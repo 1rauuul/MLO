@@ -1,0 +1,81 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+example
+
+# generated native folders
+/ios
+/android
+
+# ---------------------------------------------------------------------------
+# Confidencial (credenciales, secretos y llaves)
+# ---------------------------------------------------------------------------
+# Variables de entorno (cualquier variante; se permite .env.example)
+.env
+.env.*
+!.env.example
+
+# Secretos / credenciales de build y servicios
+credentials.json
+secrets/
+.secrets/
+*serviceAccountKey*.json
+google-services.json
+GoogleService-Info.plist
+eas-secrets.json
+*.keystore
+*.jks
+*.p8
+*.p12
+*.pem
+*.key
+*.cert
+*.mobileprovision
+*.provisionprofile
+
+# Firma / Android (por si se generan fuera de /android)
+release.keystore
+debug.keystore
+
+# ---------------------------------------------------------------------------
+# Documentos de planeación (no se versionan)
+# ---------------------------------------------------------------------------
+PlanDesarrollo.md
+**/PlanDesarrollo.md
+**/planes.md
+**/*.plan.md
