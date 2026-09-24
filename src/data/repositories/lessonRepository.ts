@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import type { Complexity, Lesson, Unit, UnitColor } from '@/models/entities';
+import type { Complexity, ContentBlock, Lesson, Unit, UnitColor } from '@/models/entities';
 
 interface UnitRow {
   id: string;
@@ -8,7 +8,6 @@ interface UnitRow {
   title: string;
   description: string;
   difficulty: Complexity;
-  duration: string;
   color: UnitColor;
 }
 
@@ -23,6 +22,7 @@ interface LessonRow {
   context_title: string;
   context_body: string;
   synthesis: string;
+  content: string;
   position: number;
 }
 
@@ -33,7 +33,6 @@ function mapUnit(row: UnitRow): Unit {
     title: row.title,
     description: row.description,
     difficulty: row.difficulty,
-    duration: row.duration,
     color: row.color,
   };
 }
@@ -48,6 +47,15 @@ function mapLesson(row: LessonRow): Lesson {
   } catch {
     synthesis = [];
   }
+  let content: ContentBlock[] = [];
+  try {
+    const parsedContent: unknown = JSON.parse(row.content ?? '[]');
+    if (Array.isArray(parsedContent)) {
+      content = parsedContent as ContentBlock[];
+    }
+  } catch {
+    content = [];
+  }
   return {
     id: row.id,
     unitId: row.unit_id,
@@ -59,6 +67,7 @@ function mapLesson(row: LessonRow): Lesson {
     contextTitle: row.context_title,
     contextBody: row.context_body,
     synthesis,
+    content,
     position: row.position,
   };
 }

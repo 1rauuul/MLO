@@ -5,8 +5,14 @@ interface ProgressRow {
   completed: number;
 }
 
-export async function selectProgressMap(db: SQLiteDatabase): Promise<Record<string, boolean>> {
-  const rows = await db.getAllAsync<ProgressRow>('SELECT lesson_id, completed FROM module_progress');
+export async function selectProgressMap(
+  db: SQLiteDatabase,
+  accountId: number,
+): Promise<Record<string, boolean>> {
+  const rows = await db.getAllAsync<ProgressRow>(
+    'SELECT lesson_id, completed FROM module_progress WHERE account_id = ?',
+    accountId,
+  );
   const map: Record<string, boolean> = {};
   for (const row of rows) {
     map[row.lesson_id] = row.completed === 1;
@@ -14,10 +20,15 @@ export async function selectProgressMap(db: SQLiteDatabase): Promise<Record<stri
   return map;
 }
 
-export async function markLessonCompleted(db: SQLiteDatabase, lessonId: string): Promise<void> {
+export async function markLessonCompleted(
+  db: SQLiteDatabase,
+  accountId: number,
+  lessonId: string,
+): Promise<void> {
   await db.runAsync(
-    `INSERT INTO module_progress (lesson_id, completed, updated_at) VALUES (?, 1, ?)
-     ON CONFLICT(lesson_id) DO UPDATE SET completed = 1, updated_at = excluded.updated_at`,
+    `INSERT INTO module_progress (account_id, lesson_id, completed, updated_at) VALUES (?, ?, 1, ?)
+     ON CONFLICT(account_id, lesson_id) DO UPDATE SET completed = 1, updated_at = excluded.updated_at`,
+    accountId,
     lessonId,
     new Date().toISOString(),
   );
@@ -25,6 +36,7 @@ export async function markLessonCompleted(db: SQLiteDatabase, lessonId: string):
 
 export async function countCompletedByUnit(
   db: SQLiteDatabase,
+  accountId: number,
   unitId: string,
 ): Promise<{ completed: number; total: number }> {
   const totalRow = await db.getFirstAsync<{ total: number }>(
@@ -35,8 +47,17 @@ export async function countCompletedByUnit(
     `SELECT COUNT(*) AS completed
      FROM lessons l
      JOIN module_progress p ON p.lesson_id = l.id
-     WHERE l.unit_id = ? AND p.completed = 1`,
+     WHERE l.unit_id = ? AND p.account_id = ? AND p.completed = 1`,
     unitId,
+    accountId,
   );
   return { completed: completedRow?.completed ?? 0, total: totalRow?.total ?? 0 };
+}
+
+export async function resetAccountProgress(db: SQLiteDatabase, accountId: number): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM module_progress WHERE account_id = ?', accountId);
+    await db.runAsync('DELETE FROM evaluation_results WHERE account_id = ?', accountId);
+    await db.runAsync('DELETE FROM results WHERE account_id = ?', accountId);
+  });
 }

@@ -5,6 +5,8 @@ import { selectLessonsByUnit, selectUnits } from '@/data/repositories/lessonRepo
 import { selectProgressMap } from '@/data/repositories/progressRepository';
 import type { Lesson, Unit } from '@/models/entities';
 
+import { useAuth } from './useAuth';
+
 interface CatalogResult {
   units: Unit[];
   lessonsByUnit: Record<string, Lesson[]>;
@@ -15,22 +17,24 @@ interface CatalogResult {
 
 export function useCatalog(): CatalogResult {
   const db = useSQLiteContext();
+  const { account } = useAuth();
   const [units, setUnits] = useState<Unit[]>([]);
   const [lessonsByUnit, setLessonsByUnit] = useState<Record<string, Lesson[]>>({});
   const [progressMap, setProgressMap] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const [loadedUnits, progress] = await Promise.all([selectUnits(db), selectProgressMap(db)]);
+    const loadedUnits = await selectUnits(db);
     const grouped: Record<string, Lesson[]> = {};
     for (const unit of loadedUnits) {
       grouped[unit.id] = await selectLessonsByUnit(db, unit.id);
     }
+    const progress = account ? await selectProgressMap(db, account.id) : {};
     setUnits(loadedUnits);
     setLessonsByUnit(grouped);
     setProgressMap(progress);
     setIsLoading(false);
-  }, [db]);
+  }, [db, account]);
 
   useEffect(() => {
     void refresh();

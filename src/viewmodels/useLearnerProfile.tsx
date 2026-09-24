@@ -13,6 +13,8 @@ import {
 import { saveProfile, selectProfile } from '@/data/repositories/profileRepository';
 import type { LearnerProfile, LearningStyle } from '@/models/entities';
 
+import { useAuth } from './useAuth';
+
 interface LearnerProfileContextValue {
   profile: LearnerProfile | null;
   isLoading: boolean;
@@ -25,26 +27,28 @@ interface LearnerProfileContextValue {
   saveQuestionnaire: (style: LearningStyle) => void;
 }
 
-const DEFAULT_PROFILE: LearnerProfile = {
-  id: 1,
-  learnerName: 'Valentina Ríos',
-  learningStyle: 'Pragmático',
-  darkMode: true,
-  largeText: false,
-};
-
+const FALLBACK_STYLE: LearningStyle = 'Pragmático';
 const LearnerProfileContext = createContext<LearnerProfileContextValue | null>(null);
 
 export function LearnerProfileProvider({ children }: { children: ReactNode }) {
   const db = useSQLiteContext();
+  const { account } = useAuth();
   const [profile, setProfile] = useState<LearnerProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const profileRef = useRef<LearnerProfile | null>(null);
 
   useEffect(() => {
     let active = true;
+    if (!account) {
+      profileRef.current = null;
+      setProfile(null);
+      setIsLoading(false);
+      return () => {
+        active = false;
+      };
+    }
     (async () => {
-      const loaded = (await selectProfile(db)) ?? DEFAULT_PROFILE;
+      const loaded = await selectProfile(db, account.id);
       if (!active) {
         return;
       }
@@ -55,7 +59,7 @@ export function LearnerProfileProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [db]);
+  }, [db, account]);
 
   const update = useCallback(
     (changes: Partial<LearnerProfile>) => {
@@ -79,9 +83,9 @@ export function LearnerProfileProvider({ children }: { children: ReactNode }) {
     () => ({
       profile,
       isLoading,
-      style: profile?.learningStyle ?? DEFAULT_PROFILE.learningStyle,
-      darkMode: profile?.darkMode ?? DEFAULT_PROFILE.darkMode,
-      largeText: profile?.largeText ?? DEFAULT_PROFILE.largeText,
+      style: profile?.learningStyle ?? FALLBACK_STYLE,
+      darkMode: profile?.darkMode ?? true,
+      largeText: profile?.largeText ?? false,
       setStyle,
       setDarkMode,
       setLargeText,

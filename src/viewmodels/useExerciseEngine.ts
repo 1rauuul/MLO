@@ -1,10 +1,22 @@
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { insertResult, selectExercisesByLesson } from '@/data/repositories/exerciseRepository';
-import type { Exercise } from '@/models/entities';
+import { insertResult, selectExercise, selectExercisesByLesson } from '@/data/repositories/exerciseRepository';
+import type { Exercise, MatchPair } from '@/models/entities';
 
-import { isOrderCorrect, moveItem, scrambleOrder } from './exerciseLogic';
+import {
+  buildFillBank,
+  extractFillAnswers,
+  isFillCorrect,
+  isMatchCorrect,
+  isOrderCorrect,
+  moveItem,
+  scrambleOrder,
+  shuffleItems,
+  splitFillSentences,
+  type FillSegment,
+} from './exerciseLogic';
+import { useAuth } from './useAuth';
 
 export interface ExerciseEngine {
   steps: string[];
@@ -103,10 +115,286 @@ export function useRecordExerciseResult(): (
   correct: boolean,
 ) => Promise<void> {
   const db = useSQLiteContext();
+  const { account } = useAuth();
   return useCallback(
     async (exerciseId: string, answer: string, correct: boolean) => {
-      await insertResult(db, exerciseId, answer, correct);
+      if (!account) {
+        return;
+      }
+      await insertResult(db, account.id, exerciseId, answer, correct);
     },
-    [db],
+    [db, account],
   );
+}
+
+interface UseExercisesForLessonResult {
+  exercises: Exercise[];
+  isLoading: boolean;
+}
+
+export function useExercise(id: string | null): { exercise: Exercise | null; isLoading: boolean } {
+  const db = useSQLiteContext();
+  const [exercise, setExercise] = useState<Exercise | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) {
+      setExercise(null);
+      setIsLoading(false);
+      return;
+    }
+    let active = true;
+    setIsLoading(true);
+    (async () => {
+      const loaded = await selectExercise(db, id);
+      if (!active) {
+        return;
+      }
+      setExercise(loaded);
+      setIsLoading(false);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [db, id]);
+
+  return { exercise, isLoading };
+}
+
+export function useExercisesForLesson(lessonId: string | null): UseExercisesForLessonResult {
+  const db = useSQLiteContext();
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!lessonId) {
+      setExercises([]);
+      setIsLoading(false);
+      return;
+    }
+    let active = true;
+    setIsLoading(true);
+    (async () => {
+      const loaded = await selectExercisesByLesson(db, lessonId);
+      if (!active) {
+        return;
+      }
+      setExercises(loaded);
+      setIsLoading(false);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [db, lessonId]);
+
+  return { exercises, isLoading };
+}
+
+export interface FillEngine {
+  sentences: FillSegment[][];
+  answers: string[];
+  bank: string[];
+  used: boolean[];
+  assignment: (string | null)[];
+  activeBlank: number | null;
+  checked: boolean;
+  isCorrect: boolean;
+  selectBlank: (index: number) => void;
+  placeWord: (bankIndex: number) => void;
+  clearBlank: (index: number) => void;
+  submit: (onResult?: (correct: boolean) => void) => boolean;
+  reset: () => void;
+}
+
+export function useFillEngine(exercise: Exercise | null): FillEngine {
+  const rawSentences = useMemo(
+    () => (exercise?.type === 'fill' ? (exercise.config.sentences ?? []) : []),
+    [exercise],
+  );
+  const sentences = useMemo(() => splitFillSentences(rawSentences), [rawSentences]);
+  const answers = useMemo(() => extractFillAnswers(rawSentences), [rawSentences]);
+
+  const [bank, setBank] = useState<string[]>([]);
+  const [used, setUsed] = useState<boolean[]>([]);
+  const [assignment, setAssignment] = useState<(string | null)[]>([]);
+  const [activeBlank, setActiveBlank] = useState<number | null>(null);
+  const [checked, setChecked] = useState(false);
+  const [isCorrect, setIsCorrect] = useState(false);
+
+  const reset = useCallback(() => {
+    const answers = extractFillAnswers(rawSentences);
+    setBank(buildFillBank(rawSentences, Math.random));
+    setUsed(answers.map(() => false));
+    setAssignment(answers.map(() => null));
+    setActiveBlank(null);
+    setChecked(false);
+    setIsCorrect(false);
+  }, [rawSentences]);
+
+  useEffect(() => {
+    reset();
+  }, [reset]);
+
+  const selectBlank = useCallback((index: number) => {
+    setActiveBlank(current => (current === index ? null : index));
+  }, []);
+
+  const placeWord = useCallback(
+    (bankIndex: number) => {
+      if (used[bankIndex]) {
+        return;
+      }
+      const target = activeBlank ?? assignment.findIndex(item => item === null);
+      if (target === -1 || assignment[target] !== null) {
+        return;
+      }
+      const word = bank[bankIndex];
+      if (word === undefined) {
+        return;
+      }
+      const nextAssignment = [...assignment];
+      nextAssignment[target] = word;
+      setAssignment(nextAssignment);
+      setUsed(previous => previous.map((value, index) => (index === bankIndex ? true : value)));
+      const nextEmpty = nextAssignment.findIndex(item => item === null);
+      setActiveBlank(nextEmpty === -1 ? null : nextEmpty);
+      setChecked(false);
+    },
+    [activeBlank, assignment, bank, used],
+  );
+
+  const clearBlank = useCallback(
+    (index: number) => {
+      const word = assignment[index];
+      if (word === null || word === undefined) {
+        return;
+      }
+      setAssignment(previous => previous.map((value, position) => (position === index ? null : value)));
+      setUsed(previous => {
+        const bankIndex = bank.findIndex((item, position) => item === word && previous[position]);
+        if (bankIndex === -1) {
+          return previous;
+        }
+        return previous.map((value, position) => (position === bankIndex ? false : value));
+      });
+      setChecked(false);
+    },
+    [assignment, bank],
+  );
+
+  const submit = useCallback(
+    (onResult?: (correct: boolean) => void) => {
+      const correct = isFillCorrect(rawSentences, assignment);
+      setChecked(true);
+      setIsCorrect(correct);
+      onResult?.(correct);
+      return correct;
+    },
+    [rawSentences, assignment],
+  );
+
+  return {
+    sentences,
+    answers,
+    bank,
+    used,
+    assignment,
+    activeBlank,
+    checked,
+    isCorrect,
+    selectBlank,
+    placeWord,
+    clearBlank,
+    submit,
+    reset,
+  };
+}
+
+export interface MatchEngine {
+  pairs: MatchPair[];
+  lefts: string[];
+  rights: string[];
+  assignment: (number | null)[];
+  selectedLeft: number | null;
+  checked: boolean;
+  isCorrect: boolean;
+  selectLeft: (index: number) => void;
+  selectRight: (position: number) => void;
+  submit: (onResult?: (correct: boolean) => void) => boolean;
+  reset: () => void;
+}
+
+export function useMatchEngine(exercise: Exercise | null): MatchEngine {
+  const pairs = useMemo(
+    () => (exercise?.type === 'match' ? (exercise.config.pairs ?? []) : []),
+    [exercise],
+  );
+  const lefts = useMemo(() => pairs.map(pair => pair.left), [pairs]);
+
+  const [rights, setRights] = useState<string[]>([]);
+  const [assignment, setAssignment] = useState<(number | null)[]>([]);
+  const [selectedLeft, setSelectedLeft] = useState<number | null>(null);
+  const [checked, setChecked] = useState(false);
+  const [isCorrect, setIsCorrect] = useState(false);
+
+  const reset = useCallback(() => {
+    setRights(shuffleItems(pairs.map(pair => pair.right), Math.random));
+    setAssignment(pairs.map(() => null));
+    setSelectedLeft(null);
+    setChecked(false);
+    setIsCorrect(false);
+  }, [pairs]);
+
+  useEffect(() => {
+    reset();
+  }, [reset]);
+
+  const selectLeft = useCallback((index: number) => {
+    setSelectedLeft(current => (current === index ? null : index));
+  }, []);
+
+  const selectRight = useCallback(
+    (position: number) => {
+      if (selectedLeft === null) {
+        return;
+      }
+      setAssignment(previous => {
+        const next = [...previous];
+        const owner = next.indexOf(position);
+        if (owner !== -1) {
+          next[owner] = null;
+        }
+        next[selectedLeft] = position;
+        return next;
+      });
+      setSelectedLeft(null);
+      setChecked(false);
+    },
+    [selectedLeft],
+  );
+
+  const submit = useCallback(
+    (onResult?: (correct: boolean) => void) => {
+      const correct = isMatchCorrect(pairs, rights, assignment);
+      setChecked(true);
+      setIsCorrect(correct);
+      onResult?.(correct);
+      return correct;
+    },
+    [pairs, rights, assignment],
+  );
+
+  return {
+    pairs,
+    lefts,
+    rights,
+    assignment,
+    selectedLeft,
+    checked,
+    isCorrect,
+    selectLeft,
+    selectRight,
+    submit,
+    reset,
+  };
 }

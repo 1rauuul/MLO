@@ -9,7 +9,7 @@ import { QuizOption, type QuizOptionResult } from '@/components/QuizOption';
 import { ResultModal } from '@/components/ResultModal';
 import { Screen } from '@/components/Screen';
 import { useTheme } from '@/theme/theme-provider';
-import { useLearnerProfile } from '@/viewmodels/useLearnerProfile';
+import { useAuth } from '@/viewmodels/useAuth';
 import { useModuleProgress } from '@/viewmodels/useModuleProgress';
 import {
   useEvaluationForLesson,
@@ -23,7 +23,7 @@ export default function EvaluationScreen() {
   const quiz = useQuizEngine(questions);
   const record = useRecordEvaluationResult();
   const { markCompleted } = useModuleProgress();
-  const { profile } = useLearnerProfile();
+  const { account } = useAuth();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
   const recordedRef = useRef(false);
@@ -141,7 +141,7 @@ export default function EvaluationScreen() {
 
       <ResultModal
         visible={quiz.finished}
-        learnerName={profile?.learnerName ?? 'Valentina Ríos'}
+        learnerName={account?.displayName ?? 'Estudiante'}
         score={quiz.score}
         onClose={() => router.back()}
         onRetry={() => {

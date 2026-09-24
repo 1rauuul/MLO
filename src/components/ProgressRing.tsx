@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { useTheme } from '@/theme/theme-provider';
+import { fonts } from '@/theme/tokens';
 
 import { AppText } from './AppText';
 
@@ -19,13 +20,13 @@ export function ProgressRing({ value, size = 56 }: { value: number; size?: numbe
       accessibilityValue={{ min: 0, max: 100, now: clamped }}
       style={{ width: size, height: size }}>
       <Svg viewBox="0 0 48 48" width={size} height={size}>
-        <Circle cx={24} cy={24} r={radius} stroke={colors.line} strokeWidth={4} fill="none" />
+        <Circle cx={24} cy={24} r={radius} stroke={colors.line} strokeWidth={1} fill="none" />
         <Circle
           cx={24}
           cy={24}
           r={radius}
-          stroke={colors.primary}
-          strokeWidth={4}
+          stroke={colors.success}
+          strokeWidth={3}
           fill="none"
           strokeDasharray={circumference}
           strokeDashoffset={circumference * (1 - clamped / 100)}
@@ -54,6 +55,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
+    fontFamily: fonts.mono,
   },
 });

@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import type { Exercise, ExerciseType } from '@/models/entities';
+import type { Exercise, ExerciseConfig, ExerciseType } from '@/models/entities';
 
 interface ExerciseRow {
   id: string;
@@ -9,6 +9,7 @@ interface ExerciseRow {
   prompt: string;
   instructions: string;
   correct_order: string;
+  config: string;
 }
 
 function mapExercise(row: ExerciseRow): Exercise {
@@ -21,6 +22,15 @@ function mapExercise(row: ExerciseRow): Exercise {
   } catch {
     correctOrder = [];
   }
+  let config: ExerciseConfig = {};
+  try {
+    const parsedConfig: unknown = JSON.parse(row.config ?? '{}');
+    if (parsedConfig && typeof parsedConfig === 'object') {
+      config = parsedConfig as ExerciseConfig;
+    }
+  } catch {
+    config = {};
+  }
   return {
     id: row.id,
     lessonId: row.lesson_id,
@@ -28,6 +38,7 @@ function mapExercise(row: ExerciseRow): Exercise {
     prompt: row.prompt,
     instructions: row.instructions,
     correctOrder,
+    config,
   };
 }
 
@@ -46,12 +57,14 @@ export async function selectExercise(db: SQLiteDatabase, id: string): Promise<Ex
 
 export async function insertResult(
   db: SQLiteDatabase,
+  accountId: number,
   exerciseId: string,
   answer: string,
   isCorrect: boolean,
 ): Promise<void> {
   await db.runAsync(
-    'INSERT INTO results (exercise_id, answer, is_correct, created_at) VALUES (?, ?, ?, ?)',
+    'INSERT INTO results (account_id, exercise_id, answer, is_correct, created_at) VALUES (?, ?, ?, ?, ?)',
+    accountId,
     exerciseId,
     answer,
     isCorrect ? 1 : 0,

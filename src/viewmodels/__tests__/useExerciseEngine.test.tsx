@@ -15,6 +15,7 @@ const exercise: Exercise = {
   prompt: 'Ordena',
   instructions: 'Usa las flechas',
   correctOrder: ['a', 'b', 'c', 'd'],
+  config: {},
 };
 
 describe('useExerciseEngine', () => {

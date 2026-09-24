@@ -1,19 +1,23 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
 import { BottomTabBar, type HomeTab } from '@/components/BottomTabBar';
+import { PrimaryButton, SecondaryButton } from '@/components/Buttons';
+import { Chevron } from '@/components/Chevron';
 import { EmptyState } from '@/components/EmptyState';
-import { PrimaryButton } from '@/components/Buttons';
 import { Screen } from '@/components/Screen';
 import { SectionHeading } from '@/components/SectionHeading';
 import { SubtopicRow } from '@/components/SubtopicRow';
 import { Toggle } from '@/components/Toggle';
 import { UnitCard } from '@/components/UnitCard';
-import type { LearningStyle, Unit } from '@/models/entities';
+import type { EvaluationResult, LearningStyle, Lesson, Unit } from '@/models/entities';
 import { useTheme } from '@/theme/theme-provider';
+import { initials } from '@/viewmodels/authLogic';
+import { useAuth } from '@/viewmodels/useAuth';
 import { useCatalog } from '@/viewmodels/useCatalog';
+import { useEvaluationsCatalog } from '@/viewmodels/useEvaluationsCatalog';
 import { useLearnerProfile } from '@/viewmodels/useLearnerProfile';
 import { useRecentResults } from '@/viewmodels/useRecentResults';
 import { useSession } from '@/viewmodels/useSession';
@@ -32,12 +36,15 @@ function greetingDate(): string {
 export default function HomeScreen() {
   const [tab, setTab] = useState<HomeTab>('modules');
   const { colors } = useTheme();
-  const { profile, style, setStyle, darkMode, setDarkMode, largeText, setLargeText } =
-    useLearnerProfile();
+  const { account, logout, resetProgress } = useAuth();
+  const { style, setStyle, darkMode, setDarkMode, largeText, setLargeText } = useLearnerProfile();
   const { units, lessonsByUnit, progressMap, refresh } = useCatalog();
   const { results, averageScore, refresh: refreshResults } = useRecentResults();
   const session = useSession();
   const router = useRouter();
+
+  const learnerName = account?.displayName ?? 'Estudiante';
+  const accountUsername = account?.username ?? '';
 
   useFocusEffect(
     useCallback(() => {
@@ -46,9 +53,13 @@ export default function HomeScreen() {
     }, [refresh, refreshResults]),
   );
 
-  const openLesson = (unitId: string, lessonId: string) => {
-    session.openLesson(unitId, lessonId);
-    router.push({ pathname: '/tema/[id]', params: { id: lessonId } });
+  const openLesson = (unitId: string, lesson: Lesson) => {
+    session.openLesson(unitId, lesson.id);
+    if (lesson.code === '1.1') {
+      router.push({ pathname: '/lecciones/[id]', params: { id: lesson.id } });
+    } else {
+      router.push({ pathname: '/tema/[id]', params: { id: lesson.id } });
+    }
   };
 
   return (
@@ -59,7 +70,7 @@ export default function HomeScreen() {
             units={units}
             lessonsByUnit={lessonsByUnit}
             progressMap={progressMap}
-            onOpenUnit={unit => router.push({ pathname: '/lecciones', params: { unit: unit.id } })}
+            learnerName={learnerName}
             onOpenLesson={openLesson}
             onOpenProfile={() => setTab('profile')}
           />
@@ -67,19 +78,13 @@ export default function HomeScreen() {
         {tab === 'assessments' && (
           <AssessmentsTab
             results={results}
-            onStart={() => {
-              const firstUnit = units[0];
-              const lesson = firstUnit ? lessonsByUnit[firstUnit.id]?.[0] : undefined;
-              if (firstUnit && lesson) {
-                session.openLesson(firstUnit.id, lesson.id);
-                router.push({ pathname: '/evaluacion', params: { lesson: lesson.id } });
-              }
-            }}
+            onOpen={lessonId => router.push({ pathname: '/evaluacion', params: { lesson: lessonId } })}
           />
         )}
         {tab === 'profile' && (
           <ProfileTab
-            learnerName={profile?.learnerName ?? 'Valentina Ríos'}
+            learnerName={learnerName}
+            accountUsername={accountUsername}
             style={style}
             setStyle={setStyle}
             darkMode={darkMode}
@@ -92,6 +97,23 @@ export default function HomeScreen() {
               0,
             )}
             averageScore={averageScore}
+            onLogout={() => void logout()}
+            onResetProgress={() =>
+              Alert.alert(
+                'Reiniciar progreso',
+                'Se borrarán tus lecciones completadas y resultados. Esta acción no se puede deshacer.',
+                [
+                  { text: 'Cancelar', style: 'cancel' },
+                  {
+                    text: 'Reiniciar',
+                    style: 'destructive',
+                    onPress: () => {
+                      void resetProgress().then(() => Promise.all([refresh(), refreshResults()]));
+                    },
+                  },
+                ],
+              )
+            }
           />
         )}
       </Screen>
@@ -102,10 +124,10 @@ export default function HomeScreen() {
 
 interface ModulesTabProps {
   units: Unit[];
-  lessonsByUnit: Record<string, import('@/models/entities').Lesson[]>;
+  lessonsByUnit: Record<string, Lesson[]>;
   progressMap: Record<string, boolean>;
-  onOpenUnit: (unit: Unit) => void;
-  onOpenLesson: (unitId: string, lessonId: string) => void;
+  learnerName: string;
+  onOpenLesson: (unitId: string, lesson: Lesson) => void;
   onOpenProfile: () => void;
 }
 
@@ -113,7 +135,7 @@ function ModulesTab({
   units,
   lessonsByUnit,
   progressMap,
-  onOpenUnit,
+  learnerName,
   onOpenLesson,
   onOpenProfile,
 }: ModulesTabProps) {
@@ -131,16 +153,14 @@ function ModulesTab({
     }) ?? units[0];
   const currentLessons = lessonsByUnit[currentUnit.id] ?? [];
   const currentDone = currentLessons.filter(lesson => progressMap[lesson.id]).length;
-  const currentProgress = currentLessons.length
-    ? Math.round((currentDone / currentLessons.length) * 100)
-    : 0;
+  const nextLesson = currentLessons.find(lesson => !progressMap[lesson.id]) ?? currentLessons[0];
 
   return (
     <View>
       <View style={styles.topHeader}>
         <View style={styles.flex}>
           <AppText variant="eyebrow">{greetingDate()}</AppText>
-          <AppText variant="title">Hola, Valentina</AppText>
+          <AppText variant="title">{`Hola, ${learnerName}`}</AppText>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -148,7 +168,7 @@ function ModulesTab({
           onPress={onOpenProfile}
           style={[styles.avatar, { backgroundColor: colors.soft }]}>
           <AppText variant="code" color={colors.primary} weight="700">
-            VR
+            {initials(learnerName)}
           </AppText>
         </Pressable>
       </View>
@@ -162,20 +182,20 @@ function ModulesTab({
           Continúa donde lo dejaste
         </AppText>
         <AppText style={styles.continueTitle} color={colors.onPrimary} weight="700">
-          Unidad {currentUnit.number}{'\n'}
+          Unidad {currentUnit.number}
+          {'\n'}
           {currentUnit.title}
         </AppText>
         <AppText variant="small" color="#E6ECFF">
-          {currentDone} de {currentLessons.length} subtemas · {currentProgress}%
+          {`${currentDone} de ${currentLessons.length} subtemas`}
         </AppText>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Continuar unidad"
-          onPress={() => onOpenUnit(currentUnit)}
+          disabled={!nextLesson}
+          onPress={() => nextLesson && onOpenLesson(currentUnit.id, nextLesson)}
           style={[styles.continueAction, { backgroundColor: colors.onPrimary }]}>
-          <AppText color={colors.primary} weight="700" style={styles.continueArrow}>
-            →
-          </AppText>
+          <Chevron direction="right" size={18} color={colors.primary} strokeWidth={2.4} />
         </Pressable>
       </View>
 
@@ -198,8 +218,7 @@ function ModulesTab({
                 subtopicCount={lessons.length}
                 progress={progress}
                 expanded={isExpanded}
-                onOpen={() => onOpenUnit(unit)}
-                onToggleExpand={() => setExpanded(isExpanded ? null : unit.id)}
+                onToggle={() => setExpanded(isExpanded ? null : unit.id)}
               />
               {isExpanded && (
                 <View style={[styles.inlineSubtopics, { paddingLeft: spacing.md }]}>
@@ -208,7 +227,7 @@ function ModulesTab({
                       key={lesson.id}
                       lesson={lesson}
                       completed={!!progressMap[lesson.id]}
-                      onPress={() => onOpenLesson(unit.id, lesson.id)}
+                      onPress={() => onOpenLesson(unit.id, lesson)}
                     />
                   ))}
                 </View>
@@ -222,12 +241,13 @@ function ModulesTab({
 }
 
 interface AssessmentsTabProps {
-  results: { id: number; score: number; correctCount: number; totalCount: number; createdAt: string }[];
-  onStart: () => void;
+  results: EvaluationResult[];
+  onOpen: (lessonId: string) => void;
 }
 
-function AssessmentsTab({ results, onStart }: AssessmentsTabProps) {
+function AssessmentsTab({ results, onOpen }: AssessmentsTabProps) {
   const { colors, radius } = useTheme();
+  const { summaries } = useEvaluationsCatalog();
 
   return (
     <View>
@@ -236,18 +256,43 @@ function AssessmentsTab({ results, onStart }: AssessmentsTabProps) {
           <AppText variant="eyebrow">Evaluación formativa</AppText>
           <AppText variant="title">Comprobaciones</AppText>
         </View>
-        <AppText variant="title" color={colors.primary}>
-          ✓
-        </AppText>
       </View>
 
-      <View
-        style={[styles.assessmentHero, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
-        <AppText variant="eyebrow">Recomendada para ti</AppText>
-        <AppText variant="heading">Introducción a la ingeniería</AppText>
-        <AppText variant="small">2 preguntas · Unidad 01</AppText>
-        <PrimaryButton label="Iniciar ahora" onPress={onStart} />
-      </View>
+      <SectionHeading
+        eyebrow="Disponibles"
+        title="Tus evaluaciones"
+        trailing={String(summaries.length).padStart(2, '0')}
+      />
+      {summaries.length === 0 ? (
+        <EmptyState title="Sin evaluaciones" message="Aún no hay comprobaciones disponibles." />
+      ) : (
+        <View style={styles.list}>
+          {summaries.map(item => (
+            <Pressable
+              key={item.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Abrir evaluación ${item.title}`}
+              onPress={() => onOpen(item.lessonId)}
+              style={[
+                styles.historyItem,
+                { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control },
+              ]}>
+              <View style={[styles.historyMark, { backgroundColor: colors.soft }]}>
+                <AppText color={colors.primary} weight="700">
+                  ✓
+                </AppText>
+              </View>
+              <View style={styles.flex}>
+                <AppText weight="600">{item.title}</AppText>
+                <AppText variant="small">
+                  {`Unidad ${String(item.unitNumber).padStart(2, '0')} · ${item.lessonTitle}`}
+                </AppText>
+              </View>
+              <Chevron direction="right" size={16} color={colors.muted} strokeWidth={2.2} />
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       <SectionHeading eyebrow="Resultados recientes" title="Tu historial" />
       {results.length === 0 ? (
@@ -260,7 +305,10 @@ function AssessmentsTab({ results, onStart }: AssessmentsTabProps) {
           {results.map(result => (
             <View
               key={result.id}
-              style={[styles.historyItem, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control }]}>
+              style={[
+                styles.historyItem,
+                { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control },
+              ]}>
               <View style={[styles.historyMark, { backgroundColor: colors.soft }]}>
                 <AppText color={colors.success} weight="700">
                   ✓
@@ -285,6 +333,7 @@ function AssessmentsTab({ results, onStart }: AssessmentsTabProps) {
 
 interface ProfileTabProps {
   learnerName: string;
+  accountUsername: string;
   style: LearningStyle;
   setStyle: (value: LearningStyle) => void;
   darkMode: boolean;
@@ -294,10 +343,13 @@ interface ProfileTabProps {
   completedLessons: number;
   totalLessons: number;
   averageScore: number;
+  onLogout: () => void;
+  onResetProgress: () => void;
 }
 
 function ProfileTab({
   learnerName,
+  accountUsername,
   style,
   setStyle,
   darkMode,
@@ -307,6 +359,8 @@ function ProfileTab({
   completedLessons,
   totalLessons,
   averageScore,
+  onLogout,
+  onResetProgress,
 }: ProfileTabProps) {
   const { colors, radius, spacing } = useTheme();
 
@@ -315,13 +369,13 @@ function ProfileTab({
       <View style={styles.profileHero}>
         <View style={[styles.profileAvatar, { backgroundColor: colors.soft }]}>
           <AppText variant="code" color={colors.primary} weight="700">
-            VR
+            {initials(learnerName)}
           </AppText>
         </View>
         <View>
           <AppText variant="eyebrow">Estudiante</AppText>
           <AppText variant="title">{learnerName}</AppText>
-          <AppText variant="small">Ingeniería de Software</AppText>
+          <AppText variant="small">{`@${accountUsername}`}</AppText>
         </View>
       </View>
 
@@ -332,7 +386,10 @@ function ProfileTab({
         ].map(stat => (
           <View
             key={stat.label}
-            style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
+            style={[
+              styles.statCard,
+              { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card },
+            ]}>
             <AppText variant="heading">{stat.value}</AppText>
             <AppText variant="small">{stat.label}</AppText>
           </View>
@@ -357,7 +414,10 @@ function ProfileTab({
                   borderRadius: radius.pill,
                 },
               ]}>
-              <AppText color={active ? colors.onPrimary : colors.text} weight="600" style={styles.stylePillText}>
+              <AppText
+                color={active ? colors.onPrimary : colors.text}
+                weight="600"
+                style={styles.stylePillText}>
                 {option}
               </AppText>
             </Pressable>
@@ -373,13 +433,26 @@ function ProfileTab({
         <SettingRow
           title="Apariencia oscura"
           subtitle="Reduce el brillo para estudiar"
-          control={<Toggle on={darkMode} onToggle={() => setDarkMode(!darkMode)} label="Apariencia oscura" />}
+          control={
+            <Toggle on={darkMode} onToggle={() => setDarkMode(!darkMode)} label="Apariencia oscura" />
+          }
         />
         <SettingRow
           title="Texto ampliado"
           subtitle="Facilita la lectura prolongada"
-          control={<Toggle on={largeText} onToggle={() => setLargeText(!largeText)} label="Texto ampliado" />}
+          control={
+            <Toggle on={largeText} onToggle={() => setLargeText(!largeText)} label="Texto ampliado" />
+          }
         />
+      </View>
+
+      <SectionHeading eyebrow="Cuenta" title="Sesión" />
+      <View style={styles.list}>
+        <SettingRow title={learnerName} subtitle={`@${accountUsername}`} control={null} />
+      </View>
+      <View style={[styles.sessionActions, { marginTop: spacing.md }]}>
+        <PrimaryButton label="Cerrar sesión" onPress={onLogout} />
+        <SecondaryButton label="Reiniciar mi progreso" onPress={onResetProgress} />
       </View>
     </View>
   );
@@ -397,7 +470,10 @@ function SettingRow({
   const { colors, radius } = useTheme();
   return (
     <View
-      style={[styles.settingRow, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control }]}>
+      style={[
+        styles.settingRow,
+        { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control },
+      ]}>
       <View style={styles.flex}>
         <AppText weight="600">{title}</AppText>
         <AppText variant="small">{subtitle}</AppText>
@@ -441,15 +517,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  continueArrow: { fontSize: 20, lineHeight: 22 },
   list: { gap: 12 },
   unitBlock: { gap: 10 },
   inlineSubtopics: { gap: 8 },
-  assessmentHero: {
-    borderWidth: 1,
-    padding: 22,
-    gap: 8,
-  },
   historyItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -507,4 +577,5 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
   },
+  sessionActions: { gap: 8 },
 });

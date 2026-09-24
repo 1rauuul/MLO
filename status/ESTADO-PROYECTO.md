@@ -8,6 +8,53 @@
 
 ---
 
+## 0. Actualización — implementación real (sesión posterior)
+
+> Fecha de corte: 21–22 de septiembre de 2026. Sustituye al corte de Fases 0–3 de abajo.
+
+**Completado en esta sesión**
+
+- **Autenticación local offline**: `accounts` + `auth_session`, hash SHA-256 con salt
+  (`expo-crypto`), `useAuth`, pantallas `login`/`register`, guardas `Stack.Protected`,
+  splash hasta resolver sesión.
+- **Datos por cuenta**: `learner_profile`, `module_progress`, `results` y
+  `evaluation_results` con `account_id`; el perfil y el nombre salen del login.
+- **Progreso a cero**: seed sin perfil ni progreso; migración v2 destruye/recrea; todo
+  indicador inicia en 0 %.
+- **Navegación ≤3 toques**: Home con unidades expandibles (acordeón, 1 abierta);
+  hub de mosaicos para todas las lecciones salvo 1.1 (que abre directo la lectura);
+  un mosaico por ejemplo y por ejercicio; sin rutas-lista intermedias; tab Evaluaciones
+  con catálogo real e historial; Perfil con cierre de sesión y reinicio de progreso.
+- **UI**: alineada a la referencia (hero azul, avatar con iniciales, anillos, chips),
+  paleta intacta, chevrons SVG en lugar de glifos de flecha.
+- **Contenido**: lectura por bloques ricos (`lessons.content`: párrafos, listas y tablas)
+  para 1.1 y 1.2 desde `Introducción a la ISW.md`; `RichContent` respeta tablas.
+- **Ejercicios interactivos (Unidad 1, lecciones 1.2–1.4)**: tipos `order`, `fill`
+  (completar con banco de palabras) y `match` (enlazar pares), con lógica pura testeada
+  (`exerciseLogic.ts`) y engines `useExerciseEngine`/`useFillEngine`/`useMatchEngine`.
+  Ejemplo extra en 1.2 y evaluaciones de 1.2–1.4 ampliadas a 4 preguntas.
+- **Esquema v4** con migración aditiva v3→v4 (`ALTER TABLE exercises ADD COLUMN config` +
+  `applyUnit1Activities`), preservando cuentas y resultados existentes.
+
+**Verificación (evidencia)**
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Typecheck estricto | `npx tsc --noEmit` | exit 0 |
+| Pruebas | `npm test` | 5 suites / 36 tests OK |
+| Lint | `npx eslint .` | exit 0 |
+| Bundle nativo | `npx expo export --platform android` | OK |
+
+**Pendiente**
+
+- Crucigramas (descartado por usabilidad móvil; el usuario eligió completar/enlazar/ordenar).
+- Contenido de lectura por bloques ricos para 1.3–1.4 y unidades 2–5 (hoy usan `body`).
+- Ejercicios interactivos para 1.1 (se dejó intencionalmente como estaba) y para unidades 2–5.
+- Pruebas de repositorios contra expo-sqlite y de pantallas/flujos completos.
+- Fase 4 (cuestionario CHAEA automático) y Fase 5 (EAS Build / validación en dispositivo).
+
+---
+
 ## 1. Verificación de cierre de sesión
 
 | Comprobación | Comando | Resultado |

@@ -5,6 +5,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useTheme } from '@/theme/theme-provider';
 
 import { AppText } from './AppText';
+import { Chevron } from './Chevron';
 
 interface SubtopicRowProps {
   lesson: Lesson;
@@ -39,9 +40,13 @@ export function SubtopicRow({ lesson, completed, onPress }: SubtopicRowProps) {
       <AppText style={styles.title} weight="600">
         {lesson.title}
       </AppText>
-      <AppText color={completed ? colors.success : colors.muted} weight="700">
-        {completed ? '✓' : '→'}
-      </AppText>
+      {completed ? (
+        <AppText color={colors.success} weight="700">
+          ✓
+        </AppText>
+      ) : (
+        <Chevron direction="right" size={16} color={colors.muted} strokeWidth={2.2} />
+      )}
     </Pressable>
   );
 }

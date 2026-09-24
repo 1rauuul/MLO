@@ -1,6 +1,8 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import type { Complexity, UnitColor } from '@/models/entities';
+import type { Complexity, ExerciseConfig, ExerciseType, UnitColor } from '@/models/entities';
+
+import { richContent } from './richContent';
 
 interface UnitSeed {
   id: string;
@@ -8,7 +10,6 @@ interface UnitSeed {
   title: string;
   description: string;
   difficulty: Complexity;
-  duration: string;
   color: UnitColor;
 }
 
@@ -39,9 +40,11 @@ interface ExampleSeed {
 interface ExerciseSeed {
   id: string;
   lessonId: string;
+  type?: ExerciseType;
   prompt: string;
   instructions: string;
   correctOrder: string[];
+  config?: ExerciseConfig;
 }
 
 interface QuestionSeed {
@@ -66,7 +69,6 @@ const units: UnitSeed[] = [
     title: 'Introducción',
     description: 'Software de calidad más allá de programar.',
     difficulty: 'Fundamental',
-    duration: '38 min',
     color: 'blue',
   },
   {
@@ -75,7 +77,6 @@ const units: UnitSeed[] = [
     title: 'Procesos de software',
     description: 'Modelos y actividades del proceso de desarrollo.',
     difficulty: 'Intermedio',
-    duration: '42 min',
     color: 'violet',
   },
   {
@@ -84,7 +85,6 @@ const units: UnitSeed[] = [
     title: 'Desarrollo ágil de software',
     description: 'Métodos ágiles, XP y gestión de proyectos.',
     difficulty: 'Intermedio',
-    duration: '45 min',
     color: 'green',
   },
   {
@@ -93,7 +93,6 @@ const units: UnitSeed[] = [
     title: 'Ingeniería de requerimientos',
     description: 'Cómo descubrir, especificar y validar requerimientos.',
     difficulty: 'Avanzado',
-    duration: '52 min',
     color: 'blue',
   },
   {
@@ -102,7 +101,6 @@ const units: UnitSeed[] = [
     title: 'Modelado del sistema',
     description: 'Modelos de contexto, interacción, estructura y comportamiento.',
     difficulty: 'Avanzado',
-    duration: '48 min',
     color: 'violet',
   },
 ];
@@ -420,6 +418,207 @@ const evaluations: EvaluationSeed[] = [
   },
 ];
 
+const unit1ExtraExamples: ExampleSeed[] = [
+  {
+    id: 'ex4',
+    lessonId: 'l1.2',
+    complexity: 'Intermedio',
+    title: 'De producto genérico a sistema adaptado',
+    scenario:
+      'Una organización compra un ERP genérico (como SAP) y necesita que refleje sus reglas de negocio, reportes y procesos empresariales específicos.',
+    before: 'Usar el producto genérico sin adaptarlo: los procesos reales quedan fuera del sistema.',
+    after: 'Adaptar el producto genérico a los requerimientos del cliente sobre una base común reutilizable.',
+  },
+];
+
+const unit1ExtraExercises: ExerciseSeed[] = [
+  {
+    id: 'fill1.2',
+    lessonId: 'l1.2',
+    type: 'fill',
+    prompt: 'Completa los conceptos del desarrollo profesional',
+    instructions: 'Toca un espacio y después una palabra del banco para completar cada frase.',
+    correctOrder: [],
+    config: {
+      sentences: [
+        'El buen software debe entregar la funcionalidad y el desempeño requeridos, y debe ser {{sustentable}}, confiable y utilizable.',
+        'Los productos {{genéricos}} se venden en el mercado abierto a cualquier cliente.',
+        'Los productos {{personalizados}} se desarrollan para un cliente en particular.',
+        'Aproximadamente 60% de los costos del software son de {{desarrollo}} y 40% de prueba.',
+      ],
+    },
+  },
+  {
+    id: 'match1.2',
+    lessonId: 'l1.2',
+    type: 'match',
+    prompt: 'Enlaza cada atributo con su descripción',
+    instructions: 'Toca un atributo y después la descripción que le corresponde.',
+    correctOrder: [],
+    config: {
+      pairs: [
+        { left: 'Mantenimiento', right: 'El software puede evolucionar para satisfacer necesidades cambiantes' },
+        { left: 'Confiabilidad y seguridad', right: 'No causa daño físico ni económico y resiste ataques' },
+        { left: 'Eficiencia', right: 'No desperdicia memoria ni ciclos del procesador' },
+        { left: 'Aceptabilidad', right: 'Comprensible, utilizable y compatible con otros sistemas' },
+      ],
+    },
+  },
+  {
+    id: 'fill1.3',
+    lessonId: 'l1.3',
+    type: 'fill',
+    prompt: 'Completa el código de ética',
+    instructions: 'Toca un espacio y después una palabra del banco para completar cada frase.',
+    correctOrder: [],
+    config: {
+      sentences: [
+        'El código de ética ACM/IEEE establece {{ocho}} principios de conducta profesional.',
+        'El principio {{PÚBLICO}} indica actuar consecuentemente con el interés del público.',
+        'La {{confidencialidad}} debe respetarse aun sin un acuerdo formal firmado.',
+        'No aceptar trabajo fuera de la propia {{competencia}} es un deber profesional.',
+      ],
+    },
+  },
+  {
+    id: 'match1.3',
+    lessonId: 'l1.3',
+    type: 'match',
+    prompt: 'Enlaza cada principio con su obligación',
+    instructions: 'Toca un principio y después la obligación que le corresponde.',
+    correctOrder: [],
+    config: {
+      pairs: [
+        { left: 'PÚBLICO', right: 'Actuar conforme al interés del público' },
+        { left: 'CLIENTE Y EMPLEADOR', right: 'Fomentar el mejor interés del cliente y del empleador' },
+        { left: 'JUICIO', right: 'Mantener integridad e independencia en el juicio profesional' },
+        { left: 'COLEGAS', right: 'Ser justos con los colegas y apoyarlos' },
+      ],
+    },
+  },
+  {
+    id: 'fill1.4',
+    lessonId: 'l1.4',
+    type: 'fill',
+    prompt: 'Completa los estudios de caso',
+    instructions: 'Toca un espacio y después una palabra del banco para completar cada frase.',
+    correctOrder: [],
+    config: {
+      sentences: [
+        'La bomba de insulina es un sistema {{embebido}} crítico de seguridad.',
+        'El MHC-PMS es un sistema de {{información}} con base de datos centralizada.',
+        'La estación meteorológica es un sistema de adquisición de {{datos}} basado en sensores.',
+        'Las estaciones operan con baterías y un enlace {{satelital}} de baja rapidez.',
+      ],
+    },
+  },
+  {
+    id: 'match1.4',
+    lessonId: 'l1.4',
+    type: 'match',
+    prompt: 'Enlaza cada estudio de caso con su tipo de sistema',
+    instructions: 'Toca un sistema y después el tipo que le corresponde.',
+    correctOrder: [],
+    config: {
+      pairs: [
+        { left: 'Bomba de insulina', right: 'Sistema embebido que controla un dispositivo médico' },
+        { left: 'MHC-PMS', right: 'Sistema de información de pacientes de salud mental' },
+        { left: 'Estación meteorológica', right: 'Sistema de adquisición de datos con sensores' },
+        { left: 'Mantenimiento de estación', right: 'Monitoriza y actualiza remotamente las estaciones' },
+      ],
+    },
+  },
+];
+
+const unit1ExtraQuestions: { evaluationId: string; orderIndex: number; question: QuestionSeed }[] = [
+  {
+    evaluationId: 'ev1.2',
+    orderIndex: 2,
+    question: {
+      prompt: '¿Qué incluye un sistema de software profesional además de los programas?',
+      options: [
+        'Solo el código fuente.',
+        'Documentación y archivos de configuración.',
+        'Únicamente manuales impresos.',
+        'Solo el sitio web de descargas.',
+      ],
+      answer: 1,
+      explanation:
+        'Un sistema profesional incluye programas separados, archivos de configuración, documentación del sistema y del usuario, y sitios web con información del producto.',
+    },
+  },
+  {
+    evaluationId: 'ev1.2',
+    orderIndex: 3,
+    question: {
+      prompt: 'En los productos personalizados, ¿quién controla generalmente la especificación?',
+      options: [
+        'La organización desarrolladora.',
+        'La organización que compra el software.',
+        'El mercado abierto.',
+        'El equipo de pruebas.',
+      ],
+      answer: 1,
+      explanation:
+        'En los productos personalizados la organización adquirente suele definir y gestionar la especificación; en los genéricos la controla quien desarrolla.',
+    },
+  },
+  {
+    evaluationId: 'ev1.3',
+    orderIndex: 2,
+    question: {
+      prompt: '¿Cuántos principios reúne el código de ética ACM/IEEE?',
+      options: ['Seis.', 'Siete.', 'Ocho.', 'Nueve.'],
+      answer: 2,
+      explanation:
+        'El código resume ocho principios: PÚBLICO, CLIENTE Y EMPLEADOR, PRODUCTO, JUICIO, GESTIÓN, PROFESIÓN, COLEGAS y UNO MISMO.',
+    },
+  },
+  {
+    evaluationId: 'ev1.3',
+    orderIndex: 3,
+    question: {
+      prompt: '¿Qué principio exige mantener integridad e independencia en el juicio profesional?',
+      options: ['GESTIÓN.', 'JUICIO.', 'PRODUCTO.', 'COLEGAS.'],
+      answer: 1,
+      explanation:
+        'El principio JUICIO establece que los ingenieros deben mantener integridad e independencia en su juicio profesional.',
+    },
+  },
+  {
+    evaluationId: 'ev1.4',
+    orderIndex: 2,
+    question: {
+      prompt: '¿Qué tipo de sistema es la bomba de insulina?',
+      options: [
+        'Sistema de información.',
+        'Sistema embebido.',
+        'Sistema de procesamiento en lotes.',
+        'Sistema de entretenimiento.',
+      ],
+      answer: 1,
+      explanation:
+        'El software controla un dispositivo médico (la bomba) a partir de lecturas de un sensor: es un sistema embebido crítico de seguridad.',
+    },
+  },
+  {
+    evaluationId: 'ev1.4',
+    orderIndex: 3,
+    question: {
+      prompt: '¿Cuál es un requerimiento clave de la estación meteorológica a campo abierto?',
+      options: [
+        'Fiabilidad en condiciones de ambiente hostil.',
+        'Interfaz gráfica de alta resolución.',
+        'Actualizaciones manuales diarias.',
+        'Gran ancho de banda satelital.',
+      ],
+      answer: 0,
+      explanation:
+        'Las estaciones operan sin vigilancia, con baterías y enlace satelital estrecho, expuestas a condiciones severas: la fiabilidad y el mantenimiento son clave.',
+    },
+  },
+];
+
 function buildSimpleLessons(): LessonSeed[] {
   const result: LessonSeed[] = [];
   for (const [unitId, items] of Object.entries(simpleLessons)) {
@@ -447,17 +646,79 @@ function buildSimpleLessons(): LessonSeed[] {
   return result;
 }
 
+async function insertExampleRow(db: SQLiteDatabase, example: ExampleSeed): Promise<void> {
+  await db.runAsync(
+    'INSERT INTO examples (id, lesson_id, complexity, title, scenario, before_state, after_state) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING',
+    example.id,
+    example.lessonId,
+    example.complexity,
+    example.title,
+    example.scenario,
+    example.before,
+    example.after,
+  );
+}
+
+async function insertExerciseRow(db: SQLiteDatabase, exercise: ExerciseSeed): Promise<void> {
+  await db.runAsync(
+    'INSERT INTO exercises (id, lesson_id, type, prompt, instructions, correct_order, config) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING',
+    exercise.id,
+    exercise.lessonId,
+    exercise.type ?? 'order',
+    exercise.prompt,
+    exercise.instructions,
+    JSON.stringify(exercise.correctOrder),
+    JSON.stringify(exercise.config ?? {}),
+  );
+}
+
+async function insertQuestionRow(
+  db: SQLiteDatabase,
+  id: string,
+  evaluationId: string,
+  orderIndex: number,
+  question: QuestionSeed,
+): Promise<void> {
+  await db.runAsync(
+    'INSERT INTO questions (id, evaluation_id, order_index, prompt, options, answer, explanation) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING',
+    id,
+    evaluationId,
+    orderIndex,
+    question.prompt,
+    JSON.stringify(question.options),
+    question.answer,
+    question.explanation,
+  );
+}
+
+export async function applyUnit1Activities(db: SQLiteDatabase): Promise<void> {
+  for (const example of unit1ExtraExamples) {
+    await insertExampleRow(db, example);
+  }
+  for (const exercise of unit1ExtraExercises) {
+    await insertExerciseRow(db, exercise);
+  }
+  for (const extra of unit1ExtraQuestions) {
+    await insertQuestionRow(
+      db,
+      `${extra.evaluationId}-q${extra.orderIndex + 1}`,
+      extra.evaluationId,
+      extra.orderIndex,
+      extra.question,
+    );
+  }
+}
+
 export async function seedDatabase(db: SQLiteDatabase): Promise<void> {
   await db.withTransactionAsync(async () => {
     for (const unit of units) {
       await db.runAsync(
-        'INSERT INTO units (id, number, title, description, difficulty, duration, color) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO units (id, number, title, description, difficulty, color) VALUES (?, ?, ?, ?, ?, ?)',
         unit.id,
         unit.number,
         unit.title,
         unit.description,
         unit.difficulty,
-        unit.duration,
         unit.color,
       );
     }
@@ -465,7 +726,7 @@ export async function seedDatabase(db: SQLiteDatabase): Promise<void> {
     const lessons = [...unitOneLessons, ...buildSimpleLessons()];
     for (const lesson of lessons) {
       await db.runAsync(
-        'INSERT INTO lessons (id, unit_id, code, title, eyebrow, body, code_sample, context_title, context_body, synthesis, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO lessons (id, unit_id, code, title, eyebrow, body, code_sample, context_title, context_body, synthesis, content, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         lesson.id,
         lesson.unitId,
         lesson.code,
@@ -476,38 +737,27 @@ export async function seedDatabase(db: SQLiteDatabase): Promise<void> {
         lesson.contextTitle ?? '',
         lesson.contextBody ?? '',
         JSON.stringify(lesson.synthesis ?? []),
+        JSON.stringify(richContent[lesson.id] ?? []),
         lesson.position,
       );
     }
 
-    for (const example of examples) {
-      await db.runAsync(
-        'INSERT INTO examples (id, lesson_id, complexity, title, scenario, before_state, after_state) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        example.id,
-        example.lessonId,
-        example.complexity,
-        example.title,
-        example.scenario,
-        example.before,
-        example.after,
-      );
+    for (const example of [...examples, ...unit1ExtraExamples]) {
+      await insertExampleRow(db, example);
     }
 
-    for (const exercise of exercises) {
-      await db.runAsync(
-        'INSERT INTO exercises (id, lesson_id, type, prompt, instructions, correct_order) VALUES (?, ?, ?, ?, ?, ?)',
-        exercise.id,
-        exercise.lessonId,
-        'order',
-        exercise.prompt,
-        exercise.instructions,
-        JSON.stringify(exercise.correctOrder),
-      );
+    for (const exercise of [...exercises, ...unit1ExtraExercises]) {
+      await insertExerciseRow(db, exercise);
+    }
+
+    for (const extra of unit1ExtraQuestions) {
+      const evaluation = evaluations.find(item => item.id === extra.evaluationId);
+      evaluation?.questions.push(extra.question);
     }
 
     for (const evaluation of evaluations) {
       await db.runAsync(
-        'INSERT INTO evaluations (id, lesson_id, title, description) VALUES (?, ?, ?, ?)',
+        'INSERT INTO evaluations (id, lesson_id, title, description) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO NOTHING',
         evaluation.id,
         evaluation.lessonId,
         evaluation.title,
@@ -515,33 +765,15 @@ export async function seedDatabase(db: SQLiteDatabase): Promise<void> {
       );
       let questionIndex = 0;
       for (const question of evaluation.questions) {
-        await db.runAsync(
-          'INSERT INTO questions (id, evaluation_id, order_index, prompt, options, answer, explanation) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          `${evaluation.id}-q${questionIndex + 1}`,
-          evaluation.id,
-          questionIndex,
-          question.prompt,
-          JSON.stringify(question.options),
-          question.answer,
-          question.explanation,
-        );
+        await insertQuestionRow(db, `${evaluation.id}-q${questionIndex + 1}`, evaluation.id, questionIndex, question);
         questionIndex += 1;
       }
     }
-
-    await db.runAsync(
-      'INSERT INTO learner_profile (id, learner_name, learning_style, dark_mode, large_text) VALUES (1, ?, ?, 1, 0)',
-      'Valentina Ríos',
-      'Pragmático',
-    );
-
-    const now = new Date().toISOString();
-    for (const lessonId of ['l1.1', 'l1.2']) {
-      await db.runAsync(
-        'INSERT INTO module_progress (lesson_id, completed, updated_at) VALUES (?, 1, ?)',
-        lessonId,
-        now,
-      );
-    }
   });
+}
+
+export async function applyContentMigration(db: SQLiteDatabase): Promise<void> {
+  for (const [lessonId, blocks] of Object.entries(richContent)) {
+    await db.runAsync('UPDATE lessons SET content = ? WHERE id = ?', JSON.stringify(blocks), lessonId);
+  }
 }

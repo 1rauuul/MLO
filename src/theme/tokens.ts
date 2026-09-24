@@ -72,6 +72,16 @@ export const fonts = {
   mono: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
 } as const;
 
+const unitAccents: Record<string, string> = {
+  blue: '#4D7CFE',
+  violet: '#8B7CFE',
+  green: '#45D39A',
+};
+
+export function accentForUnit(color: string): string {
+  return unitAccents[color] ?? unitAccents.blue;
+}
+
 export const typography = {
   eyebrow: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' as const },
   title: { fontSize: 30, lineHeight: 32, letterSpacing: -1 },

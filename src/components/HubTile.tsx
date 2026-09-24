@@ -24,10 +24,14 @@ export function HubTile({ icon, label, note, accent, onPress }: HubTileProps) {
       onPress={onPress}
       style={({ pressed }) => [
         styles.tile,
-        { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.tile },
+        {
+          backgroundColor: colors.card,
+          borderColor: `${accent}4D`,
+          borderRadius: radius.tile,
+        },
         pressed && !reduced ? { transform: [{ scale: 0.97 }] } : null,
       ]}>
-      <View style={[styles.icon, { backgroundColor: `${accent}22` }]}>
+      <View style={[styles.icon, { backgroundColor: `${accent}1C` }]}>
         <AppText style={styles.glyph} color={accent}>
           {icon}
         </AppText>

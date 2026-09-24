@@ -1,0 +1,145 @@
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { useTheme } from '@/theme/theme-provider';
+import { normalizeAnswer, type FillSegment } from '@/viewmodels/exerciseLogic';
+import type { FillEngine } from '@/viewmodels/useExerciseEngine';
+
+import { AppText } from './AppText';
+import { PrimaryButton, SecondaryButton } from './Buttons';
+
+interface FillExerciseProps {
+  engine: FillEngine;
+  onSubmit: (answer: string, correct: boolean) => void;
+}
+
+export function FillExercise({ engine, onSubmit }: FillExerciseProps) {
+  const { colors, radius, spacing } = useTheme();
+  const complete = engine.assignment.every(item => item !== null);
+
+  const check = () => {
+    const correct = engine.submit();
+    onSubmit(JSON.stringify(engine.assignment), correct);
+  };
+
+  const renderBlank = (blankIndex: number) => {
+    const word = engine.assignment[blankIndex];
+    const expected = engine.answers[blankIndex];
+    const isActive = engine.activeBlank === blankIndex;
+    const stateColor = engine.checked
+      ? word !== null && normalizeAnswer(word) === normalizeAnswer(expected ?? '')
+        ? colors.success
+        : colors.danger
+      : isActive
+        ? colors.primary
+        : colors.line;
+    return (
+      <Text
+        key={`blank-${blankIndex}`}
+        onPress={() =>
+          word ? engine.clearBlank(blankIndex) : engine.selectBlank(blankIndex)
+        }
+        style={[
+          styles.blank,
+          {
+            backgroundColor: colors.soft,
+            borderColor: stateColor,
+            color: word ? colors.text : colors.muted,
+          },
+        ]}>
+        {word ?? '_____'}
+      </Text>
+    );
+  };
+
+  const renderSegments = (segments: FillSegment[], sentenceIndex: number) => (
+    <AppText key={`s-${sentenceIndex}`} style={styles.sentence}>
+      {segments.map((segment, index) =>
+        segment.blank === null ? (
+          <Text key={`t-${index}`}>{segment.text}</Text>
+        ) : (
+          renderBlank(segment.blank)
+        ),
+      )}
+    </AppText>
+  );
+
+  return (
+    <View>
+      <View style={styles.sentences}>{engine.sentences.map(renderSegments)}</View>
+
+      <AppText variant="eyebrow" style={[styles.bankLabel, { color: colors.muted }]}>
+        Banco de palabras
+      </AppText>
+      <View style={[styles.bank, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
+        {engine.bank.map((word, index) => (
+          <Pressable
+            key={`${word}-${index}`}
+            accessibilityRole="button"
+            accessibilityLabel={`Palabra ${word}`}
+            accessibilityState={{ disabled: engine.used[index] }}
+            disabled={engine.used[index]}
+            onPress={() => engine.placeWord(index)}
+            style={[
+              styles.chip,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.line,
+                borderRadius: radius.pill,
+                opacity: engine.used[index] ? 0.35 : 1,
+              },
+            ]}>
+            <AppText variant="small" weight="600">
+              {word}
+            </AppText>
+          </Pressable>
+        ))}
+      </View>
+
+      <View style={[styles.actions, { marginTop: spacing.lg }]}>
+        <PrimaryButton label="Comprobar" disabled={!complete} onPress={check} style={styles.action} />
+        <SecondaryButton label="Reintentar" onPress={engine.reset} style={styles.action} />
+      </View>
+
+      {engine.checked ? (
+        <View
+          style={[
+            styles.feedback,
+            {
+              backgroundColor: colors.card,
+              borderColor: engine.isCorrect ? colors.success : colors.danger,
+              borderRadius: radius.control,
+            },
+          ]}>
+          <AppText color={engine.isCorrect ? colors.success : colors.danger} weight="700">
+            {engine.isCorrect ? '✓ Conceptos completados' : '↻ Revisa los espacios marcados'}
+          </AppText>
+          <AppText variant="small">
+            {engine.isCorrect
+              ? 'Las frases quedaron completas con los términos correctos.'
+              : 'Toca un espacio ocupado para devolver su palabra al banco.'}
+          </AppText>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  sentences: { gap: 14 },
+  sentence: { fontSize: 14, lineHeight: 26 },
+  blank: {
+    borderWidth: 1,
+    borderBottomWidth: 2,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 1,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  bankLabel: { marginTop: 18 },
+  bank: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 12, marginTop: 8 },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1 },
+  actions: { flexDirection: 'row', gap: 12 },
+  action: { flex: 1 },
+  feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
+});

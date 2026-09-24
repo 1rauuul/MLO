@@ -5,19 +5,24 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/AppText';
 import { PrimaryButton, SecondaryButton } from '@/components/Buttons';
 import { EmptyState } from '@/components/EmptyState';
+import { RichContent } from '@/components/RichContent';
 import { Screen } from '@/components/Screen';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useTheme } from '@/theme/theme-provider';
+import { useExercisesForLesson } from '@/viewmodels/useExerciseEngine';
 import { useLessonContent } from '@/viewmodels/useLessonContent';
 import { useModuleProgress } from '@/viewmodels/useModuleProgress';
+import { useEvaluationForLesson } from '@/viewmodels/useQuizEngine';
 
-const SECTION_LABELS = ['Concepto', 'En contexto', 'Síntesis'];
-const SECTION_PROGRESS = [32, 68, 100];
+const SECTION_LABELS = ['Concepto', 'Síntesis'];
+const LAST_SECTION = SECTION_LABELS.length - 1;
 
 export default function LessonDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const lessonId = id ?? null;
-  const { lesson, isLoading } = useLessonContent(lessonId);
+  const { lesson, examples, isLoading } = useLessonContent(lessonId);
+  const { exercises } = useExercisesForLesson(lessonId);
+  const { evaluation } = useEvaluationForLesson(lessonId);
   const { markCompleted } = useModuleProgress();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
@@ -39,9 +44,28 @@ export default function LessonDetailScreen() {
     );
   }
 
-  const goToExample = () => {
+  const firstExample = examples[0];
+  const firstExercise = exercises[0];
+
+  const finalLabel = firstExample
+    ? 'Ver ejemplo'
+    : firstExercise
+      ? 'Practicar'
+      : evaluation
+        ? 'Evaluación'
+        : 'Terminar';
+
+  const goNext = () => {
     void markCompleted(lesson.id);
-    router.push({ pathname: '/ejemplos', params: { lesson: lesson.id } });
+    if (firstExample) {
+      router.push({ pathname: '/ejemplos/[id]', params: { id: firstExample.id } });
+    } else if (firstExercise) {
+      router.push({ pathname: '/ejercicios/[id]', params: { id: firstExercise.id, lesson: lesson.id } });
+    } else if (evaluation) {
+      router.push({ pathname: '/evaluacion', params: { lesson: lesson.id } });
+    } else {
+      router.back();
+    }
   };
 
   return (
@@ -50,14 +74,14 @@ export default function LessonDetailScreen() {
         onBack={() => router.back()}
         eyebrow={lesson.eyebrow}
         title="Lecciones"
-        trailing={`${section + 1}/3`}
+        trailing={`${section + 1}/${SECTION_LABELS.length}`}
       />
 
       <View style={[styles.progressTrack, { backgroundColor: colors.soft }]}>
         <View
           style={[
             styles.progressValue,
-            { width: `${SECTION_PROGRESS[section]}%`, backgroundColor: colors.primary },
+            { width: `${((section + 1) / SECTION_LABELS.length) * 100}%`, backgroundColor: colors.primary },
           ]}
         />
       </View>
@@ -82,16 +106,14 @@ export default function LessonDetailScreen() {
           { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card },
         ]}>
         <AppText variant="eyebrow">{section === 0 ? lesson.eyebrow : lesson.title}</AppText>
-        <AppText variant="title">
-          {section === 0
-            ? lesson.title
-            : section === 1
-              ? lesson.contextTitle || 'En contexto'
-              : 'Síntesis'}
-        </AppText>
+        <AppText variant="title">{section === 0 ? lesson.title : 'Síntesis'}</AppText>
         {section === 0 && (
           <>
-            <AppText style={{ marginTop: spacing.sm }}>{lesson.body}</AppText>
+            {lesson.content.length > 0 ? (
+              <RichContent blocks={lesson.content} />
+            ) : (
+              <AppText style={{ marginTop: spacing.sm }}>{lesson.body}</AppText>
+            )}
             {lesson.codeSample ? (
               <View style={[styles.code, { backgroundColor: colors.code, borderRadius: radius.control }]}>
                 <AppText variant="code" color={colors.text}>
@@ -102,9 +124,6 @@ export default function LessonDetailScreen() {
           </>
         )}
         {section === 1 && (
-          <AppText style={{ marginTop: spacing.sm }}>{lesson.contextBody}</AppText>
-        )}
-        {section === 2 && (
           <View style={styles.list}>
             {lesson.synthesis.map(item => (
               <View key={item} style={styles.synthesisRow}>
@@ -126,8 +145,8 @@ export default function LessonDetailScreen() {
           style={styles.footerButton}
         />
         <PrimaryButton
-          label={section === 2 ? 'Ver ejemplo' : 'Continuar'}
-          onPress={section === 2 ? goToExample : () => setSection(Math.min(2, section + 1))}
+          label={section === LAST_SECTION ? finalLabel : 'Continuar'}
+          onPress={section === LAST_SECTION ? goNext : () => setSection(Math.min(LAST_SECTION, section + 1))}
           style={styles.footerButton}
         />
       </View>

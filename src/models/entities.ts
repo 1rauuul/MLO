@@ -4,7 +4,24 @@ export type Complexity = 'Fundamental' | 'Intermedio' | 'Avanzado';
 
 export type UnitColor = 'blue' | 'violet' | 'green';
 
-export type ExerciseType = 'order';
+export type ExerciseType = 'order' | 'fill' | 'match';
+
+export interface MatchPair {
+  left: string;
+  right: string;
+}
+
+export interface ExerciseConfig {
+  sentences?: string[];
+  pairs?: MatchPair[];
+}
+
+export type ContentBlock =
+  | { type: 'p'; text: string }
+  | { type: 'h'; text: string }
+  | { type: 'bullets'; items: string[] }
+  | { type: 'numbers'; items: string[] }
+  | { type: 'table'; header: string[]; rows: string[][] };
 
 export interface Unit {
   id: string;
@@ -12,7 +29,6 @@ export interface Unit {
   title: string;
   description: string;
   difficulty: Complexity;
-  duration: string;
   color: UnitColor;
 }
 
@@ -27,6 +43,7 @@ export interface Lesson {
   contextTitle: string;
   contextBody: string;
   synthesis: string[];
+  content: ContentBlock[];
   position: number;
 }
 
@@ -47,6 +64,7 @@ export interface Exercise {
   prompt: string;
   instructions: string;
   correctOrder: string[];
+  config: ExerciseConfig;
 }
 
 export interface ExerciseResult {
@@ -83,9 +101,16 @@ export interface EvaluationResult {
   createdAt: string;
 }
 
+export interface Account {
+  id: number;
+  username: string;
+  displayName: string;
+  createdAt: string;
+}
+
 export interface LearnerProfile {
   id: number;
-  learnerName: string;
+  accountId: number;
   learningStyle: LearningStyle;
   darkMode: boolean;
   largeText: boolean;

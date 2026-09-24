@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { selectRecentEvaluationResults } from '@/data/repositories/evaluationRepository';
 import type { EvaluationResult } from '@/models/entities';
 
+import { useAuth } from './useAuth';
+
 interface RecentResultsResult {
   results: EvaluationResult[];
   averageScore: number;
@@ -13,14 +15,15 @@ interface RecentResultsResult {
 
 export function useRecentResults(limit = 5): RecentResultsResult {
   const db = useSQLiteContext();
+  const { account } = useAuth();
   const [results, setResults] = useState<EvaluationResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const loaded = await selectRecentEvaluationResults(db, limit);
+    const loaded = account ? await selectRecentEvaluationResults(db, account.id, limit) : [];
     setResults(loaded);
     setIsLoading(false);
-  }, [db, limit]);
+  }, [db, account, limit]);
 
   useEffect(() => {
     void refresh();

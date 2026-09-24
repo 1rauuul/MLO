@@ -1,8 +1,8 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { DATABASE_VERSION, SCHEMA_DDL } from '@/models/schema';
+import { DATABASE_VERSION, DROP_ALL_DDL, SCHEMA_DDL } from '@/models/schema';
 
-import { seedDatabase } from './seed';
+import { applyContentMigration, applyUnit1Activities, seedDatabase } from './seed';
 
 export const DATABASE_NAME = 'mlo.db';
 
@@ -16,7 +16,20 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     return;
   }
 
-  await db.execAsync(SCHEMA_DDL);
-  await seedDatabase(db);
+  if (currentVersion < 2) {
+    await db.execAsync(DROP_ALL_DDL);
+    await db.execAsync(SCHEMA_DDL);
+    await seedDatabase(db);
+  } else {
+    if (currentVersion < 3) {
+      await db.execAsync(`ALTER TABLE lessons ADD COLUMN content TEXT NOT NULL DEFAULT '[]'`);
+      await applyContentMigration(db);
+    }
+    if (currentVersion < 4) {
+      await db.execAsync(`ALTER TABLE exercises ADD COLUMN config TEXT NOT NULL DEFAULT '{}'`);
+      await applyUnit1Activities(db);
+    }
+  }
+
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
 }

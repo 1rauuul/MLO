@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useTheme } from '@/theme/theme-provider';
@@ -39,7 +40,7 @@ export function PrimaryButton({ label, onPress, disabled, style, accessibilityLa
         style,
       ]}>
       <AppText weight="600" color={colors.onPrimary} style={{ fontSize: 15 * scale }}>
-        {label}  →
+        {label}
       </AppText>
     </Pressable>
   );
@@ -78,11 +79,13 @@ export function IconButton({
   onPress,
   accessibilityLabel,
   style,
+  children,
 }: {
-  glyph: string;
+  glyph?: string;
   onPress?: () => void;
   accessibilityLabel: string;
   style?: StyleProp<ViewStyle>;
+  children?: ReactNode;
 }) {
   const { colors, radius, scale } = useTheme();
   const reduced = useReducedMotion();
@@ -94,11 +97,11 @@ export function IconButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.iconButton,
-        { backgroundColor: colors.soft, borderRadius: radius.control },
+        { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control },
         pressStyle(pressed, reduced),
         style,
       ]}>
-      <AppText style={{ fontSize: 18 * scale, lineHeight: 20 * scale }}>{glyph}</AppText>
+      {children ?? <AppText style={{ fontSize: 18 * scale, lineHeight: 20 * scale }}>{glyph}</AppText>}
     </Pressable>
   );
 }
@@ -115,5 +118,6 @@ const styles = StyleSheet.create({
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
   },
 });

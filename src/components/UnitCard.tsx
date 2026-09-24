@@ -4,6 +4,7 @@ import type { Unit } from '@/models/entities';
 import { useTheme } from '@/theme/theme-provider';
 
 import { AppText } from './AppText';
+import { Chevron } from './Chevron';
 import { MetadataBadge } from './MetadataBadge';
 import { ProgressRing } from './ProgressRing';
 
@@ -12,35 +13,22 @@ interface UnitCardProps {
   subtopicCount: number;
   progress: number;
   expanded: boolean;
-  onOpen: () => void;
-  onToggleExpand: () => void;
+  onToggle: () => void;
 }
 
-export function UnitCard({
-  unit,
-  subtopicCount,
-  progress,
-  expanded,
-  onOpen,
-  onToggleExpand,
-}: UnitCardProps) {
-  const { colors, radius, spacing } = useTheme();
-  const accent =
-    unit.color === 'violet' ? '#8B7CFE' : unit.color === 'green' ? colors.success : colors.primary;
+export function UnitCard({ unit, subtopicCount, progress, expanded, onToggle }: UnitCardProps) {
+  const { colors, radius } = useTheme();
 
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card },
-      ]}>
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Abrir unidad ${unit.number}, ${unit.title}`}
-        onPress={onOpen}
+        accessibilityState={{ expanded }}
+        accessibilityLabel={`${expanded ? 'Ocultar' : 'Ver'} temas de la unidad ${unit.number}, ${unit.title}`}
+        onPress={onToggle}
         style={styles.main}>
-        <View style={[styles.icon, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
-          <AppText variant="code" color={accent} weight="700">
+        <View style={[styles.icon, { backgroundColor: colors.primary, borderRadius: radius.control }]}>
+          <AppText variant="code" color={colors.onPrimary} weight="700">
             {String(unit.number).padStart(2, '0')}
           </AppText>
         </View>
@@ -52,7 +40,6 @@ export function UnitCard({
           </AppText>
           <View style={styles.badges}>
             <MetadataBadge>{unit.difficulty}</MetadataBadge>
-            <MetadataBadge>{unit.duration}</MetadataBadge>
           </View>
         </View>
         <ProgressRing value={progress} />
@@ -62,73 +49,34 @@ export function UnitCard({
         accessibilityRole="button"
         accessibilityState={{ expanded }}
         accessibilityLabel={`${expanded ? 'Ocultar' : 'Ver'} temas de ${unit.title}`}
-        onPress={onToggleExpand}
+        onPress={onToggle}
         style={[styles.expand, { borderTopColor: colors.line }]}>
         <AppText variant="small" color={colors.text} weight="600">
-          {expanded ? 'Ocultar temas' : 'Ver temas'}
+          {expanded ? 'Ocultar temas' : `Ver ${subtopicCount} temas`}
         </AppText>
-        <AppText variant="small" color={colors.text}>
-          {expanded ? '↑' : '↓'}
-        </AppText>
+        <Chevron
+          direction={expanded ? 'up' : 'down'}
+          size={16}
+          color={colors.muted}
+          strokeWidth={2.2}
+        />
       </Pressable>
-
-      {expanded && (
-        <View
-          style={[
-            styles.detail,
-            { borderTopColor: colors.line, paddingHorizontal: spacing.lg },
-          ]}>
-          <AppText variant="small">
-            {`Objeto de aprendizaje · ${subtopicCount} subtemas`}
-          </AppText>
-          <Pressable accessibilityRole="button" accessibilityLabel="Explorar subtemas" onPress={onOpen}>
-            <AppText color={colors.primary} weight="600">
-              Explorar subtemas →
-            </AppText>
-          </Pressable>
-        </View>
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  main: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    padding: 16,
-  },
-  icon: {
-    width: 44,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  copy: {
-    flex: 1,
-    gap: 4,
-  },
-  badges: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 4,
-  },
+  card: { borderWidth: 1, overflow: 'hidden' },
+  main: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 16 },
+  icon: { width: 44, height: 40, alignItems: 'center', justifyContent: 'center' },
+  copy: { flex: 1, gap: 4 },
+  badges: { flexDirection: 'row', gap: 6, marginTop: 4 },
   expand: {
     minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    borderTopWidth: 1,
-  },
-  detail: {
-    paddingVertical: 14,
-    gap: 10,
     borderTopWidth: 1,
   },
 });

@@ -4,6 +4,7 @@ import { useTheme } from '@/theme/theme-provider';
 
 import { AppText } from './AppText';
 import { IconButton } from './Buttons';
+import { Chevron } from './Chevron';
 
 interface ScreenHeaderProps {
   onBack: () => void;
@@ -13,11 +14,13 @@ interface ScreenHeaderProps {
 }
 
 export function ScreenHeader({ onBack, eyebrow, title, trailing }: ScreenHeaderProps) {
-  const { spacing } = useTheme();
+  const { spacing, colors } = useTheme();
 
   return (
     <View style={[styles.header, { marginBottom: spacing.lg }]}>
-      <IconButton glyph="←" onPress={onBack} accessibilityLabel="Volver" />
+      <IconButton onPress={onBack} accessibilityLabel="Volver">
+        <Chevron direction="left" size={18} color={colors.text} strokeWidth={2.2} />
+      </IconButton>
       <View style={styles.copy}>
         <AppText variant="eyebrow">{eyebrow}</AppText>
         <AppText weight="700" style={styles.title}>

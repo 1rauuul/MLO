@@ -9,6 +9,7 @@ import {
 import type { Evaluation, Question } from '@/models/entities';
 
 import { computeScore, countCorrect } from './quizLogic';
+import { useAuth } from './useAuth';
 
 export interface QuizEngine {
   index: number;
@@ -134,10 +135,14 @@ export function useRecordEvaluationResult(): (
   totalCount: number,
 ) => Promise<void> {
   const db = useSQLiteContext();
+  const { account } = useAuth();
   return useCallback(
     async (evaluationId: string, score: number, correctCount: number, totalCount: number) => {
-      await insertEvaluationResult(db, evaluationId, score, correctCount, totalCount);
+      if (!account) {
+        return;
+      }
+      await insertEvaluationResult(db, account.id, evaluationId, score, correctCount, totalCount);
     },
-    [db],
+    [db, account],
   );
 }

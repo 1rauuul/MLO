@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Mapa visual de navegacion de MLO Ingenieria de Software">
+  <title>Mapa de navegación | MLO</title>
+  <style>
+    :root {
+      --ink: #102f45;
+      --muted: #647887;
+      --line: #8d9ba4;
+      --paper: #f4f6f7;
+      --white: #ffffff;
+      --root: #0a3c59;
+      --yellow: #f4aa1e;
+      --yellow-line: #d68f12;
+      --orange: #ea7223;
+      --teal: #35bcc8;
+      --blue: #0d8bc6;
+      --red: #d64a59;
+      --shadow: 0 24px 60px rgba(16, 47, 69, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-width: 320px; background: var(--paper); }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 0%, rgba(53, 188, 200, 0.13), transparent 30rem),
+        linear-gradient(135deg, #f8fafb 0%, var(--paper) 55%, #eef3f5 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .page {
+      width: min(1540px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 44px 0 56px;
+    }
+
+    .masthead {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 28px;
+      margin-bottom: 26px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 12px;
+      color: var(--teal);
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      width: 24px;
+      height: 3px;
+      border-radius: 99px;
+      background: var(--teal);
+      content: "";
+    }
+
+    h1 {
+      max-width: 720px;
+      margin: 0;
+      color: var(--root);
+      font-size: clamp(2.15rem, 4vw, 4.4rem);
+      line-height: 0.98;
+      letter-spacing: -0.06em;
+    }
+
+    .intro {
+      max-width: 620px;
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .meta {
+      display: grid;
+      gap: 8px;
+      min-width: 220px;
+      padding: 18px 20px;
+      border: 1px solid rgba(10, 60, 89, 0.1);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.66);
+      box-shadow: 0 12px 30px rgba(16, 47, 69, 0.06);
+    }
+
+    .meta strong { font-size: 0.95rem; }
+    .meta span { color: var(--muted); font-size: 0.8rem; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      margin: 0 0 18px;
+      padding: 0 2px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+    }
+
+    .legend-dot.root { background: var(--root); }
+    .legend-dot.public { background: var(--orange); }
+    .legend-dot.topic { background: var(--yellow); }
+    .legend-dot.resource { background: var(--teal); }
+    .legend-dot.quiz { background: var(--blue); }
+    .legend-dot.feedback { background: var(--red); }
+
+    .diagram-card {
+      overflow: hidden;
+      border: 1px solid rgba(10, 60, 89, 0.12);
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.8);
+      box-shadow: var(--shadow);
+    }
+
+    .card-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 22px;
+      border-bottom: 1px solid rgba(10, 60, 89, 0.1);
+      background: rgba(255, 255, 255, 0.68);
+    }
+
+    .card-bar p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .tools { display: flex; gap: 7px; }
+
+    .tool {
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(10, 60, 89, 0.14);
+      border-radius: 10px;
+      color: var(--root);
+      background: var(--white);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .tool:hover,
+    .tool:focus-visible {
+      border-color: var(--teal);
+      outline: 3px solid rgba(53, 188, 200, 0.2);
+      outline-offset: 1px;
+    }
+
+    .map-viewport {
+      overflow: auto;
+      padding: 20px;
+      background:
+        linear-gradient(rgba(10, 60, 89, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(10, 60, 89, 0.035) 1px, transparent 1px),
+        #fbfcfc;
+      background-size: 24px 24px;
+      overscroll-behavior: contain;
+    }
+
+    .map-stage {
+      width: 1440px;
+      min-height: 1120px;
+      transform-origin: top left;
+      transition: transform 180ms ease;
+    }
+
+    svg {
+      display: block;
+      width: 1440px;
+      height: 1120px;
+      overflow: visible;
+    }
+
+    .boundary {
+      fill: rgba(234, 230, 231, 0.45);
+      stroke: rgba(10, 60, 89, 0.15);
+      stroke-width: 2;
+      stroke-dasharray: 10 9;
+    }
+
+    .boundary-label {
+      fill: var(--muted);
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .edge {
+      fill: none;
+      stroke: var(--line);
+      stroke-width: 2.5;
+      marker-end: url(#arrow);
+    }
+
+    .edge.dashed { stroke-dasharray: 8 8; }
+
+    .edge-label {
+      fill: #617481;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .node {
+      cursor: default;
+      filter: drop-shadow(0 8px 8px rgba(16, 47, 69, 0.1));
+    }
+
+    .node rect {
+      stroke-width: 2;
+      transition: transform 150ms ease, filter 150ms ease;
+    }
+
+    .node:hover rect { filter: brightness(1.05); transform: translateY(-2px); }
+
+    .node-title {
+      fill: #fff;
+      font-size: 20px;
+      font-weight: 800;
+      text-anchor: middle;
+    }
+
+    .node-route {
+      fill: rgba(255, 255, 255, 0.88);
+      font-size: 15px;
+      font-weight: 600;
+      text-anchor: middle;
+    }
+
+    .node.small .node-title { font-size: 17px; }
+    .node.small .node-route { font-size: 13px; }
+
+    .node.root rect { fill: var(--root); stroke: var(--root); }
+    .node.public rect { fill: var(--orange); stroke: var(--orange); }
+    .node.topic rect { fill: var(--yellow); stroke: var(--yellow-line); }
+    .node.resource rect { fill: var(--teal); stroke: var(--teal); }
+    .node.quiz rect { fill: var(--blue); stroke: var(--blue); }
+    .node.feedback rect { fill: var(--red); stroke: var(--red); }
+
+    .footnote {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 16px 4px 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    .footnote strong { color: var(--ink); }
+
+    @media (max-width: 760px) {
+      .page { width: min(100% - 24px, 1540px); padding-top: 26px; }
+      .masthead { display: block; }
+      .meta { margin-top: 22px; }
+      .diagram-card { border-radius: 20px; }
+      .card-bar { align-items: flex-start; }
+      .footnote { display: block; }
+      .footnote span { display: block; margin-bottom: 6px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">MLO / Ingeniería de Software</p>
+        <h1>Mapa de navegación</h1>
+        <p class="intro">Flujo completo de acceso, aprendizaje y evaluación de la aplicación offline-first.</p>
+      </div>
+      <aside class="meta" aria-label="Información del mapa">
+        <strong>Arquitectura de pantallas</strong>
+        <span>Expo Router · sesión local · SQLite</span>
+        <span>Actualizado: septiembre de 2026</span>
+      </aside>
+    </header>
+
+    <div class="legend" aria-label="Leyenda de colores">
+      <span class="legend-item"><i class="legend-dot root"></i>Inicio y acceso</span>
+      <span class="legend-item"><i class="legend-dot public"></i>Zona pública</span>
+      <span class="legend-item"><i class="legend-dot topic"></i>Hub del tema</span>
+      <span class="legend-item"><i class="legend-dot resource"></i>Recursos</span>
+      <span class="legend-item"><i class="legend-dot quiz"></i>Evaluación</span>
+      <span class="legend-item"><i class="legend-dot feedback"></i>Resultado y acciones</span>
+    </div>
+
+    <section class="diagram-card" aria-labelledby="diagram-title">
+      <div class="card-bar">
+        <p id="diagram-title"><strong>Flujo de navegación</strong> · desplaza horizontalmente para explorar el diagrama completo</p>
+        <div class="tools" aria-label="Controles del diagrama">
+          <button class="tool" type="button" data-zoom="out" aria-label="Reducir escala">−</button>
+          <button class="tool" type="button" data-zoom="reset" aria-label="Restablecer escala">100%</button>
+          <button class="tool" type="button" data-zoom="in" aria-label="Aumentar escala">+</button>
+        </div>
+      </div>
+
+      <div class="map-viewport" id="mapViewport" tabindex="0" aria-label="Diagrama desplazable de navegación">
+        <div class="map-stage" id="mapStage">
+          <svg viewBox="0 0 1440 1120" role="img" aria-labelledby="svgTitle svgDescription">
+            <title id="svgTitle">Mapa de navegación de MLO</title>
+            <desc id="svgDescription">Diagrama desde el inicio de la app hacia autenticación, módulos, lecciones, ejemplos, ejercicios y evaluaciones.</desc>
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#8d9ba4"></path>
+              </marker>
+            </defs>
+
+            <rect class="boundary" x="520" y="126" width="880" height="930" rx="28"></rect>
+            <text class="boundary-label" x="556" y="164">Área protegida · cuenta activa</text>
+
+            <!-- Conexiones de acceso -->
+            <path class="edge" d="M 280 76 H 390"></path>
+            <path class="edge" d="M 515 126 V 188"></path>
+            <path class="edge" d="M 390 232 H 320 V 378"></path>
+            <path class="edge" d="M 630 90 H 690 V 232"></path>
+            <path class="edge" d="M 320 232 H 570 Q 610 232 650 232 H 690"></path>
+            <path class="edge" d="M 320 378 H 570 Q 610 378 650 232 H 690"></path>
+            <text class="edge-label" x="352" y="215">Crear cuenta</text>
+            <text class="edge-label" x="536" y="216">Entrar</text>
+            <text class="edge-label" x="454" y="366">Cuenta válida</text>
+
+            <!-- Conexiones del inicio protegido -->
+            <path class="edge" d="M 950 232 H 1010"></path>
+            <path class="edge" d="M 820 276 V 340"></path>
+            <path class="edge" d="M 950 232 H 1080 Q 1120 232 1170 300 V 340"></path>
+            <text class="edge-label" x="970" y="216">Tab evaluaciones</text>
+            <text class="edge-label" x="834" y="322">Continuar / tema</text>
+            <text class="edge-label" x="1088" y="266">Tab perfil</text>
+
+            <!-- Conexiones del tema -->
+            <path class="edge" d="M 820 428 V 472 H 725 V 520"></path>
+            <path class="edge" d="M 820 428 V 472 H 1015 V 520"></path>
+            <path class="edge" d="M 820 428 V 472 H 1280 V 520"></path>
+            <path class="edge" d="M 820 428 V 620 H 875 V 700"></path>
+            <text class="edge-label" x="678" y="494">Lecciones</text>
+            <text class="edge-label" x="971" y="494">Ejemplos</text>
+            <text class="edge-label" x="1224" y="494">Ejercicios</text>
+            <text class="edge-label" x="845" y="608">Evaluación</text>
+
+            <!-- Conexiones de recursos -->
+            <path class="edge" d="M 850 564 H 890"></path>
+            <path class="edge dashed" d="M 600 564 H 560 V 428 H 690"></path>
+            <path class="edge dashed" d="M 1015 608 V 646 H 820 V 428"></path>
+            <text class="edge-label" x="854" y="548">Ver ejemplo</text>
+            <text class="edge-label" x="563" y="548" text-anchor="end">Volver al tema</text>
+            <text class="edge-label" x="911" y="636">Volver al tema</text>
+
+            <!-- Conexiones de evaluación -->
+            <path class="edge" d="M 1120 276 V 646 H 1000 V 700"></path>
+            <path class="edge" d="M 1000 744 H 1050"></path>
+            <path class="edge dashed" d="M 1000 788 V 850 H 820 V 428"></path>
+            <path class="edge dashed" d="M 1250 744 V 820 H 1160 V 744"></path>
+            <path class="edge dashed" d="M 1170 384 H 1360 V 900 H 1220 V 232 H 1170"></path>
+            <text class="edge-label" x="1062" y="634">Seleccionar evaluación</text>
+            <text class="edge-label" x="1028" y="728">Finalizar quiz</text>
+            <text class="edge-label" x="832" y="838">Cerrar / ×</text>
+            <text class="edge-label" x="1196" y="812">Reintentar</text>
+            <text class="edge-label" x="1340" y="884" text-anchor="end">Cerrar sesión</text>
+            <text class="edge-label" x="1350" y="440" transform="rotate(90 1350 440)">Reiniciar progreso · confirmar</text>
+
+            <!-- Nodos de acceso -->
+            <g class="node root" aria-label="Inicio de la app">
+              <rect x="60" y="40" width="220" height="72" rx="16"></rect>
+              <text class="node-title" x="170" y="72">Inicio de la app</text>
+              <text class="node-route" x="170" y="96">/</text>
+            </g>
+            <g class="node root" aria-label="Comprobación de sesión">
+              <rect x="390" y="40" width="250" height="86" rx="16"></rect>
+              <text class="node-title" x="515" y="73">¿Sesión activa?</text>
+              <text class="node-route" x="515" y="101">auth_session local</text>
+            </g>
+            <g class="node public" aria-label="Pantalla de iniciar sesión">
+              <rect x="80" y="188" width="240" height="88" rx="16"></rect>
+              <text class="node-title" x="200" y="221">Iniciar sesión</text>
+              <text class="node-route" x="200" y="249">/login</text>
+            </g>
+            <g class="node public" aria-label="Pantalla de registro">
+              <rect x="80" y="334" width="240" height="88" rx="16"></rect>
+              <text class="node-title" x="200" y="367">Registro</text>
+              <text class="node-route" x="200" y="395">/register</text>
+            </g>
+
+            <!-- Nodos del area protegida -->
+            <g class="node root" aria-label="Inicio módulos">
+              <rect x="690" y="188" width="260" height="88" rx="16"></rect>
+              <text class="node-title" x="820" y="221">Inicio · Módulos</text>
+              <text class="node-route" x="820" y="249">/</text>
+            </g>
+            <g class="node public small" aria-label="Tab evaluaciones">
+              <rect x="1010" y="188" width="220" height="88" rx="16"></rect>
+              <text class="node-title" x="1120" y="221">Tab Evaluaciones</text>
+              <text class="node-route" x="1120" y="249">vista de evaluaciones</text>
+            </g>
+            <g class="node public small" aria-label="Tab perfil">
+              <rect x="1170" y="340" width="220" height="88" rx="16"></rect>
+              <text class="node-title" x="1280" y="373">Tab Perfil</text>
+              <text class="node-route" x="1280" y="401">vista de perfil</text>
+            </g>
+            <g class="node topic" aria-label="Hub del tema">
+              <rect x="690" y="340" width="260" height="88" rx="16"></rect>
+              <text class="node-title" x="820" y="373">Hub del tema</text>
+              <text class="node-route" x="820" y="401">/tema/[id]</text>
+            </g>
+            <g class="node resource" aria-label="Pantalla de lección">
+              <rect x="600" y="520" width="250" height="88" rx="16"></rect>
+              <text class="node-title" x="725" y="553">Lección</text>
+              <text class="node-route" x="725" y="581">/lecciones/[id]</text>
+            </g>
+            <g class="node resource" aria-label="Pantalla de ejemplo resuelto">
+              <rect x="890" y="520" width="250" height="88" rx="16"></rect>
+              <text class="node-title" x="1015" y="553">Ejemplo resuelto</text>
+              <text class="node-route" x="1015" y="581">/ejemplos/[id]</text>
+            </g>
+            <g class="node resource small" aria-label="Pantalla de ejercicio">
+              <rect x="1170" y="520" width="220" height="88" rx="16"></rect>
+              <text class="node-title" x="1280" y="553">Ejercicio</text>
+              <text class="node-route" x="1280" y="581">/ejercicios/[id]</text>
+            </g>
+            <g class="node quiz" aria-label="Pantalla de evaluación quiz">
+              <rect x="750" y="700" width="250" height="88" rx="16"></rect>
+              <text class="node-title" x="875" y="733">Evaluación / Quiz</text>
+              <text class="node-route" x="875" y="761">/evaluacion</text>
+            </g>
+            <g class="node feedback" aria-label="Modal de resultado de evaluación">
+              <rect x="1050" y="700" width="250" height="88" rx="16"></rect>
+              <text class="node-title" x="1175" y="733" font-size="17">Resultado de evaluación</text>
+              <text class="node-route" x="1175" y="761">modal de feedback</text>
+            </g>
+
+            <g aria-label="Nota sobre ejercicio">
+              <rect x="1170" y="640" width="220" height="42" rx="12" fill="#ffffff" stroke="#d8e0e4"></rect>
+              <text x="1280" y="666" text-anchor="middle" fill="#647887" font-size="13" font-weight="700">Feedback inmediato · persiste resultado</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <div class="footnote">
+      <span><strong>Regla:</strong> las pantallas de aprendizaje requieren una cuenta local activa.</span>
+      <span><strong>Lectura:</strong> líneas continuas avanzan; líneas discontinuas regresan o ejecutan una acción.</span>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      const stage = document.getElementById('mapStage');
+      const viewport = document.getElementById('mapViewport');
+      const controls = document.querySelectorAll('[data-zoom]');
+      let scale = 1;
+
+      const applyScale = () => {
+        stage.style.transform = `scale(${scale})`;
+        stage.style.height = `${1120 * scale}px`;
+        stage.style.width = `${1440 * scale}px`;
+      };
+
+      controls.forEach((control) => {
+        control.addEventListener('click', () => {
+          const action = control.dataset.zoom;
+          if (action === 'in') scale = Math.min(1.35, +(scale + 0.1).toFixed(2));
+          if (action === 'out') scale = Math.max(0.7, +(scale - 0.1).toFixed(2));
+          if (action === 'reset') scale = 1;
+          applyScale();
+          viewport.focus({ preventScroll: true });
+        });
+      });
+
+      applyScale();
+    })();
+  </script>
+</body>
+</html>

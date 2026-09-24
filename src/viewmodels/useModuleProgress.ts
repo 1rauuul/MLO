@@ -7,6 +7,8 @@ import {
   selectProgressMap,
 } from '@/data/repositories/progressRepository';
 
+import { useAuth } from './useAuth';
+
 interface ModuleProgressResult {
   progressMap: Record<string, boolean>;
   completed: number;
@@ -17,19 +19,25 @@ interface ModuleProgressResult {
 
 export function useModuleProgress(unitId?: string): ModuleProgressResult {
   const db = useSQLiteContext();
+  const { account } = useAuth();
   const [progressMap, setProgressMap] = useState<Record<string, boolean>>({});
   const [completed, setCompleted] = useState(0);
   const [total, setTotal] = useState(0);
 
   const refresh = useCallback(async () => {
-    const map = await selectProgressMap(db);
-    setProgressMap(map);
+    if (!account) {
+      setProgressMap({});
+      setCompleted(0);
+      setTotal(0);
+      return;
+    }
+    setProgressMap(await selectProgressMap(db, account.id));
     if (unitId) {
-      const stats = await countCompletedByUnit(db, unitId);
+      const stats = await countCompletedByUnit(db, account.id, unitId);
       setCompleted(stats.completed);
       setTotal(stats.total);
     }
-  }, [db, unitId]);
+  }, [db, account, unitId]);
 
   useEffect(() => {
     void refresh();
@@ -37,10 +45,13 @@ export function useModuleProgress(unitId?: string): ModuleProgressResult {
 
   const markCompleted = useCallback(
     async (lessonId: string) => {
-      await markLessonCompleted(db, lessonId);
+      if (!account) {
+        return;
+      }
+      await markLessonCompleted(db, account.id, lessonId);
       await refresh();
     },
-    [db, refresh],
+    [db, account, refresh],
   );
 
   return { progressMap, completed, total, markCompleted, refresh };
