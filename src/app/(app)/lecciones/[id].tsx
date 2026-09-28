@@ -50,7 +50,7 @@ export default function LessonDetailScreen() {
   const finalLabel = firstExample
     ? 'Ver ejemplo'
     : firstExercise
-      ? 'Practicar'
+      ? 'Ejercicios'
       : evaluation
         ? 'Evaluación'
         : 'Terminar';
@@ -60,7 +60,7 @@ export default function LessonDetailScreen() {
     if (firstExample) {
       router.push({ pathname: '/ejemplos/[id]', params: { id: firstExample.id } });
     } else if (firstExercise) {
-      router.push({ pathname: '/ejercicios/[id]', params: { id: firstExercise.id, lesson: lesson.id } });
+      router.push({ pathname: '/ejercicios', params: { lesson: lesson.id } });
     } else if (evaluation) {
       router.push({ pathname: '/evaluacion', params: { lesson: lesson.id } });
     } else {
@@ -112,15 +112,8 @@ export default function LessonDetailScreen() {
             {lesson.content.length > 0 ? (
               <RichContent blocks={lesson.content} />
             ) : (
-              <AppText style={{ marginTop: spacing.sm }}>{lesson.body}</AppText>
+              <AppText style={{ marginTop: spacing.sm, textAlign: 'justify' }}>{lesson.body}</AppText>
             )}
-            {lesson.codeSample ? (
-              <View style={[styles.code, { backgroundColor: colors.code, borderRadius: radius.control }]}>
-                <AppText variant="code" color={colors.text}>
-                  {lesson.codeSample}
-                </AppText>
-              </View>
-            ) : null}
           </>
         )}
         {section === 1 && (

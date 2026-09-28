@@ -60,32 +60,25 @@ export default function TopicHubScreen() {
   ];
 
   if (examples.length > 0) {
-    examples.forEach(example => {
-      actions.push({
-        key: `ex-${example.id}`,
-        icon: '⇄',
-        label: 'Ejemplos',
-        note: example.title,
-        accent: colors.success,
-        onPress: () => router.push({ pathname: '/ejemplos/[id]', params: { id: example.id } }),
-      });
+    actions.push({
+      key: 'examples',
+      icon: '⇄',
+      label: 'Ejemplos',
+      note: 'Demostración + ejercicios',
+      accent: colors.success,
+      onPress: () =>
+        router.push({ pathname: '/ejemplos/[id]', params: { id: examples[0]!.id } }),
     });
   }
 
   if (exercises.length > 0) {
-    exercises.forEach((exercise, index) => {
-      actions.push({
-        key: `ej-${exercise.id}`,
-        icon: '◫',
-        label: `Ejercicio ${String(index + 1).padStart(2, '0')}`,
-        note: exercise.prompt,
-        accent: colors.warning,
-        onPress: () =>
-          router.push({
-            pathname: '/ejercicios/[id]',
-            params: { id: exercise.id, lesson: lesson.id },
-          }),
-      });
+    actions.push({
+      key: 'exercises',
+      icon: '◫',
+      label: 'Ejercicios',
+      note: 'Resuelve el banco de ejercicios',
+      accent: colors.warning,
+      onPress: () => router.push({ pathname: '/ejercicios', params: { lesson: lesson.id } }),
     });
   }
 

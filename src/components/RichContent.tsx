@@ -77,12 +77,12 @@ export function RichContent({ blocks }: { blocks: ContentBlock[] }) {
 const styles = StyleSheet.create({
   root: {},
   flex: { flex: 1 },
-  paragraph: { fontSize: 14, lineHeight: 21 },
+  paragraph: { fontSize: 14, lineHeight: 21, textAlign: 'justify' },
   heading: { marginTop: 4 },
   list: { gap: 10 },
   listRow: { flexDirection: 'row', gap: 10 },
   listMark: { width: 20 },
   table: { borderWidth: 1, overflow: 'hidden' },
   tableRow: { flexDirection: 'row', gap: 10, padding: 12, borderTopWidth: 1 },
-  cell: { flex: 1, lineHeight: 18 },
+  cell: { flex: 1, lineHeight: 18, textAlign: 'justify' },
 });

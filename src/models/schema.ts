@@ -1,4 +1,4 @@
-export const DATABASE_VERSION = 4;
+export const DATABASE_VERSION = 7;
 
 export const SCHEMA_DDL = `
 CREATE TABLE IF NOT EXISTS accounts (
@@ -42,11 +42,13 @@ CREATE TABLE IF NOT EXISTS lessons (
 CREATE TABLE IF NOT EXISTS examples (
   id TEXT PRIMARY KEY NOT NULL,
   lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
-  complexity TEXT NOT NULL,
+  type TEXT NOT NULL,
   title TEXT NOT NULL,
-  scenario TEXT NOT NULL,
-  before_state TEXT NOT NULL,
-  after_state TEXT NOT NULL
+  prompt TEXT NOT NULL,
+  config TEXT NOT NULL DEFAULT '{}',
+  steps TEXT NOT NULL DEFAULT '[]',
+  hints TEXT NOT NULL DEFAULT '[]',
+  explanation TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS exercises (
@@ -56,7 +58,8 @@ CREATE TABLE IF NOT EXISTS exercises (
   prompt TEXT NOT NULL,
   instructions TEXT NOT NULL,
   correct_order TEXT NOT NULL DEFAULT '[]',
-  config TEXT NOT NULL DEFAULT '{}'
+  config TEXT NOT NULL DEFAULT '{}',
+  explanation TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS results (
@@ -79,10 +82,23 @@ CREATE TABLE IF NOT EXISTS questions (
   id TEXT PRIMARY KEY NOT NULL,
   evaluation_id TEXT NOT NULL REFERENCES evaluations(id) ON DELETE CASCADE,
   order_index INTEGER NOT NULL DEFAULT 0,
+  type TEXT NOT NULL DEFAULT 'mcq',
+  config TEXT NOT NULL DEFAULT '{}',
   prompt TEXT NOT NULL,
   options TEXT NOT NULL DEFAULT '[]',
   answer INTEGER NOT NULL,
   explanation TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS attempts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  source TEXT NOT NULL,
+  item_id TEXT NOT NULL,
+  item_type TEXT NOT NULL,
+  lesson_id TEXT NOT NULL,
+  correct INTEGER NOT NULL,
+  created_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS evaluation_results (
@@ -119,9 +135,12 @@ CREATE INDEX IF NOT EXISTS idx_questions_evaluation ON questions(evaluation_id);
 CREATE INDEX IF NOT EXISTS idx_progress_account ON module_progress(account_id);
 CREATE INDEX IF NOT EXISTS idx_results_account ON results(account_id);
 CREATE INDEX IF NOT EXISTS idx_eval_results_account ON evaluation_results(account_id);
+CREATE INDEX IF NOT EXISTS idx_attempts_account_lesson ON attempts(account_id, lesson_id);
+CREATE INDEX IF NOT EXISTS idx_attempts_account_type ON attempts(account_id, item_type);
 `;
 
 export const DROP_ALL_DDL = `
+DROP TABLE IF EXISTS attempts;
 DROP TABLE IF EXISTS auth_session;
 DROP TABLE IF EXISTS evaluation_results;
 DROP TABLE IF EXISTS results;

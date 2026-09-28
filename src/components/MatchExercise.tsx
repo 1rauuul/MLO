@@ -9,9 +9,10 @@ import { PrimaryButton, SecondaryButton } from './Buttons';
 interface MatchExerciseProps {
   engine: MatchEngine;
   onSubmit: (answer: string, correct: boolean) => void;
+  showReset?: boolean;
 }
 
-export function MatchExercise({ engine, onSubmit }: MatchExerciseProps) {
+export function MatchExercise({ engine, onSubmit, showReset = true }: MatchExerciseProps) {
   const { colors, radius, spacing } = useTheme();
   const complete = engine.assignment.every(item => item !== null);
 
@@ -106,7 +107,7 @@ export function MatchExercise({ engine, onSubmit }: MatchExerciseProps) {
 
       <View style={[styles.actions, { marginTop: spacing.lg }]}>
         <PrimaryButton label="Comprobar" disabled={!complete} onPress={check} style={styles.action} />
-        <SecondaryButton label="Reintentar" onPress={engine.reset} style={styles.action} />
+        {showReset ? <SecondaryButton label="Reintentar" onPress={engine.reset} style={styles.action} /> : null}
       </View>
 
       {engine.checked ? (

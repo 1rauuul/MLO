@@ -36,6 +36,26 @@
 - **Esquema v4** con migración aditiva v3→v4 (`ALTER TABLE exercises ADD COLUMN config` +
   `applyUnit1Activities`), preservando cuentas y resultados existentes.
 
+**Agente de aprendizaje por tema (Unidad 1) — sesión actual**
+
+- **Flujo ①→④**: Lección (texto justificado) → Ejemplo guiado A/B → Práctica → Evaluación.
+- **Ejemplos A/B** por tema (1.2–1.4): A demuestra paso a paso con el porqué; B permite
+  intentar con pistas y ver la solución completa.
+- **Práctica**: ≥6 ejercicios por tema en orden mezclado, una pasada y sin reintento;
+  al fallar se muestra la solución completa y el porqué.
+- **Evaluación interactiva**: ≥15 reactivos por tema que mezclan `mcq`, `order`, `fill`,
+  `match`, `crossword` y `justify`; resultado con score global, por tipo y recomendación.
+- **Ejemplo A** se presenta como tabla concepto/descripción con texto justificado; las tablas
+  y los párrafos usan alineación justificada.
+- **Tipo nuevo**: crucigrama (rejilla predefinida); lógica pura en `exerciseLogic` y motores en
+  `useExerciseEngine`. (El tipo “justificar” se retiró por decisión de alcance.)
+- Cada tema tiene **≥6 ejercicios distintos** (sin repetir) y la práctica no ofrece repetición.
+- **Analítica**: tabla `attempts`, `analyticsLogic` (resumen por tipo, tipos débiles y
+  recomendación de repasar lección o practicar), testeada con TDD.
+- **1.1** queda como solo lectura (se retiran su ejercicio y evaluación).
+- **Esquema v5** con migración aditiva v4→v5 y re-siembra del contenido de Unidad 1
+  (sin borrar cuentas).
+
 **Verificación (evidencia)**
 
 | Comprobación | Comando | Resultado |

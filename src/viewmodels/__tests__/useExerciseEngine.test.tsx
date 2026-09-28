@@ -16,6 +16,7 @@ const exercise: Exercise = {
   instructions: 'Usa las flechas',
   correctOrder: ['a', 'b', 'c', 'd'],
   config: {},
+  explanation: '',
 };
 
 describe('useExerciseEngine', () => {

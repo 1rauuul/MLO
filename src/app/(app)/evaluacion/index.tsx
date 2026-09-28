@@ -1,45 +1,117 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { ActivityView } from '@/components/activities/ActivityView';
 import { AppText } from '@/components/AppText';
-import { IconButton, PrimaryButton } from '@/components/Buttons';
+import { PrimaryButton, SecondaryButton } from '@/components/Buttons';
 import { EmptyState } from '@/components/EmptyState';
 import { QuizOption, type QuizOptionResult } from '@/components/QuizOption';
-import { ResultModal } from '@/components/ResultModal';
 import { Screen } from '@/components/Screen';
+import { ScreenHeader } from '@/components/ScreenHeader';
+import type { ActivityType, Exercise, ExerciseType, Question } from '@/models/entities';
 import { useTheme } from '@/theme/theme-provider';
-import { useAuth } from '@/viewmodels/useAuth';
+import { recommendReview } from '@/viewmodels/analyticsLogic';
 import { useModuleProgress } from '@/viewmodels/useModuleProgress';
 import {
+  useEvaluationEngine,
   useEvaluationForLesson,
-  useQuizEngine,
   useRecordEvaluationResult,
 } from '@/viewmodels/useQuizEngine';
+
+const TYPE_LABELS: Record<ActivityType, string> = {
+  order: 'Ordena',
+  fill: 'Completa',
+  match: 'Enlaza',
+  crossword: 'Crucigrama',
+  mcq: 'Opción múltiple',
+};
+
+function asExercise(question: Question, lessonId: string): Exercise {
+  return {
+    id: question.id,
+    lessonId,
+    type: question.type as ExerciseType,
+    prompt: question.prompt,
+    instructions: '',
+    correctOrder: question.type === 'order' ? question.options : [],
+    config: question.config,
+    explanation: question.explanation,
+  };
+}
+
+function McqQuestion({
+  question,
+  answered,
+  onAnswer,
+}: {
+  question: Question;
+  answered: boolean;
+  onAnswer: (correct: boolean) => void;
+}) {
+  const { spacing } = useTheme();
+  const [chosen, setChosen] = useState<number | null>(null);
+
+  const resultFor = (index: number): QuizOptionResult | undefined => {
+    if (!answered) {
+      return undefined;
+    }
+    if (index === question.answer) {
+      return 'correct';
+    }
+    return index === chosen ? 'wrong' : undefined;
+  };
+
+  return (
+    <View style={{ gap: spacing.md }}>
+      {question.options.map((option, index) => (
+        <QuizOption
+          key={option}
+          index={index}
+          label={option}
+          selected={chosen === index}
+          result={resultFor(index)}
+          onPress={() => {
+            if (!answered) {
+              setChosen(index);
+            }
+          }}
+        />
+      ))}
+      {!answered ? (
+        <PrimaryButton
+          label="Comprobar"
+          disabled={chosen === null}
+          onPress={() => onAnswer(chosen === question.answer)}
+        />
+      ) : null}
+    </View>
+  );
+}
 
 export default function EvaluationScreen() {
   const { lesson: lessonParam } = useLocalSearchParams<{ lesson?: string }>();
   const { evaluation, questions, isLoading } = useEvaluationForLesson(lessonParam ?? null);
-  const quiz = useQuizEngine(questions);
+  const engine = useEvaluationEngine(questions, lessonParam ?? null);
   const record = useRecordEvaluationResult();
   const { markCompleted } = useModuleProgress();
-  const { account } = useAuth();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
   const recordedRef = useRef(false);
 
   useEffect(() => {
-    if (!quiz.finished || !evaluation || recordedRef.current) {
+    if (engine.phase !== 'summary' || !evaluation || recordedRef.current) {
       return;
     }
     recordedRef.current = true;
-    void record(evaluation.id, quiz.score, quiz.correctCount, quiz.total);
+    const percent = engine.total === 0 ? 0 : Math.round((engine.correctCount / engine.total) * 100);
+    void record(evaluation.id, percent, engine.correctCount, engine.total);
     if (lessonParam) {
       void markCompleted(lessonParam);
     }
-  }, [quiz.finished, evaluation, quiz.score, quiz.correctCount, quiz.total, record, markCompleted, lessonParam]);
+  }, [engine.phase, engine.correctCount, engine.total, evaluation, record, markCompleted, lessonParam]);
 
-  if (!isLoading && !evaluation) {
+  if (!isLoading && (!evaluation || engine.total === 0)) {
     return (
       <Screen>
         <EmptyState
@@ -50,7 +122,7 @@ export default function EvaluationScreen() {
     );
   }
 
-  if (!evaluation || !quiz.question) {
+  if (!evaluation) {
     return (
       <Screen>
         <EmptyState title="Cargando" message="Preparando la evaluación." />
@@ -58,113 +130,161 @@ export default function EvaluationScreen() {
     );
   }
 
-  const resultFor = (index: number): QuizOptionResult | undefined => {
-    if (quiz.chosen === null) {
-      return undefined;
-    }
-    if (index === quiz.question?.answer) {
-      return 'correct';
-    }
-    return index === quiz.chosen ? 'wrong' : undefined;
-  };
+  if (engine.phase === 'summary') {
+    const percent = engine.total === 0 ? 0 : Math.round((engine.correctCount / engine.total) * 100);
+    const recommendation = recommendReview(engine.summary);
+    return (
+      <Screen>
+        <ScreenHeader onBack={() => router.back()} eyebrow="Evaluación" title="Resultado" />
+        <View
+          style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
+          <AppText variant="eyebrow">Score final</AppText>
+          <AppText variant="title">{`${percent}%`}</AppText>
+          <AppText variant="small">{`${engine.correctCount} de ${engine.total} reactivos correctos`}</AppText>
+        </View>
 
-  const isLast = quiz.index === quiz.total - 1;
+        <AppText variant="eyebrow" style={{ marginTop: spacing.lg }}>
+          Score por tipo
+        </AppText>
+        <View style={styles.list}>
+          {Object.entries(engine.summary.byType)
+            .filter(([type]) => type !== 'mcq')
+            .map(([type, bucket]) => (
+              <View
+                key={type}
+                style={[styles.row, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control }]}>
+                <AppText weight="600" style={styles.flex}>
+                  {TYPE_LABELS[type as ActivityType] ?? type}
+                </AppText>
+                <AppText color={bucket.correct === bucket.total ? colors.success : colors.danger} weight="700">
+                  {`${bucket.correct}/${bucket.total}`}
+                </AppText>
+              </View>
+            ))}
+        </View>
+
+        {recommendation !== 'none' ? (
+          <View
+            style={[styles.feedback, { borderColor: colors.warning, backgroundColor: colors.card, borderRadius: radius.control }]}>
+            <AppText color={colors.warning} weight="700">
+              {recommendation === 'lesson' ? 'Recomendación: repasa la lección' : 'Recomendación: resuelve más ejercicios'}
+            </AppText>
+            <AppText variant="small">
+              {recommendation === 'lesson'
+                ? 'Los errores sugieren repasar el contenido del tema.'
+                : 'Hay tipos de ejercicio con varios errores; resuélvelos en los ejercicios.'}
+            </AppText>
+          </View>
+        ) : (
+          <View
+            style={[styles.feedback, { borderColor: colors.success, backgroundColor: colors.card, borderRadius: radius.control }]}>
+            <AppText color={colors.success} weight="700">
+              ¡Buen resultado!
+            </AppText>
+            <AppText variant="small">Puedes continuar con el siguiente tema.</AppText>
+          </View>
+        )}
+
+        <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
+          {recommendation === 'lesson' && lessonParam ? (
+            <PrimaryButton
+              label="Repasar la lección"
+              onPress={() => router.push({ pathname: '/lecciones/[id]', params: { id: lessonParam } })}
+            />
+          ) : lessonParam ? (
+            <PrimaryButton
+              label="Resolver ejercicios"
+              onPress={() => router.push({ pathname: '/ejercicios', params: { lesson: lessonParam } })}
+            />
+          ) : null}
+          <SecondaryButton label="Volver al tema" onPress={() => router.back()} />
+        </View>
+      </Screen>
+    );
+  }
+
+  const question = engine.question;
+  if (!question) {
+    return null;
+  }
+
+  const isLast = engine.index >= engine.total - 1;
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <IconButton
-          glyph="×"
-          accessibilityLabel="Cerrar evaluación"
-          onPress={() => router.back()}
-        />
-        <View style={styles.flex}>
-          <AppText variant="eyebrow">Comprobación de aprendizaje</AppText>
-          <AppText weight="700" style={styles.headerTitle}>
-            Evaluación
-          </AppText>
-        </View>
-        <AppText variant="code">{`${quiz.index + 1}/${quiz.total}`}</AppText>
-      </View>
+      <ScreenHeader
+        onBack={() => router.back()}
+        eyebrow={`Reactivo ${String(engine.index + 1).padStart(2, '0')} · ${TYPE_LABELS[question.type] ?? question.type}`}
+        title="Evaluación"
+        trailing={`${engine.index + 1}/${engine.total}`}
+      />
 
       <View style={[styles.progressTrack, { backgroundColor: colors.soft }]}>
         <View
           style={[
             styles.progressValue,
-            {
-              width: `${((quiz.index + 1) / quiz.total) * 100}%`,
-              backgroundColor: colors.primary,
-            },
+            { width: `${((engine.index + 1) / engine.total) * 100}%`, backgroundColor: colors.primary },
           ]}
         />
       </View>
 
-      <AppText variant="eyebrow">{`Pregunta ${String(quiz.index + 1).padStart(2, '0')}`}</AppText>
       <AppText variant="heading" style={styles.prompt}>
-        {quiz.question.prompt}
+        {question.prompt}
       </AppText>
 
-      <View style={[styles.options, { marginTop: spacing.lg }]}>
-        {quiz.question.options.map((option, index) => (
-          <QuizOption
-            key={option}
-            index={index}
-            label={option}
-            selected={quiz.chosen === index}
-            result={resultFor(index)}
-            onPress={() => quiz.choose(index)}
+      <View style={{ marginTop: spacing.lg }}>
+        {question.type === 'mcq' ? (
+          <McqQuestion
+            key={question.id}
+            question={question}
+            answered={engine.answered}
+            onAnswer={correct => engine.submit('', correct)}
           />
-        ))}
+        ) : (
+          <ActivityView
+            key={question.id}
+            exercise={asExercise(question, lessonParam ?? '')}
+            allowReset={false}
+            onSubmit={(answer, correct) => engine.submit(answer, correct)}
+          />
+        )}
       </View>
 
-      {quiz.chosen !== null ? (
+      {engine.answered ? (
         <View
           style={[
             styles.feedback,
-            { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control },
+            {
+              borderColor: engine.lastCorrect ? colors.success : colors.danger,
+              backgroundColor: colors.card,
+              borderRadius: radius.control,
+            },
           ]}>
-          <AppText
-            weight="700"
-            color={quiz.chosen === quiz.question.answer ? colors.success : colors.danger}>
-            {quiz.chosen === quiz.question.answer ? '✓ Respuesta correcta' : '! Aún no'}
+          <AppText color={engine.lastCorrect ? colors.success : colors.danger} weight="700">
+            {engine.lastCorrect ? '✓ Respuesta correcta' : '✗ Respuesta incorrecta'}
           </AppText>
-          <AppText variant="small">{quiz.question.explanation}</AppText>
+          <AppText variant="small">{question.explanation}</AppText>
         </View>
       ) : null}
 
-      <PrimaryButton
-        label={isLast ? 'Ver resultado' : 'Siguiente pregunta'}
-        disabled={quiz.chosen === null}
-        onPress={quiz.next}
-        style={{ marginTop: spacing.lg }}
-      />
-
-      <ResultModal
-        visible={quiz.finished}
-        learnerName={account?.displayName ?? 'Estudiante'}
-        score={quiz.score}
-        onClose={() => router.back()}
-        onRetry={() => {
-          recordedRef.current = false;
-          quiz.restart();
-        }}
-      />
+      {engine.answered ? (
+        <PrimaryButton
+          label={isLast ? 'Ver resultado' : 'Siguiente reactivo'}
+          onPress={engine.next}
+          style={{ marginTop: spacing.lg }}
+        />
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 14,
-  },
-  headerTitle: { fontSize: 15 },
   progressTrack: { height: 4, borderRadius: 99, overflow: 'hidden', marginBottom: 20 },
   progressValue: { height: '100%' },
   prompt: { marginTop: 8 },
-  options: { gap: 10 },
+  list: { gap: 10 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderWidth: 1 },
+  card: { borderWidth: 1, padding: 18, gap: 4 },
   feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
 });

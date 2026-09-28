@@ -1,6 +1,12 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import type { Evaluation, EvaluationResult, Question } from '@/models/entities';
+import type {
+  ActivityType,
+  Evaluation,
+  EvaluationResult,
+  ExerciseConfig,
+  Question,
+} from '@/models/entities';
 
 interface EvaluationRow {
   id: string;
@@ -13,6 +19,8 @@ interface QuestionRow {
   id: string;
   evaluation_id: string;
   order_index: number;
+  type: ActivityType;
+  config: string;
   prompt: string;
   options: string;
   answer: number;
@@ -47,10 +55,21 @@ function mapQuestion(row: QuestionRow): Question {
   } catch {
     options = [];
   }
+  let config: ExerciseConfig = {};
+  try {
+    const parsedConfig: unknown = JSON.parse(row.config ?? '{}');
+    if (parsedConfig && typeof parsedConfig === 'object') {
+      config = parsedConfig as ExerciseConfig;
+    }
+  } catch {
+    config = {};
+  }
   return {
     id: row.id,
     evaluationId: row.evaluation_id,
     orderIndex: row.order_index,
+    type: row.type ?? 'mcq',
+    config,
     prompt: row.prompt,
     options,
     answer: row.answer,

@@ -10,9 +10,10 @@ import { PrimaryButton, SecondaryButton } from './Buttons';
 interface FillExerciseProps {
   engine: FillEngine;
   onSubmit: (answer: string, correct: boolean) => void;
+  showReset?: boolean;
 }
 
-export function FillExercise({ engine, onSubmit }: FillExerciseProps) {
+export function FillExercise({ engine, onSubmit, showReset = true }: FillExerciseProps) {
   const { colors, radius, spacing } = useTheme();
   const complete = engine.assignment.every(item => item !== null);
 
@@ -97,7 +98,7 @@ export function FillExercise({ engine, onSubmit }: FillExerciseProps) {
 
       <View style={[styles.actions, { marginTop: spacing.lg }]}>
         <PrimaryButton label="Comprobar" disabled={!complete} onPress={check} style={styles.action} />
-        <SecondaryButton label="Reintentar" onPress={engine.reset} style={styles.action} />
+        {showReset ? <SecondaryButton label="Reintentar" onPress={engine.reset} style={styles.action} /> : null}
       </View>
 
       {engine.checked ? (

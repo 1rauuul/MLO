@@ -1,4 +1,4 @@
-import type { MatchPair } from '@/models/entities';
+import type { ExerciseConfig, MatchPair } from '@/models/entities';
 
 export function isOrderCorrect(steps: string[], correctOrder: string[]): boolean {
   return (
@@ -15,6 +15,16 @@ export function moveItem(items: string[], index: number, direction: -1 | 1): str
   const current = next[index];
   next[index] = next[target];
   next[target] = current;
+  return next;
+}
+
+export function reorderItem<T>(items: T[], from: number, to: number): T[] {
+  if (from === to || from < 0 || from >= items.length || to < 0 || to >= items.length) {
+    return items;
+  }
+  const next = [...items];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved!);
   return next;
 }
 
@@ -106,4 +116,48 @@ export function isMatchCorrect(
     const rightPosition = assignment[index];
     return rightPosition !== null && shuffledRights[rightPosition] === pair.right;
   });
+}
+
+export interface CrosswordCell {
+  row: number;
+  col: number;
+  entryIndexes: number[];
+  solution: string;
+}
+
+export function crosswordCells(config: ExerciseConfig): CrosswordCell[] {
+  const crossword = config.crossword;
+  if (!crossword) {
+    return [];
+  }
+  const cells = new Map<string, CrosswordCell>();
+  crossword.entries.forEach((entry, entryIndex) => {
+    const stepRow = entry.direction === 'down' ? 1 : 0;
+    const stepCol = entry.direction === 'across' ? 1 : 0;
+    for (let offset = 0; offset < entry.word.length; offset += 1) {
+      const row = entry.row + stepRow * offset;
+      const col = entry.col + stepCol * offset;
+      const key = `${row}-${col}`;
+      const existing = cells.get(key);
+      if (existing) {
+        existing.entryIndexes.push(entryIndex);
+      } else {
+        cells.set(key, {
+          row,
+          col,
+          entryIndexes: [entryIndex],
+          solution: entry.word[offset]!.toUpperCase(),
+        });
+      }
+    }
+  });
+  return [...cells.values()];
+}
+
+export function isCrosswordCorrect(config: ExerciseConfig, letters: Record<string, string>): boolean {
+  const cells = crosswordCells(config);
+  return (
+    cells.length > 0 &&
+    cells.every(cell => (letters[`${cell.row}-${cell.col}`] ?? '').toUpperCase() === cell.solution)
+  );
 }

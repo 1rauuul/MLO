@@ -10,6 +10,7 @@ interface ExerciseRow {
   instructions: string;
   correct_order: string;
   config: string;
+  explanation: string;
 }
 
 function mapExercise(row: ExerciseRow): Exercise {
@@ -39,6 +40,7 @@ function mapExercise(row: ExerciseRow): Exercise {
     instructions: row.instructions,
     correctOrder,
     config,
+    explanation: row.explanation ?? '',
   };
 }
 

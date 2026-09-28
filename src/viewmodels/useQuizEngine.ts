@@ -1,15 +1,19 @@
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { insertAttempt, selectAttemptsByLesson } from '@/data/repositories/attemptRepository';
 import {
   insertEvaluationResult,
   selectEvaluationByLesson,
   selectQuestions,
 } from '@/data/repositories/evaluationRepository';
-import type { Evaluation, Question } from '@/models/entities';
+import type { ActivityType, Evaluation, Question } from '@/models/entities';
 
+import { summarizeAttempts, type AttemptSummary } from './analyticsLogic';
 import { computeScore, countCorrect } from './quizLogic';
 import { useAuth } from './useAuth';
+
+const KNOWN_ACTIVITY_TYPES: ActivityType[] = ['order', 'fill', 'match', 'crossword', 'mcq'];
 
 export interface QuizEngine {
   index: number;
@@ -145,4 +149,97 @@ export function useRecordEvaluationResult(): (
     },
     [db, account],
   );
+}
+
+export interface EvaluationEngine {
+  index: number;
+  total: number;
+  question: Question | null;
+  phase: 'running' | 'summary';
+  answered: boolean;
+  lastCorrect: boolean | null;
+  correctCount: number;
+  summary: AttemptSummary;
+  submit: (answer: string, correct: boolean) => void;
+  next: () => void;
+  restart: () => void;
+}
+
+export function useEvaluationEngine(questions: Question[], lessonId: string | null): EvaluationEngine {
+  const db = useSQLiteContext();
+  const { account } = useAuth();
+  const usable = useMemo(
+    () => questions.filter(question => KNOWN_ACTIVITY_TYPES.includes(question.type)),
+    [questions],
+  );
+  const [index, setIndex] = useState(0);
+  const [answered, setAnswered] = useState(false);
+  const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [phase, setPhase] = useState<'running' | 'summary'>('running');
+  const [summary, setSummary] = useState<AttemptSummary>(summarizeAttempts([]));
+
+  const refreshSummary = useCallback(async () => {
+    if (!account || !lessonId) {
+      setSummary(summarizeAttempts([]));
+      return;
+    }
+    const attempts = await selectAttemptsByLesson(db, account.id, lessonId);
+    setSummary(summarizeAttempts(attempts));
+  }, [db, account, lessonId]);
+
+  const restart = useCallback(() => {
+    setIndex(0);
+    setAnswered(false);
+    setLastCorrect(null);
+    setCorrectCount(0);
+    setPhase('running');
+  }, []);
+
+  useEffect(() => {
+    restart();
+  }, [usable, restart]);
+
+  const submit = useCallback(
+    (answer: string, correct: boolean) => {
+      if (answered || phase !== 'running') {
+        return;
+      }
+      const question = usable[index];
+      if (question && account && lessonId) {
+        void insertAttempt(db, account.id, 'evaluation', question.id, question.type, lessonId, correct);
+      }
+      setAnswered(true);
+      setLastCorrect(correct);
+      if (correct) {
+        setCorrectCount(current => current + 1);
+      }
+    },
+    [answered, phase, usable, index, db, account, lessonId],
+  );
+
+  const next = useCallback(() => {
+    if (index < usable.length - 1) {
+      setIndex(current => current + 1);
+      setAnswered(false);
+      setLastCorrect(null);
+      return;
+    }
+    void refreshSummary();
+    setPhase('summary');
+  }, [index, usable.length, refreshSummary]);
+
+  return {
+    index,
+    total: usable.length,
+    question: usable[index] ?? null,
+    phase,
+    answered,
+    lastCorrect,
+    correctCount,
+    summary,
+    submit,
+    next,
+    restart,
+  };
 }

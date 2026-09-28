@@ -1,6 +1,11 @@
+import type { ExerciseConfig } from '@/models/entities';
+import { unit1Evaluations, unit1Exercises } from '@/data/unit1Content';
+
 import {
   buildFillBank,
+  crosswordCells,
   extractFillAnswers,
+  isCrosswordCorrect,
   isFillCorrect,
   isMatchCorrect,
   moveItem,
@@ -8,6 +13,7 @@ import {
   shuffleItems,
   splitFillSentences,
   isOrderCorrect,
+  reorderItem,
 } from '../exerciseLogic';
 
 describe('exerciseLogic', () => {
@@ -27,6 +33,13 @@ describe('exerciseLogic', () => {
   it('no mueve fuera de los límites', () => {
     expect(moveItem(correct, 0, -1)).toBe(correct);
     expect(moveItem(correct, 3, 1)).toBe(correct);
+  });
+
+  it('reordena moviendo un elemento a otra posición', () => {
+    expect(reorderItem(correct, 0, 2)).toEqual(['b', 'c', 'a', 'd']);
+    expect(reorderItem(correct, 3, 0)).toEqual(['d', 'a', 'b', 'c']);
+    expect(reorderItem(correct, 1, 1)).toBe(correct);
+    expect(reorderItem(correct, 0, 9)).toBe(correct);
   });
 
   it('genera un orden inicial distinto al correcto', () => {
@@ -92,5 +105,68 @@ describe('match (enlazar conceptos)', () => {
   it('rechaza enlaces incompletos o cruzados', () => {
     expect(isMatchCorrect(pairs, rights, [1, null])).toBe(false);
     expect(isMatchCorrect(pairs, rights, [0, 1])).toBe(false);
+  });
+});
+
+describe('crossword', () => {
+  const config = {
+    crossword: {
+      rows: 3,
+      cols: 3,
+      entries: [
+        { word: 'SOL', clue: 'astro', row: 0, col: 0, direction: 'across' as const },
+        { word: 'SAL', clue: 'condimento', row: 0, col: 0, direction: 'down' as const },
+      ],
+    },
+  };
+
+  it('genera celdas con su solución', () => {
+    const cells = crosswordCells(config);
+    expect(cells).toHaveLength(5);
+    expect(cells.find(cell => cell.row === 0 && cell.col === 0)?.solution).toBe('S');
+    expect(cells.find(cell => cell.row === 0 && cell.col === 2)?.solution).toBe('L');
+    expect(cells.find(cell => cell.row === 2 && cell.col === 0)?.solution).toBe('L');
+    expect(cells.find(cell => cell.row === 0 && cell.col === 0)?.entryIndexes).toEqual([0, 1]);
+  });
+
+  it('valida letras correctas', () => {
+    const letters = { '0-0': 'S', '0-1': 'O', '0-2': 'L', '1-0': 'A', '2-0': 'L' };
+    expect(isCrosswordCorrect(config, letters)).toBe(true);
+    expect(isCrosswordCorrect(config, { '0-0': 'X' })).toBe(false);
+  });
+});
+
+describe('crossword data integrity (Unidad 1)', () => {
+  const configs: ExerciseConfig[] = [
+    ...unit1Exercises.map(exercise => exercise.config).filter((c): c is ExerciseConfig => !!c?.crossword),
+    ...unit1Evaluations.flatMap(ev => ev.questions.map(q => q.config)).filter((c): c is ExerciseConfig => !!c?.crossword),
+  ];
+
+  it('valida que cada palabra encaje en su rejilla sin conflictos', () => {
+    expect(configs.length).toBeGreaterThan(0);
+    for (const config of configs) {
+      const crossword = config.crossword!;
+      const letters = new Map<string, string>();
+      for (const entry of crossword.entries) {
+        const stepRow = entry.direction === 'down' ? 1 : 0;
+        const stepCol = entry.direction === 'across' ? 1 : 0;
+        for (let offset = 0; offset < entry.word.length; offset += 1) {
+          const row = entry.row + stepRow * offset;
+          const col = entry.col + stepCol * offset;
+          expect(row).toBeGreaterThanOrEqual(0);
+          expect(row).toBeLessThan(crossword.rows);
+          expect(col).toBeGreaterThanOrEqual(0);
+          expect(col).toBeLessThan(crossword.cols);
+          const key = `${row}-${col}`;
+          const letter = entry.word[offset]!.toUpperCase();
+          const existing = letters.get(key);
+          if (existing !== undefined) {
+            expect(existing).toBe(letter);
+          }
+          letters.set(key, letter);
+        }
+      }
+      expect(letters.size).toBeGreaterThan(0);
+    }
   });
 });

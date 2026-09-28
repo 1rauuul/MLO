@@ -2,18 +2,22 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { insertResult, selectExercise, selectExercisesByLesson } from '@/data/repositories/exerciseRepository';
-import type { Exercise, MatchPair } from '@/models/entities';
+import type { CrosswordEntry, Exercise, ExerciseConfig, MatchPair } from '@/models/entities';
 
 import {
   buildFillBank,
+  crosswordCells,
   extractFillAnswers,
+  isCrosswordCorrect,
   isFillCorrect,
   isMatchCorrect,
   isOrderCorrect,
   moveItem,
+  reorderItem,
   scrambleOrder,
   shuffleItems,
   splitFillSentences,
+  type CrosswordCell,
   type FillSegment,
 } from './exerciseLogic';
 import { useAuth } from './useAuth';
@@ -23,6 +27,7 @@ export interface ExerciseEngine {
   checked: boolean;
   isCorrect: boolean;
   move: (index: number, direction: -1 | 1) => void;
+  moveTo: (from: number, to: number) => void;
   submit: (onResult?: (correct: boolean) => void) => boolean;
   reset: () => void;
 }
@@ -49,6 +54,11 @@ export function useExerciseEngine(exercise: Exercise | null): ExerciseEngine {
     setChecked(false);
   }, []);
 
+  const moveTo = useCallback((from: number, to: number) => {
+    setSteps(previous => reorderItem(previous, from, to));
+    setChecked(false);
+  }, []);
+
   const submit = useCallback(
     (onResult?: (correct: boolean) => void) => {
       if (!exercise) {
@@ -72,7 +82,7 @@ export function useExerciseEngine(exercise: Exercise | null): ExerciseEngine {
     setIsCorrect(false);
   }, [exercise]);
 
-  return { steps, checked, isCorrect, move, submit, reset };
+  return { steps, checked, isCorrect, move, moveTo, submit, reset };
 }
 
 interface UseExerciseForLessonResult {
@@ -394,6 +404,81 @@ export function useMatchEngine(exercise: Exercise | null): MatchEngine {
     isCorrect,
     selectLeft,
     selectRight,
+    submit,
+    reset,
+  };
+}
+
+export interface CrosswordEngine {
+  cells: CrosswordCell[];
+  entries: CrosswordEntry[];
+  rows: number;
+  cols: number;
+  letters: Record<string, string>;
+  selectedEntry: number | null;
+  checked: boolean;
+  isCorrect: boolean;
+  selectEntry: (index: number) => void;
+  setLetter: (row: number, col: number, letter: string) => void;
+  submit: (onResult?: (correct: boolean) => void) => boolean;
+  reset: () => void;
+}
+
+export function useCrosswordEngine(exercise: Exercise | null): CrosswordEngine {
+  const crossword = useMemo(
+    () => (exercise?.type === 'crossword' ? exercise.config.crossword : undefined),
+    [exercise],
+  );
+  const config: ExerciseConfig = useMemo(() => ({ crossword }), [crossword]);
+  const cells = useMemo(() => crosswordCells(config), [config]);
+  const [letters, setLetters] = useState<Record<string, string>>({});
+  const [selectedEntry, setSelectedEntry] = useState<number | null>(null);
+  const [checked, setChecked] = useState(false);
+  const [isCorrect, setIsCorrect] = useState(false);
+
+  const reset = useCallback(() => {
+    setLetters({});
+    setSelectedEntry(null);
+    setChecked(false);
+    setIsCorrect(false);
+  }, []);
+
+  useEffect(() => {
+    reset();
+  }, [reset, exercise]);
+
+  const selectEntry = useCallback((index: number) => {
+    setSelectedEntry(current => (current === index ? null : index));
+  }, []);
+
+  const setLetter = useCallback((row: number, col: number, letter: string) => {
+    const clean = letter.replace(/[^a-zA-ZñÑ]/g, '').slice(-1).toUpperCase();
+    setLetters(previous => ({ ...previous, [`${row}-${col}`]: clean }));
+    setChecked(false);
+  }, []);
+
+  const submit = useCallback(
+    (onResult?: (correct: boolean) => void) => {
+      const correct = isCrosswordCorrect(config, letters);
+      setChecked(true);
+      setIsCorrect(correct);
+      onResult?.(correct);
+      return correct;
+    },
+    [config, letters],
+  );
+
+  return {
+    cells,
+    entries: crossword?.entries ?? [],
+    rows: crossword?.rows ?? 0,
+    cols: crossword?.cols ?? 0,
+    letters,
+    selectedEntry,
+    checked,
+    isCorrect,
+    selectEntry,
+    setLetter,
     submit,
     reset,
   };
