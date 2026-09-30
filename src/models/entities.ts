@@ -23,6 +23,7 @@ export interface CrosswordEntry {
 
 export interface ExerciseConfig {
   sentences?: string[];
+  bank?: string[];
   pairs?: MatchPair[];
   crossword?: { rows: number; cols: number; entries: CrosswordEntry[] };
 }

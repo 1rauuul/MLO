@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useCallback, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -13,28 +14,21 @@ import { IconButton, PrimaryButton } from '@/components/Buttons';
 import { useTheme } from '@/theme/theme-provider';
 import type { ExerciseEngine } from '@/viewmodels/useExerciseEngine';
 
-const ROW_HEIGHT = 58;
-const ROW_GAP = 10;
-const STEP = ROW_HEIGHT + ROW_GAP;
-const ACCENTS = ['#4D7CFE', '#45D39A', '#F3BC61', '#EE6F7D', '#8B7CFE', '#4DD0E1'];
+import { accentForText } from './accents';
 
-function accentFor(text: string): string {
-  let hash = 0;
-  for (let index = 0; index < text.length; index += 1) {
-    hash = (hash + text.charCodeAt(index)) % 997;
-  }
-  return ACCENTS[hash % ACCENTS.length]!;
-}
+const ROW_GAP = 10;
+const FALLBACK_HEIGHT = 64;
 
 interface DraggableRowProps {
   index: number;
-  count: number;
   accent: string;
-  onMoveTo: (from: number, to: number) => void;
+  onDrop: (index: number, translationY: number) => void;
+  onMeasure: (step: string, height: number) => void;
+  step: string;
   children: ReactNode;
 }
 
-function DraggableRow({ index, count, accent, onMoveTo, children }: DraggableRowProps) {
+function DraggableRow({ index, accent, onDrop, onMeasure, step, children }: DraggableRowProps) {
   const { colors, radius } = useTheme();
   const translateY = useSharedValue(0);
   const active = useSharedValue(0);
@@ -48,21 +42,15 @@ function DraggableRow({ index, count, accent, onMoveTo, children }: DraggableRow
       translateY.value = event.translationY;
     })
     .onEnd(event => {
-      const target = Math.max(
-        0,
-        Math.min(count - 1, Math.round((index * STEP + event.translationY) / STEP)),
-      );
-      if (target !== index) {
-        runOnJS(onMoveTo)(index, target);
-      }
+      runOnJS(onDrop)(index, event.translationY);
     })
     .onFinalize(() => {
-      translateY.value = withSpring(0, { damping: 20, stiffness: 250 });
+      translateY.value = withSpring(0, { damping: 34, stiffness: 320, mass: 0.9 });
       active.value = 0;
     });
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }, { scale: active.value ? 1.03 : 1 }],
+    transform: [{ translateY: translateY.value }, { scale: active.value ? 1.02 : 1 }],
     zIndex: active.value ? 10 : 0,
     elevation: active.value ? 6 : 0,
   }));
@@ -70,6 +58,7 @@ function DraggableRow({ index, count, accent, onMoveTo, children }: DraggableRow
   return (
     <GestureDetector gesture={pan}>
       <Animated.View
+        onLayout={event => onMeasure(step, event.nativeEvent.layout.height)}
         style={[
           styles.dragRow,
           { backgroundColor: colors.card, borderColor: accent, borderRadius: radius.control },
@@ -88,6 +77,38 @@ interface OrderExerciseProps {
 
 export function OrderExercise({ engine, onSubmit }: OrderExerciseProps) {
   const { colors, radius, spacing } = useTheme();
+  const heights = useRef<Record<string, number>>({});
+
+  const measure = useCallback((step: string, height: number) => {
+    heights.current[step] = height;
+  }, []);
+
+  const handleDrop = useCallback(
+    (index: number, translationY: number) => {
+      const steps = engine.steps;
+      let top = 0;
+      const centers = steps.map(step => {
+        const rowHeight = heights.current[step] ?? FALLBACK_HEIGHT;
+        const center = top + rowHeight / 2;
+        top += rowHeight + ROW_GAP;
+        return center;
+      });
+      const draggedCenter = (centers[index] ?? 0) + translationY;
+      let target = index;
+      let best = Number.POSITIVE_INFINITY;
+      centers.forEach((center, candidate) => {
+        const distance = Math.abs(center - draggedCenter);
+        if (distance < best) {
+          best = distance;
+          target = candidate;
+        }
+      });
+      if (target !== index) {
+        engine.moveTo(index, target);
+      }
+    },
+    [engine],
+  );
 
   const check = () => {
     const correct = engine.submit();
@@ -98,14 +119,15 @@ export function OrderExercise({ engine, onSubmit }: OrderExerciseProps) {
     <View>
       <View>
         {engine.steps.map((step, index) => {
-          const accent = accentFor(step);
+          const accent = accentForText(step);
           return (
             <DraggableRow
               key={step}
               index={index}
-              count={engine.steps.length}
+              step={step}
               accent={accent}
-              onMoveTo={engine.moveTo}>
+              onDrop={handleDrop}
+              onMeasure={measure}>
               <View style={[styles.badge, { backgroundColor: `${accent}22` }]}>
                 <AppText variant="code" color={accent} weight="700">
                   {String(index + 1).padStart(2, '0')}
@@ -164,17 +186,19 @@ export function OrderExercise({ engine, onSubmit }: OrderExerciseProps) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   dragRow: {
-    height: ROW_HEIGHT,
+    minHeight: 56,
     marginBottom: ROW_GAP,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 12,
+    paddingVertical: 10,
     borderWidth: 2,
   },
   badge: {
-    width: 38,
+    minWidth: 38,
     height: 34,
+    paddingHorizontal: 6,
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',

@@ -244,12 +244,14 @@ async function insertEvaluationRows(db: SQLiteDatabase, evaluation: EvaluationSe
 const UNIT1_LESSONS = ['l1.1', 'l1.2', 'l1.3', 'l1.4'];
 const UNIT1_EVALUATIONS = ['ev1.1', 'ev1.2', 'ev1.3', 'ev1.4'];
 
-export async function applyUnit1Content(db: SQLiteDatabase): Promise<void> {
+export async function applyUnit1Content(db: SQLiteDatabase, clearAttempts = true): Promise<void> {
   await db.withTransactionAsync(async () => {
-    await db.runAsync(
-      `DELETE FROM attempts WHERE lesson_id IN (${UNIT1_LESSONS.map(() => '?').join(', ')})`,
-      ...UNIT1_LESSONS,
-    );
+    if (clearAttempts) {
+      await db.runAsync(
+        `DELETE FROM attempts WHERE lesson_id IN (${UNIT1_LESSONS.map(() => '?').join(', ')})`,
+        ...UNIT1_LESSONS,
+      );
+    }
     await db.runAsync(
       `DELETE FROM exercises WHERE lesson_id IN (${UNIT1_LESSONS.map(() => '?').join(', ')})`,
       ...UNIT1_LESSONS,

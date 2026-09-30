@@ -217,12 +217,22 @@ export interface FillEngine {
 }
 
 export function useFillEngine(exercise: Exercise | null): FillEngine {
-  const rawSentences = useMemo(
+  const sourceSentences = useMemo(
     () => (exercise?.type === 'fill' ? (exercise.config.sentences ?? []) : []),
     [exercise],
   );
-  const sentences = useMemo(() => splitFillSentences(rawSentences), [rawSentences]);
-  const answers = useMemo(() => extractFillAnswers(rawSentences), [rawSentences]);
+  const bankExtra = useMemo(
+    () => (exercise?.type === 'fill' ? (exercise.config.bank ?? []) : []),
+    [exercise],
+  );
+  const [ordered, setOrdered] = useState<string[]>([]);
+
+  useEffect(() => {
+    setOrdered(shuffleItems(sourceSentences, Math.random));
+  }, [sourceSentences]);
+
+  const sentences = useMemo(() => splitFillSentences(ordered), [ordered]);
+  const answers = useMemo(() => extractFillAnswers(ordered), [ordered]);
 
   const [bank, setBank] = useState<string[]>([]);
   const [used, setUsed] = useState<boolean[]>([]);
@@ -232,14 +242,14 @@ export function useFillEngine(exercise: Exercise | null): FillEngine {
   const [isCorrect, setIsCorrect] = useState(false);
 
   const reset = useCallback(() => {
-    const answers = extractFillAnswers(rawSentences);
-    setBank(buildFillBank(rawSentences, Math.random));
-    setUsed(answers.map(() => false));
-    setAssignment(answers.map(() => null));
+    const expected = extractFillAnswers(ordered);
+    setBank(buildFillBank(ordered, Math.random, bankExtra));
+    setUsed(Array.from({ length: expected.length + bankExtra.length }, () => false));
+    setAssignment(expected.map(() => null));
     setActiveBlank(null);
     setChecked(false);
     setIsCorrect(false);
-  }, [rawSentences]);
+  }, [ordered, bankExtra]);
 
   useEffect(() => {
     reset();
@@ -294,13 +304,13 @@ export function useFillEngine(exercise: Exercise | null): FillEngine {
 
   const submit = useCallback(
     (onResult?: (correct: boolean) => void) => {
-      const correct = isFillCorrect(rawSentences, assignment);
+      const correct = isFillCorrect(ordered, assignment);
       setChecked(true);
       setIsCorrect(correct);
       onResult?.(correct);
       return correct;
     },
-    [rawSentences, assignment],
+    [ordered, assignment],
   );
 
   return {
@@ -412,6 +422,7 @@ export function useMatchEngine(exercise: Exercise | null): MatchEngine {
 export interface CrosswordEngine {
   cells: CrosswordCell[];
   entries: CrosswordEntry[];
+  bank: string[];
   rows: number;
   cols: number;
   letters: Record<string, string>;
@@ -430,6 +441,10 @@ export function useCrosswordEngine(exercise: Exercise | null): CrosswordEngine {
     [exercise],
   );
   const config: ExerciseConfig = useMemo(() => ({ crossword }), [crossword]);
+  const bank = useMemo(
+    () => (exercise?.type === 'crossword' ? (exercise.config.bank ?? []) : []),
+    [exercise],
+  );
   const cells = useMemo(() => crosswordCells(config), [config]);
   const [letters, setLetters] = useState<Record<string, string>>({});
   const [selectedEntry, setSelectedEntry] = useState<number | null>(null);
@@ -448,7 +463,7 @@ export function useCrosswordEngine(exercise: Exercise | null): CrosswordEngine {
   }, [reset, exercise]);
 
   const selectEntry = useCallback((index: number) => {
-    setSelectedEntry(current => (current === index ? null : index));
+    setSelectedEntry(index);
   }, []);
 
   const setLetter = useCallback((row: number, col: number, letter: string) => {
@@ -471,6 +486,7 @@ export function useCrosswordEngine(exercise: Exercise | null): CrosswordEngine {
   return {
     cells,
     entries: crossword?.entries ?? [],
+    bank,
     rows: crossword?.rows ?? 0,
     cols: crossword?.cols ?? 0,
     letters,

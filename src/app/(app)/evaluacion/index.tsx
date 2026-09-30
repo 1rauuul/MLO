@@ -99,6 +99,14 @@ export default function EvaluationScreen() {
   const { colors, radius, spacing } = useTheme();
   const recordedRef = useRef(false);
 
+  const goTopic = () => {
+    if (lessonParam) {
+      router.replace({ pathname: '/tema/[id]', params: { id: lessonParam } });
+    } else {
+      router.back();
+    }
+  };
+
   useEffect(() => {
     if (engine.phase !== 'summary' || !evaluation || recordedRef.current) {
       return;
@@ -185,19 +193,54 @@ export default function EvaluationScreen() {
           </View>
         )}
 
+        <AppText variant="eyebrow" style={{ marginTop: spacing.lg }}>
+          Repaso de reactivos
+        </AppText>
+        <View style={styles.list}>
+          {engine.items.map((item, index) => {
+            const ok = engine.outcomes[index] === true;
+            return (
+              <View
+                key={item.id}
+                style={[
+                  styles.review,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: ok ? colors.success : colors.danger,
+                    borderRadius: radius.control,
+                  },
+                ]}>
+                <AppText color={ok ? colors.success : colors.danger} weight="700">
+                  {ok ? '✓' : '✗'}
+                </AppText>
+                <View style={styles.flex}>
+                  <AppText variant="small" weight="600">
+                    {item.prompt}
+                  </AppText>
+                  {!ok && item.explanation ? (
+                    <AppText variant="small" color={colors.muted}>
+                      {item.explanation}
+                    </AppText>
+                  ) : null}
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
         <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
+          <PrimaryButton label="Volver al tema" onPress={goTopic} />
           {recommendation === 'lesson' && lessonParam ? (
-            <PrimaryButton
+            <SecondaryButton
               label="Repasar la lección"
               onPress={() => router.push({ pathname: '/lecciones/[id]', params: { id: lessonParam } })}
             />
           ) : lessonParam ? (
-            <PrimaryButton
+            <SecondaryButton
               label="Resolver ejercicios"
               onPress={() => router.push({ pathname: '/ejercicios', params: { lesson: lessonParam } })}
             />
           ) : null}
-          <SecondaryButton label="Volver al tema" onPress={() => router.back()} />
         </View>
       </Screen>
     );
@@ -263,6 +306,11 @@ export default function EvaluationScreen() {
           <AppText color={engine.lastCorrect ? colors.success : colors.danger} weight="700">
             {engine.lastCorrect ? '✓ Respuesta correcta' : '✗ Respuesta incorrecta'}
           </AppText>
+          {question.type === 'mcq' && question.options[question.answer] ? (
+            <AppText variant="small" color={colors.success}>
+              {`Respuesta correcta: ${question.options[question.answer]}`}
+            </AppText>
+          ) : null}
           <AppText variant="small">{question.explanation}</AppText>
         </View>
       ) : null}
@@ -285,6 +333,7 @@ const styles = StyleSheet.create({
   prompt: { marginTop: 8 },
   list: { gap: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderWidth: 1 },
+  review: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12, borderWidth: 1 },
   card: { borderWidth: 1, padding: 18, gap: 4 },
   feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
 });

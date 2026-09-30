@@ -68,9 +68,6 @@ export function FillExercise({ engine, onSubmit, showReset = true }: FillExercis
     <View>
       <View style={styles.sentences}>{engine.sentences.map(renderSegments)}</View>
 
-      <AppText variant="eyebrow" style={[styles.bankLabel, { color: colors.muted }]}>
-        Banco de palabras
-      </AppText>
       <View style={[styles.bank, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
         {engine.bank.map((word, index) => (
           <Pressable
@@ -137,7 +134,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  bankLabel: { marginTop: 18 },
   bank: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 12, marginTop: 8 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1 },
   actions: { flexDirection: 'row', gap: 12 },

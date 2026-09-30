@@ -8,13 +8,23 @@ import { PrimaryButton, SecondaryButton } from '@/components/Buttons';
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { ScreenHeader } from '@/components/ScreenHeader';
-import type { Exercise } from '@/models/entities';
+import type { ActivityType } from '@/models/entities';
 import { useTheme } from '@/theme/theme-provider';
-import { useExample } from '@/viewmodels/useExample';
+import { demoSteps } from '@/viewmodels/exampleLogic';
+import { hintsForType } from '@/viewmodels/exerciseHints';
+import { useExercise } from '@/viewmodels/useExerciseEngine';
+
+const TYPE_LABELS: Record<ActivityType, string> = {
+  order: 'Ordena',
+  fill: 'Completa',
+  match: 'Enlaza',
+  crossword: 'Crucigrama',
+  mcq: 'Opción múltiple',
+};
 
 export default function ExampleDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { example, isLoading } = useExample(id ?? null);
+  const { exercise, isLoading } = useExercise(id ?? null);
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
   const [variant, setVariant] = useState<'A' | 'B'>('A');
@@ -22,7 +32,7 @@ export default function ExampleDetailScreen() {
   const [answered, setAnswered] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
 
-  if (!isLoading && !example) {
+  if (!isLoading && !exercise) {
     return (
       <Screen>
         <EmptyState title="Sin ejemplo" message="No se encontró el ejemplo solicitado." />
@@ -30,7 +40,7 @@ export default function ExampleDetailScreen() {
     );
   }
 
-  if (!example) {
+  if (!exercise) {
     return (
       <Screen>
         <EmptyState title="Cargando" message="Preparando el ejemplo guiado." />
@@ -38,37 +48,26 @@ export default function ExampleDetailScreen() {
     );
   }
 
-  const asExercise: Exercise = {
-    id: example.id,
-    lessonId: example.lessonId,
-    type: example.type,
-    prompt: example.prompt,
-    instructions: '',
-    correctOrder: [],
-    config: example.config,
-    explanation: example.explanation,
-  };
-
+  const steps = demoSteps(exercise);
+  const hints = hintsForType(exercise.type);
+  const pairs = exercise.config.pairs ?? [];
   const goExercises = () =>
-    router.push({ pathname: '/ejercicios', params: { lesson: example.lessonId } });
+    router.push({ pathname: '/ejercicios', params: { lesson: exercise.lessonId } });
 
   if (variant === 'A') {
     return (
       <Screen>
         <ScreenHeader
           onBack={() => router.back()}
-          eyebrow="Ejemplo A · Demostración"
-          title={example.title}
+          eyebrow={`Ejemplo A · Demostración · ${TYPE_LABELS[exercise.type] ?? exercise.type}`}
+          title={exercise.prompt}
         />
 
-        <AppText variant="eyebrow">{example.prompt}</AppText>
+        <AppText variant="eyebrow">Solución completa paso a paso</AppText>
 
-        {example.config.pairs && example.config.pairs.length > 0 ? (
+        {pairs.length > 0 ? (
           <View
-            style={[
-              styles.table,
-              { borderColor: colors.line, borderRadius: radius.control, marginTop: spacing.md },
-            ]}>
+            style={[styles.table, { borderColor: colors.line, borderRadius: radius.control, marginTop: spacing.md }]}>
             <View style={[styles.tableRow, { backgroundColor: colors.soft, borderTopWidth: 0 }]}>
               <AppText variant="small" weight="700" style={styles.cell}>
                 Concepto
@@ -77,10 +76,8 @@ export default function ExampleDetailScreen() {
                 Descripción
               </AppText>
             </View>
-            {example.config.pairs.map((pair, index) => (
-              <View
-                key={`${pair.left}-${index}`}
-                style={[styles.tableRow, { borderTopColor: colors.line }]}>
+            {pairs.map((pair, index) => (
+              <View key={`${pair.left}-${index}`} style={[styles.tableRow, { borderTopColor: colors.line }]}>
                 <AppText variant="small" weight="600" style={styles.cell}>
                   {pair.left}
                 </AppText>
@@ -90,28 +87,25 @@ export default function ExampleDetailScreen() {
               </View>
             ))}
           </View>
-        ) : null}
-
-        <AppText variant="eyebrow" style={{ marginTop: spacing.lg }}>
-          Cómo se razona
-        </AppText>
-        <View style={[styles.steps, { marginTop: spacing.sm }]}>
-          {example.steps.map((step, index) => (
-            <View
-              key={`${step.text}-${index}`}
-              style={[styles.node, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
-              <AppText variant="code" color={colors.primary} weight="700">
-                {String(index + 1).padStart(2, '0')}
-              </AppText>
-              <View style={styles.flex}>
-                <AppText weight="600">{step.text}</AppText>
-                <AppText variant="small" color={colors.muted}>
-                  {`Por qué: ${step.why}`}
+        ) : (
+          <View style={[styles.steps, { marginTop: spacing.md }]}>
+            {steps.map((step, index) => (
+              <View
+                key={`${step.text}-${index}`}
+                style={[styles.node, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
+                <AppText variant="code" color={colors.primary} weight="700">
+                  {String(index + 1).padStart(2, '0')}
                 </AppText>
+                <View style={styles.flex}>
+                  <AppText weight="600">{step.text}</AppText>
+                  <AppText variant="small" color={colors.muted}>
+                    {`Por qué: ${step.why}`}
+                  </AppText>
+                </View>
               </View>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        )}
 
         <PrimaryButton
           label="Ahora inténtalo tú"
@@ -126,15 +120,17 @@ export default function ExampleDetailScreen() {
     <Screen>
       <ScreenHeader
         onBack={() => setVariant('A')}
-        eyebrow="Ejemplo B · Acompañamiento"
-        title={example.title}
+        eyebrow={`Ejemplo B · Acompañamiento · ${TYPE_LABELS[exercise.type] ?? exercise.type}`}
+        title={exercise.prompt}
       />
 
-      <AppText variant="eyebrow">{example.prompt}</AppText>
+      <AppText variant="small" color={colors.muted} style={styles.hint}>
+        Resuélvelo tú; si te atoras, usa una pista (no te da la respuesta).
+      </AppText>
 
       <View style={{ marginTop: spacing.md }}>
         <ActivityView
-          exercise={asExercise}
+          exercise={exercise}
           allowReset
           onSubmit={(_answer, _correct) => {
             setAnswered(true);
@@ -142,18 +138,18 @@ export default function ExampleDetailScreen() {
         />
       </View>
 
-      {example.hints.length > 0 ? (
+      {hints.length > 0 ? (
         <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
-          {example.hints.slice(0, revealedHints).map((hint, index) => (
+          {hints.slice(0, revealedHints).map((hint, index) => (
             <View
-              key={`${hint}-${index}`}
-              style={[styles.hint, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
+              key={hint}
+              style={[styles.hintBox, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
               <AppText variant="small">{`Pista ${index + 1}: ${hint}`}</AppText>
             </View>
           ))}
-          {revealedHints < example.hints.length ? (
+          {revealedHints < hints.length ? (
             <SecondaryButton
-              label="Ver una pista"
+              label={revealedHints === 0 ? 'Ver una pista' : 'Ver otra pista'}
               onPress={() => setRevealedHints(current => current + 1)}
             />
           ) : null}
@@ -166,10 +162,13 @@ export default function ExampleDetailScreen() {
             <View
               style={[styles.solution, { borderColor: colors.success, backgroundColor: colors.card, borderRadius: radius.control }]}>
               <AppText variant="eyebrow">Solución completa</AppText>
-              <AppText variant="small">{example.explanation}</AppText>
+              <AppText variant="small">{exercise.explanation}</AppText>
             </View>
           ) : (
-            <SecondaryButton label="Ver solución completa y el porqué" onPress={() => setShowSolution(true)} />
+            <SecondaryButton
+              label="Ver solución completa y el porqué"
+              onPress={() => setShowSolution(true)}
+            />
           )}
           <PrimaryButton label="Ir a ejercicios" onPress={goExercises} />
         </View>
@@ -185,6 +184,7 @@ const styles = StyleSheet.create({
   table: { borderWidth: 1, overflow: 'hidden' },
   tableRow: { flexDirection: 'row', gap: 10, padding: 12, borderTopWidth: 1 },
   cell: { flex: 1, lineHeight: 18, textAlign: 'justify' },
-  hint: { padding: 12 },
+  hint: { lineHeight: 18 },
+  hintBox: { padding: 12 },
   solution: { borderWidth: 1, padding: 14, gap: 4 },
 });

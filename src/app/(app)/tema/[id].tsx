@@ -23,7 +23,7 @@ interface HubAction {
 export default function TopicHubScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const lessonId = id ?? null;
-  const { lesson, unit, examples, exercises, evaluation, completed } = useLessonHub(lessonId);
+  const { lesson, unit, exercises, evaluation, completed } = useLessonHub(lessonId);
   const session = useSession();
   const router = useRouter();
   const { colors, radius } = useTheme();
@@ -59,15 +59,14 @@ export default function TopicHubScreen() {
     },
   ];
 
-  if (examples.length > 0) {
+  if (exercises.length > 0) {
     actions.push({
       key: 'examples',
       icon: '⇄',
       label: 'Ejemplos',
-      note: 'Demostración + ejercicios',
+      note: 'Demostración + acompañamiento',
       accent: colors.success,
-      onPress: () =>
-        router.push({ pathname: '/ejemplos/[id]', params: { id: examples[0]!.id } }),
+      onPress: () => router.push({ pathname: '/ejemplos', params: { lesson: lesson.id } }),
     });
   }
 

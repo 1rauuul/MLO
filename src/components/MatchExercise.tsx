@@ -5,6 +5,7 @@ import type { MatchEngine } from '@/viewmodels/useExerciseEngine';
 
 import { AppText } from './AppText';
 import { PrimaryButton, SecondaryButton } from './Buttons';
+import { accentForIndex } from './activities/accents';
 
 interface MatchExerciseProps {
   engine: MatchEngine;
@@ -21,57 +22,51 @@ export function MatchExercise({ engine, onSubmit, showReset = true }: MatchExerc
     onSubmit(JSON.stringify(engine.assignment), correct);
   };
 
-  const leftBorder = (index: number) => {
+  const leftCorrect = (index: number): boolean => {
     const linked = engine.assignment[index];
-    if (engine.checked) {
-      const ok = linked !== null && engine.rights[linked] === engine.pairs[index]?.right;
-      return ok ? colors.success : colors.danger;
-    }
-    if (engine.selectedLeft === index) {
-      return colors.primary;
-    }
-    return linked !== null ? colors.primary : colors.line;
-  };
-
-  const rightBorder = (position: number) => {
-    const owner = engine.assignment.indexOf(position);
-    if (engine.checked) {
-      const ok = owner !== -1 && engine.rights[position] === engine.pairs[owner]?.right;
-      return ok ? colors.success : colors.danger;
-    }
-    return owner !== null && owner !== -1 ? colors.primary : colors.line;
+    return linked !== null && engine.rights[linked] === engine.pairs[index]?.right;
   };
 
   return (
     <View>
       <AppText variant="small" style={[styles.hint, { color: colors.muted }]}>
-        Toca un concepto y después la definición que le corresponde.
+        Toca un concepto y después la definición que le corresponde. Cada par se marca con su color.
       </AppText>
 
       <View style={[styles.columns, { marginTop: spacing.md }]}>
         <View style={styles.column}>
           {engine.lefts.map((left, index) => {
-            const linked = engine.assignment[index];
+            const accent = accentForIndex(index);
+            const selected = engine.selectedLeft === index;
+            const correct = leftCorrect(index);
             return (
               <Pressable
                 key={left}
                 accessibilityRole="button"
-                accessibilityState={{ selected: engine.selectedLeft === index }}
+                accessibilityState={{ selected }}
                 accessibilityLabel={`Concepto ${left}`}
                 onPress={() => engine.selectLeft(index)}
                 style={[
                   styles.item,
-                  { backgroundColor: colors.card, borderColor: leftBorder(index), borderRadius: radius.control },
+                  {
+                    backgroundColor: selected ? `${accent}1F` : colors.card,
+                    borderColor: accent,
+                    borderWidth: selected ? 3 : 2,
+                    borderRadius: radius.control,
+                  },
                 ]}>
+                <View style={[styles.badge, { backgroundColor: accent }]}>
+                  <AppText variant="small" color={colors.onPrimary} weight="700">
+                    {index + 1}
+                  </AppText>
+                </View>
                 <AppText variant="small" weight="600" style={styles.flex}>
                   {left}
                 </AppText>
-                {linked !== null ? (
-                  <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-                    <AppText variant="small" color={colors.onPrimary} weight="700">
-                      {linked + 1}
-                    </AppText>
-                  </View>
+                {engine.checked ? (
+                  <AppText color={correct ? colors.success : colors.danger} weight="700">
+                    {correct ? '✓' : '✗'}
+                  </AppText>
                 ) : null}
               </Pressable>
             );
@@ -81,6 +76,8 @@ export function MatchExercise({ engine, onSubmit, showReset = true }: MatchExerc
         <View style={styles.column}>
           {engine.rights.map((right, position) => {
             const owner = engine.assignment.indexOf(position);
+            const accent = owner === -1 ? colors.line : accentForIndex(owner);
+            const correct = owner !== -1 && leftCorrect(owner);
             return (
               <Pressable
                 key={right}
@@ -89,16 +86,30 @@ export function MatchExercise({ engine, onSubmit, showReset = true }: MatchExerc
                 onPress={() => engine.selectRight(position)}
                 style={[
                   styles.item,
-                  { backgroundColor: colors.card, borderColor: rightBorder(position), borderRadius: radius.control },
+                  {
+                    backgroundColor: owner === -1 ? colors.card : `${accent}14`,
+                    borderColor: accent,
+                    borderWidth: owner === -1 ? 1 : 2,
+                    borderRadius: radius.control,
+                    opacity: engine.selectedLeft === null && owner === -1 ? 0.85 : 1,
+                  },
                 ]}>
-                <View style={[styles.badge, { backgroundColor: owner !== -1 ? colors.primary : colors.soft }]}>
-                  <AppText variant="small" color={owner !== -1 ? colors.onPrimary : colors.muted} weight="700">
-                    {position + 1}
+                <View style={[styles.badge, { backgroundColor: owner === -1 ? colors.soft : accent }]}>
+                  <AppText
+                    variant="small"
+                    color={owner === -1 ? colors.muted : colors.onPrimary}
+                    weight="700">
+                    {owner === -1 ? position + 1 : owner + 1}
                   </AppText>
                 </View>
                 <AppText variant="small" style={styles.flex}>
                   {right}
                 </AppText>
+                {engine.checked && owner !== -1 ? (
+                  <AppText color={correct ? colors.success : colors.danger} weight="700">
+                    {correct ? '✓' : '✗'}
+                  </AppText>
+                ) : null}
               </Pressable>
             );
           })}
@@ -143,7 +154,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     padding: 12,
-    borderWidth: 1,
+    borderWidth: 2,
     minHeight: 52,
   },
   flex: { flex: 1 },

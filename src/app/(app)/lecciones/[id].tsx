@@ -20,7 +20,7 @@ const LAST_SECTION = SECTION_LABELS.length - 1;
 export default function LessonDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const lessonId = id ?? null;
-  const { lesson, examples, isLoading } = useLessonContent(lessonId);
+  const { lesson, isLoading } = useLessonContent(lessonId);
   const { exercises } = useExercisesForLesson(lessonId);
   const { evaluation } = useEvaluationForLesson(lessonId);
   const { markCompleted } = useModuleProgress();
@@ -44,23 +44,18 @@ export default function LessonDetailScreen() {
     );
   }
 
-  const firstExample = examples[0];
   const firstExercise = exercises[0];
 
-  const finalLabel = firstExample
-    ? 'Ver ejemplo'
-    : firstExercise
-      ? 'Ejercicios'
-      : evaluation
-        ? 'Evaluación'
-        : 'Terminar';
+  const finalLabel = firstExercise
+    ? 'Ver ejemplos'
+    : evaluation
+      ? 'Evaluación'
+      : 'Terminar';
 
   const goNext = () => {
     void markCompleted(lesson.id);
-    if (firstExample) {
-      router.push({ pathname: '/ejemplos/[id]', params: { id: firstExample.id } });
-    } else if (firstExercise) {
-      router.push({ pathname: '/ejercicios', params: { lesson: lesson.id } });
+    if (firstExercise) {
+      router.push({ pathname: '/ejemplos', params: { lesson: lesson.id } });
     } else if (evaluation) {
       router.push({ pathname: '/evaluacion', params: { lesson: lesson.id } });
     } else {

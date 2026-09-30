@@ -184,6 +184,7 @@ export const unit12ExerciseBankAdditions: ExerciseSeed[] = [
           },
         ],
       },
+      bank: ['ACEPTABILIDAD', 'SOFTWARE', 'CONFIGURACION'],
     },
     explanation:
       'El crucigrama combina atributos de calidad, tipos de productos y la actividad de evolución del software.',
@@ -202,6 +203,7 @@ export const unit12ExerciseBankAdditions: ExerciseSeed[] = [
         'No desperdiciar memoria ni ciclos del procesador es tener {{eficiencia}}.',
         'Ser comprensible, utilizable y compatible define la {{aceptabilidad}}.',
       ],
+      bank: ['seguridad', 'usabilidad', 'portabilidad', 'escalabilidad'],
     },
     explanation:
       'Los atributos esenciales son mantenimiento, confiabilidad y seguridad, eficiencia y aceptabilidad.',
@@ -249,6 +251,7 @@ export const unit1Exercises: ExerciseSeed[] = [
         'Los productos {{personalizados}} se desarrollan para un cliente en particular.',
         'Aproximadamente el {{60}}% de los costos del software son de desarrollo.',
       ],
+      bank: ['mantenimiento', 'confiabilidad', 'eficiencia', 'hardware', '40'],
     },
   },
   {
@@ -303,6 +306,7 @@ export const unit1Exercises: ExerciseSeed[] = [
           { word: 'INGENIERIA', clue: 'Disciplina que cubre todos los aspectos de la producción de software', row: 3, col: 7, direction: 'down' },
         ],
       },
+      bank: ['MANTENIMIENTO', 'SOFTWARE', 'REUTILIZACION', 'CONFIGURACION'],
     },
   },
   {
@@ -320,6 +324,7 @@ export const unit1Exercises: ExerciseSeed[] = [
         'En los productos {{personalizados}}, el cliente controla la especificación.',
         'La calidad considera también los atributos {{no funcionales}} del software.',
       ],
+      bank: ['seguridad', 'funcionales', 'manuales', 'monolíticos', 'medibles'],
     },
   },
   ...unit12ExerciseBankAdditions,
@@ -347,6 +352,7 @@ export const unit1Exercises: ExerciseSeed[] = [
         'La {{confidencialidad}} se respeta aun sin un acuerdo formal firmado.',
         'No aceptar trabajo fuera de la propia {{competencia}} es un deber profesional.',
       ],
+      bank: ['siete', 'integridad', 'honestidad', 'COLEGAS', 'gestión'],
     },
   },
   {
@@ -401,6 +407,7 @@ export const unit1Exercises: ExerciseSeed[] = [
           { word: 'ETICA', clue: 'Marco de conducta profesional', row: 3, col: 6, direction: 'down' },
         ],
       },
+      bank: ['PRODUCTO', 'JUICIO', 'COLEGAS', 'HONESTIDAD'],
     },
   },
   {
@@ -418,6 +425,7 @@ export const unit1Exercises: ExerciseSeed[] = [
         'Los principios se publican en códigos de {{conducta}}.',
         'La ética se analiza mejor en un contexto de {{ingeniería}} de software.',
       ],
+      bank: ['programación', 'gestión', 'ética', 'arquitectura', 'pruebas'],
     },
   },
   {
@@ -444,6 +452,7 @@ export const unit1Exercises: ExerciseSeed[] = [
         'La estación meteorológica adquiere {{datos}} con sensores.',
         'Las estaciones usan un enlace {{satelital}} de baja rapidez.',
       ],
+      bank: ['lotes', 'hardware', 'sensores', 'red', 'control'],
     },
   },
   {
@@ -478,6 +487,7 @@ export const unit1Exercises: ExerciseSeed[] = [
         'La bomba debe estar {{disponible}} para entregar insulina cuando se requiere.',
         'El sistema de mantenimiento actualiza el software de forma {{remota}}.',
       ],
+      bank: ['seguridad', 'amigable', 'confiable', 'local', 'manual'],
     },
   },
   {
@@ -499,6 +509,7 @@ export const unit1Exercises: ExerciseSeed[] = [
           { word: 'INSULINA', clue: 'Hormona que administra la bomba automática', row: 3, col: 10, direction: 'down' },
         ],
       },
+      bank: ['SENSORES', 'PACIENTES', 'SATELITAL', 'PRIVACIDAD'],
     },
   },
   {
@@ -530,11 +541,11 @@ const eval12Questions: QuestionSeed[] = [
   mcq('¿Qué aportó la Web a la ingeniería de software?', ['Eliminó la necesidad de pruebas', 'Impulsó la reutilización y los servicios distribuidos', 'Evitó el mantenimiento', 'Eliminó los requerimientos'], 1, 'La Web trajo disponibilidad de servicios, componentes reutilizables y avances en lenguajes y reutilización.'),
   { type: 'match', config: { pairs: [{ left: 'Mantenimiento', right: 'Evolucionar ante necesidades cambiantes' }, { left: 'Eficiencia', right: 'No desperdiciar recursos' }, { left: 'Aceptabilidad', right: 'Comprensible y compatible' }] }, prompt: 'Enlaza cada atributo con su descripción', options: [], answer: 0, explanation: 'Cada atributo de calidad describe una propiedad distinta del software profesional.' },
   { type: 'match', config: { pairs: [{ left: 'Producto genérico', right: 'Se vende en el mercado abierto' }, { left: 'Producto personalizado', right: 'Se desarrolla para un cliente específico' }, { left: 'ERP adaptado', right: 'Producto genérico adaptado a la empresa' }] }, prompt: 'Enlaza cada tipo de producto con su definición', options: [], answer: 0, explanation: 'Genérico se comercializa en el mercado; personalizado se diseña para un cliente; el ERP es un genérico adaptado.' },
-  { type: 'fill', config: { sentences: ['La calidad del software abarca los atributos {{no funcionales}}.', 'Un sistema profesional incluye archivos de {{configuración}}.'] }, prompt: 'Completa las frases', options: [], answer: 0, explanation: 'La calidad incluye atributos no funcionales y el sistema incluye configuración y documentación.' },
-  { type: 'fill', config: { sentences: ['Aproximadamente el {{60}}% de los costos son de desarrollo.', 'Los productos se venden en el mercado {{abierto}}.'] }, prompt: 'Completa las cifras y términos', options: [], answer: 0, explanation: 'Cerca del 60% de los costos son de desarrollo y el mercado de los productos genéricos es abierto.' },
+  { type: 'fill', config: { sentences: ['La calidad del software abarca los atributos {{no funcionales}}.', 'Un sistema profesional incluye archivos de {{configuración}}.'], bank: ['funcionales', 'seguridad', 'manuales', 'monolíticos'] }, prompt: 'Completa las frases', options: [], answer: 0, explanation: 'La calidad incluye atributos no funcionales y el sistema incluye configuración y documentación.' },
+  { type: 'fill', config: { sentences: ['Aproximadamente el {{60}}% de los costos son de desarrollo.', 'Los productos se venden en el mercado {{abierto}}.'], bank: ['40', 'cerrado', 'privado', '80'] }, prompt: 'Completa las cifras y términos', options: [], answer: 0, explanation: 'Cerca del 60% de los costos son de desarrollo y el mercado de los productos genéricos es abierto.' },
   { type: 'order', config: {}, prompt: 'Ordena las actividades del proceso', options: ['Especificación del software', 'Desarrollo del software', 'Validación del software', 'Evolución del software'], answer: 0, explanation: 'El proceso va de la especificación a la evolución, pasando por desarrollo y validación.' },
   mcq('¿Qué práctica deja trazabilidad del trabajo profesional?', ['No documentar', 'Usar control de versiones y registrar incidencias', 'Cambiar el código en producción', 'Probar solo al final'], 1, 'Documentar y usar control de versiones deja evidencia de qué se decidió y cómo se validó.'),
-  { type: 'crossword', config: { crossword: { rows: 16, cols: 13, entries: [{ word: 'MANTENIMIENTO', clue: 'Permite evolucionar ante necesidades cambiantes', row: 3, col: 0, direction: 'across' as const }, { word: 'ACEPTABILIDAD', clue: 'Comprensible, utilizable y compatible', row: 3, col: 1, direction: 'down' as const }, { word: 'EFICIENCIA', clue: 'No desperdicia recursos del sistema', row: 3, col: 4, direction: 'down' as const }] } }, prompt: 'Completa el crucigrama de atributos', options: [], answer: 0, explanation: 'Mantenimiento, aceptabilidad y eficiencia son atributos esenciales del buen software.' },
+  { type: 'crossword', config: { crossword: { rows: 16, cols: 13, entries: [{ word: 'MANTENIMIENTO', clue: 'Permite evolucionar ante necesidades cambiantes', row: 3, col: 0, direction: 'across' as const }, { word: 'ACEPTABILIDAD', clue: 'Comprensible, utilizable y compatible', row: 3, col: 1, direction: 'down' as const }, { word: 'EFICIENCIA', clue: 'No desperdicia recursos del sistema', row: 3, col: 4, direction: 'down' as const }] }, bank: ['CONFIABILIDAD', 'SOFTWARE', 'USABILIDAD'] }, prompt: 'Completa el crucigrama de atributos', options: [], answer: 0, explanation: 'Mantenimiento, aceptabilidad y eficiencia son atributos esenciales del buen software.' },
 ];
 
 const eval13Questions: QuestionSeed[] = [
@@ -548,11 +559,11 @@ const eval13Questions: QuestionSeed[] = [
   mcq('¿Por qué es un reto la participación en sistemas militares?', ['Porque no existen', 'Porque genera conflictos éticos y exige transparencia anticipada', 'Porque está prohibida', 'Porque siempre es ilegal'], 1, 'Es un conflicto ético frecuente; empleadores y empleados deben aclarar de antemano sus posiciones.'),
   { type: 'match', config: { pairs: [{ left: 'PÚBLICO', right: 'Actuar conforme al interés del público' }, { left: 'COLEGAS', right: 'Ser justos y apoyarlos' }, { left: 'UNO MISMO', right: 'Aprendizaje para toda la vida' }] }, prompt: 'Enlaza cada principio con su obligación', options: [], answer: 0, explanation: 'Cada principio expresa una relación de responsabilidad distinta.' },
   { type: 'match', config: { pairs: [{ left: 'Confidencialidad', right: 'Respetar la información del cliente' }, { left: 'Competencia', right: 'No aceptar trabajo fuera de capacidad' }, { left: 'Mal uso de computadoras', right: 'No dañar equipos o datos ajenos' }] }, prompt: 'Enlaza cada responsabilidad con su descripción', options: [], answer: 0, explanation: 'Son áreas de responsabilidad profesional anteriores a la ley.' },
-  { type: 'fill', config: { sentences: ['El principio {{JUICIO}} exige independencia profesional.', 'El código lo publican {{ACM}} e IEEE.'] }, prompt: 'Completa los principios', options: [], answer: 0, explanation: 'JUICIO e instituciones como ACM e IEEE forman el marco del código.' },
-  { type: 'fill', config: { sentences: ['El mal uso incluye diseminar {{malware}}.', 'Los códigos de {{conducta}} establecen estándares esperados.'] }, prompt: 'Completa las frases', options: [], answer: 0, explanation: 'El mal uso va del uso trivial a la diseminación de malware; los códigos de conducta fijan estándares.' },
+  { type: 'fill', config: { sentences: ['El principio {{JUICIO}} exige independencia profesional.', 'El código lo publican {{ACM}} e IEEE.'], bank: ['GESTIÓN', 'PRODUCTO', 'IEEE', 'ISO'] }, prompt: 'Completa los principios', options: [], answer: 0, explanation: 'JUICIO e instituciones como ACM e IEEE forman el marco del código.' },
+  { type: 'fill', config: { sentences: ['El mal uso incluye diseminar {{malware}}.', 'Los códigos de {{conducta}} establecen estándares esperados.'], bank: ['virus', 'ética', 'leyes', 'principios'] }, prompt: 'Completa las frases', options: [], answer: 0, explanation: 'El mal uso va del uso trivial a la diseminación de malware; los códigos de conducta fijan estándares.' },
   { type: 'order', config: {}, prompt: 'Ordena el razonamiento ético', options: ['Identificar a los afectados', 'Reconocer el principio en juego', 'Evaluar riesgos y alternativas', 'Actuar y documentar la decisión'], answer: 0, explanation: 'El análisis ético parte de los afectados y termina en la acción documentada.' },
   mcq('¿Qué principio obliga a actuar conforme al interés del público?', ['PRODUCTO', 'PÚBLICO', 'GESTIÓN', 'UNO MISMO'], 1, 'PÚBLICO exige actuar consecuentemente con el interés del público, por encima de intereses particulares.'),
-  { type: 'crossword', config: { crossword: { rows: 19, cols: 11, entries: [{ word: 'COMPETENCIA', clue: 'No aceptar trabajo fuera de la propia capacidad', row: 3, col: 0, direction: 'across' as const }, { word: 'CONFIDENCIALIDAD', clue: 'Respeto a la información del cliente', row: 3, col: 0, direction: 'down' as const }, { word: 'ETICA', clue: 'Marco de conducta profesional', row: 3, col: 4, direction: 'down' as const }] } }, prompt: 'Completa el crucigrama de ética', options: [], answer: 0, explanation: 'Competencia, confidencialidad y ética son deberes centrales del código profesional.' },
+  { type: 'crossword', config: { crossword: { rows: 19, cols: 11, entries: [{ word: 'COMPETENCIA', clue: 'No aceptar trabajo fuera de la propia capacidad', row: 3, col: 0, direction: 'across' as const }, { word: 'CONFIDENCIALIDAD', clue: 'Respeto a la información del cliente', row: 3, col: 0, direction: 'down' as const }, { word: 'ETICA', clue: 'Marco de conducta profesional', row: 3, col: 4, direction: 'down' as const }] }, bank: ['INTEGRIDAD', 'HONESTIDAD', 'PRODUCTO'] }, prompt: 'Completa el crucigrama de ética', options: [], answer: 0, explanation: 'Competencia, confidencialidad y ética son deberes centrales del código profesional.' },
 ];
 
 const eval14Questions: QuestionSeed[] = [
@@ -566,11 +577,11 @@ const eval14Questions: QuestionSeed[] = [
   mcq('¿Por qué la estación debe ser autocontenida?', ['Para gastar menos', 'Porque no hay fuentes externas de energía ni red', 'Para ser más rápida', 'Porque lo exige el usuario'], 1, 'Se despliega en campo abierto, sin energía externa ni cables de red; usa baterías y carga solar o eólica.'),
   { type: 'match', config: { pairs: [{ left: 'Bomba de insulina', right: 'Sistema embebido médico' }, { left: 'MHC-PMS', right: 'Sistema de información clínica' }, { left: 'Estación meteorológica', right: 'Adquisición de datos con sensores' }] }, prompt: 'Enlaza cada sistema con su tipo', options: [], answer: 0, explanation: 'Cada estudio de caso representa un tipo distinto de sistema.' },
   { type: 'match', config: { pairs: [{ left: 'MHC-PMS', right: 'Privacidad' }, { left: 'Estación meteorológica', right: 'Fiabilidad en ambiente hostil' }, { left: 'Bomba de insulina', right: 'Disponibilidad y dosis correcta' }] }, prompt: 'Enlaza cada sistema con su requerimiento clave', options: [], answer: 0, explanation: 'Cada sistema enfatiza un atributo de calidad distinto.' },
-  { type: 'fill', config: { sentences: ['La bomba entrega insulina en respuesta a {{pulsos}} del controlador.', 'El MHC-PMS usa una base de datos {{centralizada}}.'] }, prompt: 'Completa las frases', options: [], answer: 0, explanation: 'La bomba responde a pulsos y el MHC-PMS se apoya en una base de datos centralizada con copias locales.' },
-  { type: 'fill', config: { sentences: ['Las estaciones se despliegan en campo {{abierto}}.', 'La estación se comunica por {{satélite}}.'] }, prompt: 'Completa las frases', options: [], answer: 0, explanation: 'El escenario es campo abierto con comunicación satelital.' },
+  { type: 'fill', config: { sentences: ['La bomba entrega insulina en respuesta a {{pulsos}} del controlador.', 'El MHC-PMS usa una base de datos {{centralizada}}.'], bank: ['señales', 'distribuida', 'local', 'respuestas'] }, prompt: 'Completa las frases', options: [], answer: 0, explanation: 'La bomba responde a pulsos y el MHC-PMS se apoya en una base de datos centralizada con copias locales.' },
+  { type: 'fill', config: { sentences: ['Las estaciones se despliegan en campo {{abierto}}.', 'La estación se comunica por {{satélite}}.'], bank: ['cerrado', 'cable', 'radio', 'remoto'] }, prompt: 'Completa las frases', options: [], answer: 0, explanation: 'El escenario es campo abierto con comunicación satelital.' },
   { type: 'order', config: {}, prompt: 'Ordena el funcionamiento de la bomba de insulina', options: ['Medir el nivel de azúcar en la sangre', 'Calcular la dosis necesaria', 'Enviar pulsos a la bomba', 'Administrar la insulina'], answer: 0, explanation: 'El sistema mide, calcula, envía pulsos y administra la dosis.' },
   mcq('¿Qué atributo es prioritario en el MHC-PMS?', ['Capacidad gráfica', 'Privacidad de la información clínica', 'Tamaño físico', 'Ancho de banda'], 1, 'El MHC-PMS maneja información sensible: la privacidad es un requerimiento crítico.'),
-  { type: 'crossword', config: { crossword: { rows: 11, cols: 8, entries: [{ word: 'INSULINA', clue: 'Hormona que administra la bomba', row: 3, col: 0, direction: 'across' as const }, { word: 'SENSORES', clue: 'Dispositivos que recogen datos del entorno', row: 3, col: 2, direction: 'down' as const }] } }, prompt: 'Completa el crucigrama de estudios de caso', options: [], answer: 0, explanation: 'La bomba administra insulina y la estación meteorológica usa sensores.' },
+  { type: 'crossword', config: { crossword: { rows: 11, cols: 8, entries: [{ word: 'INSULINA', clue: 'Hormona que administra la bomba', row: 3, col: 0, direction: 'across' as const }, { word: 'SENSORES', clue: 'Dispositivos que recogen datos del entorno', row: 3, col: 2, direction: 'down' as const }] }, bank: ['EMBEBIDO', 'MHC', 'PACIENTES'] }, prompt: 'Completa el crucigrama de estudios de caso', options: [], answer: 0, explanation: 'La bomba administra insulina y la estación meteorológica usa sensores.' },
 ];
 
 export const unit1Evaluations: EvaluationSeed[] = [

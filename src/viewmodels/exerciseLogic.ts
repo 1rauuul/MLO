@@ -100,8 +100,8 @@ export function shuffleItems<T>(items: T[], rand: () => number): T[] {
   return next;
 }
 
-export function buildFillBank(sentences: string[], rand: () => number): string[] {
-  return shuffleItems(extractFillAnswers(sentences), rand);
+export function buildFillBank(sentences: string[], rand: () => number, extra: string[] = []): string[] {
+  return shuffleItems([...extractFillAnswers(sentences), ...extra], rand);
 }
 
 export function isMatchCorrect(

@@ -154,11 +154,13 @@ export function useRecordEvaluationResult(): (
 export interface EvaluationEngine {
   index: number;
   total: number;
+  items: Question[];
   question: Question | null;
   phase: 'running' | 'summary';
   answered: boolean;
   lastCorrect: boolean | null;
   correctCount: number;
+  outcomes: (boolean | null)[];
   summary: AttemptSummary;
   submit: (answer: string, correct: boolean) => void;
   next: () => void;
@@ -176,6 +178,7 @@ export function useEvaluationEngine(questions: Question[], lessonId: string | nu
   const [answered, setAnswered] = useState(false);
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
+  const [outcomes, setOutcomes] = useState<(boolean | null)[]>([]);
   const [phase, setPhase] = useState<'running' | 'summary'>('running');
   const [summary, setSummary] = useState<AttemptSummary>(summarizeAttempts([]));
 
@@ -193,8 +196,9 @@ export function useEvaluationEngine(questions: Question[], lessonId: string | nu
     setAnswered(false);
     setLastCorrect(null);
     setCorrectCount(0);
+    setOutcomes(usable.map(() => null));
     setPhase('running');
-  }, []);
+  }, [usable]);
 
   useEffect(() => {
     restart();
@@ -211,6 +215,11 @@ export function useEvaluationEngine(questions: Question[], lessonId: string | nu
       }
       setAnswered(true);
       setLastCorrect(correct);
+      setOutcomes(previous => {
+        const next = [...previous];
+        next[index] = correct;
+        return next;
+      });
       if (correct) {
         setCorrectCount(current => current + 1);
       }
@@ -232,11 +241,13 @@ export function useEvaluationEngine(questions: Question[], lessonId: string | nu
   return {
     index,
     total: usable.length,
+    items: usable,
     question: usable[index] ?? null,
     phase,
     answered,
     lastCorrect,
     correctCount,
+    outcomes,
     summary,
     submit,
     next,

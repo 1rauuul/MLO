@@ -71,6 +71,9 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     if (currentVersion < 7) {
       await applyUnit12ExerciseBank(db);
     }
+    if (currentVersion < 8) {
+      await applyUnit1Content(db, false);
+    }
   }
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);

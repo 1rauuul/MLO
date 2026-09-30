@@ -4,7 +4,7 @@ import { migrateAndSeed } from './db';
 import { seedDatabase } from './seed';
 
 describe('migrateAndSeed', () => {
-  test('adds the l1.2 practice exercises to v6 without clearing attempts', async () => {
+  test('migra a v8 aplicando el banco de ejercicios sin borrar attempts', async () => {
     const statements: { sql: string; params: unknown[] }[] = [];
     const db = {
       execAsync: async (sql: string) => {
@@ -24,9 +24,9 @@ describe('migrateAndSeed', () => {
       .filter(statement => statement.sql.startsWith('INSERT INTO exercises'))
       .map(statement => statement.params[0]);
 
-    expect(insertedExerciseIds).toEqual(['cross1.2a', 'fill1.2c', 'ord1.2a']);
-    expect(statements.some(statement => statement.sql.startsWith('DELETE FROM'))).toBe(false);
-    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 7')).toBe(true);
+    expect(insertedExerciseIds).toEqual(expect.arrayContaining(['cross1.2a', 'fill1.2c', 'ord1.2a']));
+    expect(statements.some(statement => statement.sql.startsWith('DELETE FROM attempts'))).toBe(false);
+    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 8')).toBe(true);
   });
 
   test('includes the merged exercises in a fresh seed for l1.2', async () => {

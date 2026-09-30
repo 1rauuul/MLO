@@ -1,8 +1,10 @@
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useMemo } from 'react';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
 import { PrimaryButton } from '@/components/Buttons';
 import { useTheme } from '@/theme/theme-provider';
+import { shuffleItems } from '@/viewmodels/exerciseLogic';
 import type { CrosswordEngine } from '@/viewmodels/useExerciseEngine';
 
 interface CrosswordExerciseProps {
@@ -10,11 +12,43 @@ interface CrosswordExerciseProps {
   onSubmit: (answer: string, correct: boolean) => void;
 }
 
-const CELL = 22;
+const CELL = 24;
 
 export function CrosswordExercise({ engine, onSubmit }: CrosswordExerciseProps) {
   const { colors, radius, spacing } = useTheme();
   const cellMap = new Map(engine.cells.map(cell => [`${cell.row}-${cell.col}`, cell]));
+
+  const labels = useMemo(() => {
+    const result: string[] = [];
+    let across = 0;
+    let down = 0;
+    for (const entry of engine.entries) {
+      if (entry.direction === 'across') {
+        across += 1;
+        result.push(`H${across}`);
+      } else {
+        down += 1;
+        result.push(`V${down}`);
+      }
+    }
+    return result;
+  }, [engine.entries]);
+
+  const startLabels = useMemo(() => {
+    const map = new Map<string, string[]>();
+    engine.entries.forEach((entry, index) => {
+      const key = `${entry.row}-${entry.col}`;
+      const list = map.get(key) ?? [];
+      list.push(labels[index]!);
+      map.set(key, list);
+    });
+    return map;
+  }, [engine.entries, labels]);
+
+  const bank = useMemo(
+    () => shuffleItems([...engine.entries.map(entry => entry.word), ...engine.bank], Math.random),
+    [engine.entries, engine.bank],
+  );
 
   const check = () => {
     const correct = engine.submit();
@@ -52,60 +86,189 @@ export function CrosswordExercise({ engine, onSubmit }: CrosswordExerciseProps) 
     }
   };
 
+  const selectCellEntry = (row: number, col: number) => {
+    const cell = cellMap.get(`${row}-${col}`);
+    if (!cell) {
+      return;
+    }
+    const startEntry = cell.entryIndexes.find(
+      index =>
+        engine.entries[index] !== undefined &&
+        engine.entries[index]!.row === row &&
+        engine.entries[index]!.col === col,
+    );
+    const pick = startEntry ?? cell.entryIndexes[0];
+    if (pick !== undefined) {
+      engine.selectEntry(pick);
+    }
+  };
+
+  const fillFromBank = (word: string) => {
+    if (engine.selectedEntry === null) {
+      return;
+    }
+    const entry = engine.entries[engine.selectedEntry];
+    if (entry && entry.word.length === word.length) {
+      writeEntry(engine.selectedEntry, word);
+    }
+  };
+
+  const selected = engine.selectedEntry;
+  const activeEntry = selected !== null ? engine.entries[selected] : undefined;
+
   return (
     <View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gridScroll}>
         <View style={styles.grid}>
-        {Array.from({ length: engine.rows }).map((_, row) => (
-          <View key={`row-${row}`} style={styles.gridRow}>
-            {Array.from({ length: engine.cols }).map((_, col) => {
-              const cell = cellMap.get(`${row}-${col}`);
-              const active = cell?.entryIndexes.includes(engine.selectedEntry ?? -1) ?? false;
-              return cell ? (
-                <View
-                  key={`cell-${row}-${col}`}
-                  style={[
-                    styles.cell,
-                    {
-                      borderColor: colors.line,
-                      backgroundColor: active ? colors.soft : colors.card,
-                    },
-                  ]}>
-                  <AppText variant="small" weight="700">
-                    {engine.letters[`${row}-${col}`] ?? ''}
-                  </AppText>
-                </View>
-              ) : (
-                <View key={`cell-${row}-${col}`} style={styles.blank} />
-              );
-            })}
-          </View>
-        ))}
+          {Array.from({ length: engine.rows }).map((_, row) => (
+            <View key={`row-${row}`} style={styles.gridRow}>
+              {Array.from({ length: engine.cols }).map((_, col) => {
+                const cell = cellMap.get(`${row}-${col}`);
+                if (!cell) {
+                  return <View key={`cell-${row}-${col}`} style={styles.blank} />;
+                }
+                const active = selected !== null && cell.entryIndexes.includes(selected);
+                const start = startLabels.get(`${row}-${col}`);
+                return (
+                  <Pressable
+                    key={`cell-${row}-${col}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={start ? `Inicio ${start.join(', ')}` : 'Celda'}
+                    onPress={() => selectCellEntry(row, col)}
+                    style={[
+                      styles.cell,
+                      {
+                        borderColor: active ? colors.primary : colors.line,
+                        backgroundColor: active ? colors.soft : colors.card,
+                      },
+                    ]}>
+                    {start ? (
+                      <AppText variant="code" color={colors.muted} style={styles.cellLabel}>
+                        {start.join('/')}
+                      </AppText>
+                    ) : null}
+                    <AppText variant="small" weight="700">
+                      {engine.letters[`${row}-${col}`] ?? ''}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
         </View>
       </ScrollView>
 
-      <View style={[styles.entries, { marginTop: spacing.lg }]}>
-        {engine.entries.map((entry, index) => (
-          <View key={`${entry.word}-${index}`} style={styles.entry}>
-            <AppText variant="small" color={colors.muted} style={styles.clue}>
-              {`${entry.direction === 'across' ? 'Horizontal' : 'Vertical'} · ${entry.clue}`}
+      {activeEntry ? (
+        <View
+          style={[
+            styles.activeClue,
+            { backgroundColor: colors.soft, borderRadius: radius.control, marginTop: spacing.md },
+          ]}>
+          <View style={[styles.labelBadge, { backgroundColor: colors.primary }]}>
+            <AppText variant="small" color={colors.onPrimary} weight="700">
+              {labels[selected!]}
             </AppText>
-            <TextInput
-              value={entryValue(index)}
-              onFocus={() => engine.selectEntry(index)}
-              onChangeText={value => writeEntry(index, value)}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              maxLength={entry.word.length}
-              placeholder={String(entry.word.length)}
-              placeholderTextColor={colors.muted}
-              style={[
-                styles.input,
-                { borderColor: colors.line, backgroundColor: colors.card, color: colors.text, borderRadius: radius.control },
-              ]}
-            />
           </View>
-        ))}
+          <AppText variant="small" weight="600" style={styles.flex}>
+            {activeEntry.clue}
+          </AppText>
+        </View>
+      ) : (
+        <AppText variant="small" color={colors.muted} style={{ marginTop: spacing.md }}>
+          Toca una celda o una pista para escribir.
+        </AppText>
+      )}
+
+      <TextInput
+        value={selected !== null ? entryValue(selected) : ''}
+        editable={selected !== null}
+        onChangeText={value => (selected !== null ? writeEntry(selected, value) : undefined)}
+        autoCapitalize="characters"
+        autoCorrect={false}
+        placeholder={
+          activeEntry
+            ? `${activeEntry.word.length} letras · ${labels[selected!]}`
+            : 'Toca una pista para escribir'
+        }
+        placeholderTextColor={colors.muted}
+        style={[
+          styles.input,
+          {
+            borderColor: selected !== null ? colors.primary : colors.line,
+            backgroundColor: colors.card,
+            color: colors.text,
+            borderRadius: radius.control,
+            marginTop: spacing.sm,
+          },
+        ]}
+      />
+
+      {bank.length > 0 ? (
+        <View style={[styles.bank, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
+          {bank.map((word, index) => (
+            <Pressable
+              key={`${word}-${index}`}
+              accessibilityRole="button"
+              accessibilityLabel={`Usar ${word}`}
+              disabled={!activeEntry}
+              onPress={() => fillFromBank(word)}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.line,
+                  borderRadius: radius.pill,
+                  opacity: activeEntry ? 1 : 0.5,
+                },
+              ]}>
+              <AppText variant="small" weight="600">
+                {word}
+              </AppText>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      <View style={[styles.entries, { marginTop: spacing.md }]}>
+        {engine.entries.map((entry, index) => {
+          const activeItem = selected === index;
+          const correct = entryValue(index).toUpperCase() === entry.word.toUpperCase();
+          return (
+            <Pressable
+              key={`${entry.word}-${index}`}
+              accessibilityRole="button"
+              accessibilityLabel={`${labels[index]} ${entry.clue}`}
+              onPress={() => engine.selectEntry(index)}
+              style={[
+                styles.clueRow,
+                {
+                  borderColor: activeItem ? colors.primary : colors.line,
+                  backgroundColor: activeItem ? colors.soft : colors.card,
+                  borderRadius: radius.control,
+                },
+              ]}>
+              <View style={[styles.labelBadge, { backgroundColor: activeItem ? colors.primary : colors.soft }]}>
+                <AppText
+                  variant="small"
+                  color={activeItem ? colors.onPrimary : colors.muted}
+                  weight="700">
+                  {labels[index]}
+                </AppText>
+              </View>
+              <View style={styles.flex}>
+                <AppText variant="small">{entry.clue}</AppText>
+                <AppText variant="small" color={colors.muted}>
+                  {`${entry.word.length} letras · ${entryValue(index) || '—'}`}
+                </AppText>
+              </View>
+              {engine.checked ? (
+                <AppText color={correct ? colors.success : colors.danger} weight="700">
+                  {correct ? '✓' : '✗'}
+                </AppText>
+              ) : null}
+            </Pressable>
+          );
+        })}
       </View>
 
       <PrimaryButton label="Comprobar crucigrama" onPress={check} style={{ marginTop: spacing.lg }} />
@@ -114,7 +277,11 @@ export function CrosswordExercise({ engine, onSubmit }: CrosswordExerciseProps) 
         <View
           style={[
             styles.feedback,
-            { borderColor: engine.isCorrect ? colors.success : colors.danger, backgroundColor: colors.card, borderRadius: radius.control },
+            {
+              borderColor: engine.isCorrect ? colors.success : colors.danger,
+              backgroundColor: colors.card,
+              borderRadius: radius.control,
+            },
           ]}>
           <AppText color={engine.isCorrect ? colors.success : colors.danger} weight="700">
             {engine.isCorrect ? '✓ Crucigrama correcto' : '↻ Hay palabras incorrectas'}
@@ -126,6 +293,7 @@ export function CrosswordExercise({ engine, onSubmit }: CrosswordExerciseProps) 
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   gridScroll: { paddingVertical: 2 },
   grid: { gap: 2 },
   gridRow: { flexDirection: 'row', gap: 2 },
@@ -136,10 +304,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  cellLabel: { position: 'absolute', top: 0, left: 1, fontSize: 6, lineHeight: 7 },
   blank: { width: CELL, height: CELL },
-  entries: { gap: 10 },
-  entry: { gap: 4 },
-  clue: { lineHeight: 16 },
-  input: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, letterSpacing: 2, fontWeight: '700' },
+  activeClue: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10 },
+  input: { borderWidth: 2, paddingHorizontal: 12, paddingVertical: 10, letterSpacing: 3, fontWeight: '700' },
+  entries: { gap: 8 },
+  clueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 10,
+    borderWidth: 1,
+  },
+  labelBadge: { minWidth: 30, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 7, alignItems: 'center' },
+  bank: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 12, marginTop: 12 },
+  chip: { paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1 },
   feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
 });

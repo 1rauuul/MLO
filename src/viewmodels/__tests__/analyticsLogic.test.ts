@@ -56,4 +56,11 @@ describe('analyticsLogic', () => {
   it('no recomienda nada sin intentos', () => {
     expect(recommendReview(summarizeAttempts([]))).toBe('none');
   });
+
+  it('ignora tipos de actividad desconocidos', () => {
+    const legacy = { ...attempt('match', false, 1), itemType: 'justify' as never };
+    const summary = summarizeAttempts([legacy, attempt('fill', true, 2)]);
+    expect(summary.total).toBe(1);
+    expect(summary.byType.justify).toBeUndefined();
+  });
 });
