@@ -11,9 +11,10 @@ interface FillExerciseProps {
   engine: FillEngine;
   onSubmit: (answer: string, correct: boolean) => void;
   showReset?: boolean;
+  locked?: boolean;
 }
 
-export function FillExercise({ engine, onSubmit, showReset = true }: FillExerciseProps) {
+export function FillExercise({ engine, onSubmit, showReset = true, locked = false }: FillExerciseProps) {
   const { colors, radius, spacing } = useTheme();
   const complete = engine.assignment.every(item => item !== null);
 
@@ -36,8 +37,10 @@ export function FillExercise({ engine, onSubmit, showReset = true }: FillExercis
     return (
       <Text
         key={`blank-${blankIndex}`}
-        onPress={() =>
-          word ? engine.clearBlank(blankIndex) : engine.selectBlank(blankIndex)
+        onPress={
+          locked
+            ? undefined
+            : () => (word ? engine.clearBlank(blankIndex) : engine.selectBlank(blankIndex))
         }
         style={[
           styles.blank,
@@ -74,8 +77,8 @@ export function FillExercise({ engine, onSubmit, showReset = true }: FillExercis
             key={`${word}-${index}`}
             accessibilityRole="button"
             accessibilityLabel={`Palabra ${word}`}
-            accessibilityState={{ disabled: engine.used[index] }}
-            disabled={engine.used[index]}
+            accessibilityState={{ disabled: locked || engine.used[index] }}
+            disabled={locked || engine.used[index]}
             onPress={() => engine.placeWord(index)}
             style={[
               styles.chip,
@@ -83,7 +86,7 @@ export function FillExercise({ engine, onSubmit, showReset = true }: FillExercis
                 backgroundColor: colors.card,
                 borderColor: colors.line,
                 borderRadius: radius.pill,
-                opacity: engine.used[index] ? 0.35 : 1,
+                opacity: locked || engine.used[index] ? 0.35 : 1,
               },
             ]}>
             <AppText variant="small" weight="600">
@@ -94,7 +97,12 @@ export function FillExercise({ engine, onSubmit, showReset = true }: FillExercis
       </View>
 
       <View style={[styles.actions, { marginTop: spacing.lg }]}>
-        <PrimaryButton label="Comprobar" disabled={!complete} onPress={check} style={styles.action} />
+        <PrimaryButton
+          label="Comprobar"
+          disabled={locked || !complete}
+          onPress={check}
+          style={styles.action}
+        />
         {showReset ? <SecondaryButton label="Reintentar" onPress={engine.reset} style={styles.action} /> : null}
       </View>
 

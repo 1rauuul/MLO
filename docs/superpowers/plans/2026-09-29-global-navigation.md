@@ -127,7 +127,7 @@ Expected: exit 0; both current route hrefs satisfy Expo Router's `Href` type.
 
 - [ ] **Step 1: Move the four learning route files into `(modules)` and add a Stack layout**
 
-Preserve the route URL segments `tema/[id]`, `lecciones/[id]`, `ejemplos/[id]`, and `ejercicios/index`. In `(modules)/_layout.tsx`, render `Stack` with `headerShown: false` and set its initial route to `index`. Do not edit exercise logic or activity components as part of these moves.
+Preserve the route URL segments `tema/[id]`, `lecciones/[id]`, `ejemplos/[id]`, and `ejercicios/index`. In `(modules)/_layout.tsx`, render `Stack` with `headerShown: false` and set `unstable_settings.anchor` to `index`. Do not use deprecated `initialRouteName`. Do not edit exercise logic or activity components as part of these moves.
 
 - [ ] **Step 2: Extract Módulos as the `(modules)/index.tsx` screen**
 
@@ -135,7 +135,7 @@ Move the existing `ModulesTab` markup and `openLesson` behavior into this route.
 
 - [ ] **Step 3: Extract Evaluaciones and Perfil into their own tab roots**
 
-Move `AssessmentsTab` to `(evaluations)/evaluaciones/index.tsx` and `ProfileTab` to `(profile)/perfil/index.tsx`. Give each group a Stack with hidden native headers and its visible route as its initial route. Refresh evaluation results with `useFocusEffect` on the Evaluaciones route; refresh catalog and recent results on Perfil focus. Keep profile reset, logout, learner-style, theme, and text-size actions unchanged.
+Move `AssessmentsTab` to `(evaluations)/evaluaciones/index.tsx` and `ProfileTab` to `(profile)/perfil/index.tsx`. Give each group a Stack with hidden native headers and set `unstable_settings.anchor` to `evaluaciones/index` and `perfil/index` respectively. Do not use deprecated `initialRouteName`. Refresh evaluation results with `useFocusEffect` on the Evaluaciones route; refresh catalog and recent results on Perfil focus. Keep profile reset, logout, learner-style, theme, and text-size actions unchanged.
 
 - [ ] **Step 4: Extract the evaluation flow and add one route wrapper per tab group**
 
@@ -272,31 +272,79 @@ Expected: exit 0 for the typed `Tabs` screen names and tab-bar adapter.
 - Modify: `src/app/(app)/(modules)/ejemplos/[id].tsx`
 - Modify: `src/app/(app)/(modules)/ejercicios/index.tsx`
 - Modify: `src/components/evaluation/EvaluationFlow.tsx`
+- Create: `src/components/ActivityExitButton.tsx`
+- Test: `src/components/__tests__/ActivityExitButton.test.tsx`
 - Test: `src/navigation/activityRoutes.test.ts`
 
 **Interfaces:**
 - The lesson/example/exercise screens call `getTopicExitHref(lessonId, lessonCode)` and `getTopicExitLabel(lessonCode)`; `router.navigate(...)` performs their explicit exit action.
+- `ActivityExitButton({ lessonId, lessonCode, onExit? })` renders the agreed accessible label, invokes optional `onExit`, then navigates to `getTopicExitHref`.
 - Evaluation completion navigates to `/`, the unique Módulos root; review actions target the corresponding route in the module group.
 
-- [ ] **Step 1: Add the lesson exit action at the final synthesis section**
+- [ ] **Step 1: Write failing tests for the reusable exit button**
 
-On the last section, keep the existing progression action (`Ver ejemplo`, `Ejercicios`, or `Evaluación`). Add a secondary exit action; label it `Regresar al tema` for regular topics and `Volver a módulos` for code `1.1`. If the existing progression label is `Terminar`, route it to the same explicit destination rather than `router.back()`.
+Create `src/components/__tests__/ActivityExitButton.test.tsx`. Mock only `useRouter`, the theme hook, and reduced-motion hook; render the real button and assert the visible label, its navigation target, and the optional callback:
 
-- [ ] **Step 2: Add an exit action after the example has been answered**
+```tsx
+import { fireEvent, render } from '@testing-library/react-native';
+
+import { ActivityExitButton } from '../ActivityExitButton';
+
+const mockNavigate = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate }) }));
+jest.mock('@/theme/theme-provider', () => ({
+  useTheme: () => ({
+    colors: { soft: '#eee', text: '#111', onPrimary: '#fff' },
+    radius: { control: 8 }, scale: 1, fonts: { mono: 'monospace' },
+  }),
+}));
+jest.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }));
+
+it.each([
+  ['lesson-2', '2.1', 'Regresar al tema', { pathname: '/tema/[id]', params: { id: 'lesson-2' } }],
+  ['lesson-1', '1.1', 'Volver a módulos', '/'],
+] as const)('navigates from %s with the matching label', (lessonId, lessonCode, label, href) => {
+  mockNavigate.mockClear();
+  const onExit = jest.fn();
+  const { getByRole } = render(
+    <ActivityExitButton lessonId={lessonId} lessonCode={lessonCode} onExit={onExit} />,
+  );
+
+  fireEvent.press(getByRole('button', { name: label }));
+  expect(onExit).toHaveBeenCalledTimes(1);
+  expect(mockNavigate).toHaveBeenCalledWith(href);
+});
+```
+
+- [ ] **Step 2: Run the component test and confirm RED**
+
+Run: `npx jest src/components/__tests__/ActivityExitButton.test.tsx --runInBand`
+
+Expected: FAIL because `ActivityExitButton.tsx` does not exist yet.
+
+- [ ] **Step 3: Implement the minimal shared button**
+
+Implement `ActivityExitButton` with props `lessonId: string`, `lessonCode: string`, optional `onExit?: () => void`; use `SecondaryButton`, `getTopicExitLabel`, `getTopicExitHref`, and `useRouter`. Its press handler calls `onExit?.()` before `router.navigate(getTopicExitHref(lessonId, lessonCode))`.
+
+- [ ] **Step 4: Add the lesson exit action at the final synthesis section**
+
+On the last section, keep the existing progression action (`Ver ejemplo`, `Ejercicios`, or `Evaluación`) when it leads to another activity and add `ActivityExitButton` with the current lesson ID/code. When no next activity exists, use the explicit exit button as the completion action rather than a `Terminar` action that calls `router.back()`. Pass `markCompleted` through `onExit` so leaving from either action preserves lesson completion.
+
+- [ ] **Step 5: Add an exit action after the example has been answered**
 
 Use `example.lessonId` with `useLessonContent` to resolve the lesson code. Once the guided exercise is answered and the lesson is loaded, show `Regresar al tema` or the 1.1 fallback beside `Ir a ejercicios`. Leave the example A/B controls and answer state intact.
 
-- [ ] **Step 3: Replace the exercise-summary history-dependent return**
+- [ ] **Step 6: Replace the exercise-summary history-dependent return**
 
-Use the already loaded lesson data on the summary screen. Change `Volver al tema` to the explicit `getTopicExitHref` destination; show `Volver a módulos` for 1.1. Keep the existing recommendation and evaluation actions.
+Use the already loaded lesson data on the summary screen. Change `Volver al tema` to `ActivityExitButton`; keep the existing recommendation and evaluation actions.
 
-- [ ] **Step 4: Make the final evaluation action return to the Modules root**
+- [ ] **Step 7: Make the final evaluation action return to the Modules root**
 
 On the evaluation summary, make `Volver a Módulos` the primary action and call `router.navigate('/')`. Keep `Repasar la lección` or `Resolver ejercicios` as secondary actions when the recommendation provides them; target `/(app)/(modules)/lecciones/[id]` and `/(app)/(modules)/ejercicios?lesson=...` respectively. Keep the header back action contextual to the group from which this shared evaluation route was opened.
 
-- [ ] **Step 5: Run route tests, all tests, and typecheck**
+- [ ] **Step 8: Run focused tests, all tests, and typecheck**
 
-Run: `npx jest src/navigation/activityRoutes.test.ts src/navigation/tabRoutes.test.ts src/components/__tests__/BottomTabBar.test.tsx --runInBand`
+Run: `npx jest src/navigation/activityRoutes.test.ts src/navigation/tabRoutes.test.ts src/components/__tests__/BottomTabBar.test.tsx src/components/__tests__/ActivityExitButton.test.tsx --runInBand`
 
 Expected: PASS for route destinations and tab behavior.
 
@@ -344,4 +392,5 @@ Expected: exit 0 with no lint errors.
 - Expo SDK 57 JavaScript tabs: `https://docs.expo.dev/versions/v57.0.0/router/advanced/tabs/`
 - Expo SDK 57 nested navigators: `https://docs.expo.dev/versions/v57.0.0/router/advanced/nesting-navigators/`
 - Expo SDK 57 shared routes: `https://docs.expo.dev/versions/v57.0.0/router/advanced/shared-routes/`
+- Expo SDK 57 router settings: `https://docs.expo.dev/versions/v57.0.0/router/advanced/router-settings/`
 - Expo SDK 57 navigation actions: `https://docs.expo.dev/versions/v57.0.0/router/reference/navigating/`

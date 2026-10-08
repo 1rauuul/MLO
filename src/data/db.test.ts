@@ -26,7 +26,8 @@ describe('migrateAndSeed', () => {
 
     expect(insertedExerciseIds).toEqual(expect.arrayContaining(['cross1.2a', 'fill1.2c', 'ord1.2a']));
     expect(statements.some(statement => statement.sql.startsWith('DELETE FROM attempts'))).toBe(false);
-    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 8')).toBe(true);
+    expect(statements.some(statement => statement.sql.includes('CREATE TABLE IF NOT EXISTS last_location'))).toBe(true);
+    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 9')).toBe(true);
   });
 
   test('includes the merged exercises in a fresh seed for l1.2', async () => {

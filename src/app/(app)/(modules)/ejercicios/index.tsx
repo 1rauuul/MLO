@@ -1,4 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ActivityView } from '@/components/activities/ActivityView';
@@ -12,6 +13,7 @@ import { useTheme } from '@/theme/theme-provider';
 import { recommendReview } from '@/viewmodels/analyticsLogic';
 import { useLessonContent } from '@/viewmodels/useLessonContent';
 import { usePracticeEngine } from '@/viewmodels/usePracticeEngine';
+import { useSession } from '@/viewmodels/useSession';
 
 const TYPE_LABELS: Record<ActivityType, string> = {
   order: 'Ordena',
@@ -25,8 +27,22 @@ export default function PracticeScreen() {
   const { lesson: lessonParam } = useLocalSearchParams<{ lesson?: string }>();
   const { lesson } = useLessonContent(lessonParam ?? null);
   const engine = usePracticeEngine(lessonParam ?? null);
+  const { record } = useSession();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
+
+  useFocusEffect(
+    useCallback(() => {
+      if (lesson) {
+        record({
+          unitId: lesson.unitId,
+          lessonId: lesson.id,
+          lessonCode: lesson.code,
+          section: 'exercise',
+        });
+      }
+    }, [lesson, record]),
+  );
 
   const goBack = () => router.back();
   const goLesson = () => {
@@ -97,10 +113,9 @@ export default function PracticeScreen() {
 
         <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
           <PrimaryButton label="Ir a la evaluación" onPress={goEvaluation} />
-          <SecondaryButton
-            label={recommendation === 'lesson' ? 'Repasar la lección' : 'Volver al tema'}
-            onPress={recommendation === 'lesson' ? goLesson : goBack}
-          />
+          {recommendation === 'lesson' ? (
+            <SecondaryButton label="Repasar la lección" onPress={goLesson} />
+          ) : null}
         </View>
       </Screen>
     );
@@ -143,6 +158,7 @@ export default function PracticeScreen() {
           key={exercise.id}
           exercise={exercise}
           allowReset={false}
+          locked={engine.answered}
           onSubmit={(answer, correct) => engine.submit(answer, correct)}
         />
       </View>

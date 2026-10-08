@@ -10,6 +10,7 @@ interface ButtonProps {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  compact?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 }
@@ -18,7 +19,11 @@ function pressStyle(pressed: boolean, reduced: boolean): StyleProp<ViewStyle> {
   return pressed && !reduced ? { transform: [{ scale: 0.98 }] } : null;
 }
 
-export function PrimaryButton({ label, onPress, disabled, style, accessibilityLabel }: ButtonProps) {
+function compactStyle(compact?: boolean): StyleProp<ViewStyle> {
+  return compact ? { alignSelf: 'flex-end' } : null;
+}
+
+export function PrimaryButton({ label, onPress, disabled, compact, style, accessibilityLabel }: ButtonProps) {
   const { colors, radius, scale } = useTheme();
   const reduced = useReducedMotion();
 
@@ -36,6 +41,7 @@ export function PrimaryButton({ label, onPress, disabled, style, accessibilityLa
           borderRadius: radius.control,
           opacity: disabled ? 0.5 : 1,
         },
+        compactStyle(compact),
         pressStyle(pressed, reduced),
         style,
       ]}>
@@ -46,7 +52,7 @@ export function PrimaryButton({ label, onPress, disabled, style, accessibilityLa
   );
 }
 
-export function SecondaryButton({ label, onPress, disabled, style, accessibilityLabel }: ButtonProps) {
+export function SecondaryButton({ label, onPress, disabled, compact, style, accessibilityLabel }: ButtonProps) {
   const { colors, radius, scale } = useTheme();
   const reduced = useReducedMotion();
 
@@ -64,6 +70,7 @@ export function SecondaryButton({ label, onPress, disabled, style, accessibility
           borderRadius: radius.control,
           opacity: disabled ? 0.5 : 1,
         },
+        compactStyle(compact),
         pressStyle(pressed, reduced),
         style,
       ]}>
@@ -77,12 +84,14 @@ export function SecondaryButton({ label, onPress, disabled, style, accessibility
 export function IconButton({
   glyph,
   onPress,
+  disabled,
   accessibilityLabel,
   style,
   children,
 }: {
   glyph?: string;
   onPress?: () => void;
+  disabled?: boolean;
   accessibilityLabel: string;
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
@@ -94,10 +103,17 @@ export function IconButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled: !!disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.iconButton,
-        { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control },
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.line,
+          borderRadius: radius.control,
+          opacity: disabled ? 0.5 : 1,
+        },
         pressStyle(pressed, reduced),
         style,
       ]}>

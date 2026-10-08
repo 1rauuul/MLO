@@ -6,6 +6,8 @@ export type UnitColor = 'blue' | 'violet' | 'green';
 
 export type ActivityType = 'order' | 'match' | 'fill' | 'crossword' | 'mcq';
 
+export type LocationSection = 'hub' | 'lesson' | 'example' | 'exercise' | 'quiz';
+
 export type ExerciseType = Exclude<ActivityType, 'mcq'>;
 
 export interface MatchPair {

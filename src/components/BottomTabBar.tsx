@@ -1,10 +1,9 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/theme/theme-provider';
+import type { HomeTab } from '@/navigation/tabRoutes';
 
 import { AppText } from './AppText';
-
-export type HomeTab = 'modules' | 'assessments' | 'profile';
 
 const tabs: { id: HomeTab; icon: string; label: string }[] = [
   { id: 'modules', icon: '▦', label: 'Módulos' },
@@ -15,15 +14,23 @@ const tabs: { id: HomeTab; icon: string; label: string }[] = [
 interface BottomTabBarProps {
   active: HomeTab;
   onChange: (tab: HomeTab) => void;
+  bottomInset?: number;
 }
 
-export function BottomTabBar({ active, onChange }: BottomTabBarProps) {
+export function BottomTabBar({ active, onChange, bottomInset = 0 }: BottomTabBarProps) {
   const { colors } = useTheme();
 
   return (
     <View
       accessibilityRole="tablist"
-      style={[styles.bar, { backgroundColor: colors.surface, borderTopColor: colors.line }]}>
+      style={[
+        styles.bar,
+        {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.line,
+          paddingBottom: Math.max(bottomInset, 6),
+        },
+      ]}>
       {tabs.map(tab => {
         const isActive = active === tab.id;
         return (

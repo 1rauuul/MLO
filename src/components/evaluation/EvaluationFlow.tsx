@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ActivityView } from '@/components/activities/ActivityView';
@@ -18,6 +18,8 @@ import {
   useEvaluationForLesson,
   useRecordEvaluationResult,
 } from '@/viewmodels/useQuizEngine';
+import { useLessonContent } from '@/viewmodels/useLessonContent';
+import { useSession } from '@/viewmodels/useSession';
 
 const TYPE_LABELS: Record<ActivityType, string> = {
   order: 'Ordena',
@@ -89,23 +91,30 @@ function McqQuestion({
   );
 }
 
-export default function EvaluationScreen() {
+export default function EvaluationFlow() {
   const { lesson: lessonParam } = useLocalSearchParams<{ lesson?: string }>();
   const { evaluation, questions, isLoading } = useEvaluationForLesson(lessonParam ?? null);
+  const { lesson } = useLessonContent(lessonParam ?? null);
   const engine = useEvaluationEngine(questions, lessonParam ?? null);
   const record = useRecordEvaluationResult();
   const { markCompleted } = useModuleProgress();
+  const { record: recordLocation } = useSession();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
   const recordedRef = useRef(false);
 
-  const goTopic = () => {
-    if (lessonParam) {
-      router.replace({ pathname: '/tema/[id]', params: { id: lessonParam } });
-    } else {
-      router.back();
-    }
-  };
+  useFocusEffect(
+    useCallback(() => {
+      if (lesson) {
+        recordLocation({
+          unitId: lesson.unitId,
+          lessonId: lesson.id,
+          lessonCode: lesson.code,
+          section: 'quiz',
+        });
+      }
+    }, [lesson, recordLocation]),
+  );
 
   useEffect(() => {
     if (engine.phase !== 'summary' || !evaluation || recordedRef.current) {
@@ -229,16 +238,20 @@ export default function EvaluationScreen() {
         </View>
 
         <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
-          <PrimaryButton label="Volver al tema" onPress={goTopic} />
+          <PrimaryButton label="Volver a Módulos" onPress={() => router.navigate('/')} />
           {recommendation === 'lesson' && lessonParam ? (
             <SecondaryButton
               label="Repasar la lección"
-              onPress={() => router.push({ pathname: '/lecciones/[id]', params: { id: lessonParam } })}
+              onPress={() =>
+                router.push({ pathname: '/(app)/(modules)/lecciones/[id]', params: { id: lessonParam } })
+              }
             />
-          ) : lessonParam ? (
+          ) : recommendation === 'practice' && lessonParam ? (
             <SecondaryButton
               label="Resolver ejercicios"
-              onPress={() => router.push({ pathname: '/ejercicios', params: { lesson: lessonParam } })}
+              onPress={() =>
+                router.push({ pathname: '/(app)/(modules)/ejercicios', params: { lesson: lessonParam } })
+              }
             />
           ) : null}
         </View>
@@ -288,6 +301,7 @@ export default function EvaluationScreen() {
             key={question.id}
             exercise={asExercise(question, lessonParam ?? '')}
             allowReset={false}
+            locked={engine.answered}
             onSubmit={(answer, correct) => engine.submit(answer, correct)}
           />
         )}

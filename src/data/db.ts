@@ -74,6 +74,18 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     if (currentVersion < 8) {
       await applyUnit1Content(db, false);
     }
+    if (currentVersion < 9) {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS last_location (
+          account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+          unit_id TEXT,
+          lesson_id TEXT,
+          lesson_code TEXT,
+          section TEXT,
+          updated_at TEXT NOT NULL
+        );
+      `);
+    }
   }
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);

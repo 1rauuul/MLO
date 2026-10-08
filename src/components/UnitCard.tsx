@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { Unit } from '@/models/entities';
+import { accentForUnit } from '@/theme/tokens';
 import { useTheme } from '@/theme/theme-provider';
 
 import { AppText } from './AppText';
@@ -14,10 +16,19 @@ interface UnitCardProps {
   progress: number;
   expanded: boolean;
   onToggle: () => void;
+  children?: ReactNode;
 }
 
-export function UnitCard({ unit, subtopicCount, progress, expanded, onToggle }: UnitCardProps) {
+export function UnitCard({
+  unit,
+  subtopicCount,
+  progress,
+  expanded,
+  onToggle,
+  children,
+}: UnitCardProps) {
   const { colors, radius } = useTheme();
+  const accent = accentForUnit(unit.color);
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
@@ -27,19 +38,20 @@ export function UnitCard({ unit, subtopicCount, progress, expanded, onToggle }: 
         accessibilityLabel={`${expanded ? 'Ocultar' : 'Ver'} temas de la unidad ${unit.number}, ${unit.title}`}
         onPress={onToggle}
         style={styles.main}>
-        <View style={[styles.icon, { backgroundColor: colors.primary, borderRadius: radius.control }]}>
+        <View style={[styles.icon, { backgroundColor: accent, borderRadius: radius.control }]}>
           <AppText variant="code" color={colors.onPrimary} weight="700">
             {String(unit.number).padStart(2, '0')}
           </AppText>
         </View>
         <View style={styles.copy}>
-          <AppText variant="eyebrow">Unidad {unit.number}</AppText>
+          <AppText variant="eyebrow">{`Unidad ${unit.number}`}</AppText>
           <AppText variant="heading">{unit.title}</AppText>
           <AppText variant="small" color={colors.muted}>
             {unit.description}
           </AppText>
           <View style={styles.badges}>
             <MetadataBadge>{unit.difficulty}</MetadataBadge>
+            <MetadataBadge>{`${subtopicCount} subtemas`}</MetadataBadge>
           </View>
         </View>
         <ProgressRing value={progress} />
@@ -52,7 +64,7 @@ export function UnitCard({ unit, subtopicCount, progress, expanded, onToggle }: 
         onPress={onToggle}
         style={[styles.expand, { borderTopColor: colors.line }]}>
         <AppText variant="small" color={colors.text} weight="600">
-          {expanded ? 'Ocultar temas' : `Ver ${subtopicCount} temas`}
+          {expanded ? 'Ocultar temas' : 'Ver temas'}
         </AppText>
         <Chevron
           direction={expanded ? 'up' : 'down'}
@@ -61,6 +73,10 @@ export function UnitCard({ unit, subtopicCount, progress, expanded, onToggle }: 
           strokeWidth={2.2}
         />
       </Pressable>
+
+      {expanded && children ? (
+        <View style={[styles.content, { borderTopColor: colors.line }]}>{children}</View>
+      ) : null}
     </View>
   );
 }
@@ -70,7 +86,7 @@ const styles = StyleSheet.create({
   main: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 16 },
   icon: { width: 44, height: 40, alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1, gap: 4 },
-  badges: { flexDirection: 'row', gap: 6, marginTop: 4 },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
   expand: {
     minHeight: 44,
     flexDirection: 'row',
@@ -79,4 +95,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderTopWidth: 1,
   },
+  content: { borderTopWidth: 1, paddingHorizontal: 16, paddingBottom: 16, paddingTop: 14 },
 });

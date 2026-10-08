@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
@@ -13,6 +13,7 @@ import { useExercisesForLesson } from '@/viewmodels/useExerciseEngine';
 import { useLessonContent } from '@/viewmodels/useLessonContent';
 import { useModuleProgress } from '@/viewmodels/useModuleProgress';
 import { useEvaluationForLesson } from '@/viewmodels/useQuizEngine';
+import { useSession } from '@/viewmodels/useSession';
 
 const SECTION_LABELS = ['Concepto', 'Síntesis'];
 const LAST_SECTION = SECTION_LABELS.length - 1;
@@ -24,9 +25,23 @@ export default function LessonDetailScreen() {
   const { exercises } = useExercisesForLesson(lessonId);
   const { evaluation } = useEvaluationForLesson(lessonId);
   const { markCompleted } = useModuleProgress();
+  const { record } = useSession();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
   const [section, setSection] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (lesson) {
+        record({
+          unitId: lesson.unitId,
+          lessonId: lesson.id,
+          lessonCode: lesson.code,
+          section: 'lesson',
+        });
+      }
+    }, [lesson, record]),
+  );
 
   if (!isLoading && !lesson) {
     return (
@@ -50,7 +65,7 @@ export default function LessonDetailScreen() {
     ? 'Ver ejemplos'
     : evaluation
       ? 'Evaluación'
-      : 'Terminar';
+      : null;
 
   const goNext = () => {
     void markCompleted(lesson.id);
@@ -58,8 +73,6 @@ export default function LessonDetailScreen() {
       router.push({ pathname: '/ejemplos', params: { lesson: lesson.id } });
     } else if (evaluation) {
       router.push({ pathname: '/evaluacion', params: { lesson: lesson.id } });
-    } else {
-      router.back();
     }
   };
 
@@ -132,11 +145,25 @@ export default function LessonDetailScreen() {
           onPress={() => setSection(Math.max(0, section - 1))}
           style={styles.footerButton}
         />
-        <PrimaryButton
-          label={section === LAST_SECTION ? finalLabel : 'Continuar'}
-          onPress={section === LAST_SECTION ? goNext : () => setSection(Math.min(LAST_SECTION, section + 1))}
-          style={styles.footerButton}
-        />
+        {section === LAST_SECTION ? (
+          finalLabel ? (
+            <PrimaryButton label={finalLabel} onPress={goNext} style={styles.footerButton} />
+          ) : (
+            <PrimaryButton
+              compact
+              label="Terminar"
+              onPress={() => {
+                void markCompleted(lesson.id);
+              }}
+            />
+          )
+        ) : (
+          <PrimaryButton
+            label="Continuar"
+            onPress={() => setSection(Math.min(LAST_SECTION, section + 1))}
+            style={styles.footerButton}
+          />
+        )}
       </View>
     </Screen>
   );

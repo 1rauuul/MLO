@@ -10,11 +10,12 @@ import type { CrosswordEngine } from '@/viewmodels/useExerciseEngine';
 interface CrosswordExerciseProps {
   engine: CrosswordEngine;
   onSubmit: (answer: string, correct: boolean) => void;
+  locked?: boolean;
 }
 
 const CELL = 24;
 
-export function CrosswordExercise({ engine, onSubmit }: CrosswordExerciseProps) {
+export function CrosswordExercise({ engine, onSubmit, locked = false }: CrosswordExerciseProps) {
   const { colors, radius, spacing } = useTheme();
   const cellMap = new Map(engine.cells.map(cell => [`${cell.row}-${cell.col}`, cell]));
 
@@ -134,6 +135,8 @@ export function CrosswordExercise({ engine, onSubmit }: CrosswordExerciseProps) 
                     key={`cell-${row}-${col}`}
                     accessibilityRole="button"
                     accessibilityLabel={start ? `Inicio ${start.join(', ')}` : 'Celda'}
+                    accessibilityState={{ disabled: locked }}
+                    disabled={locked}
                     onPress={() => selectCellEntry(row, col)}
                     style={[
                       styles.cell,
@@ -181,7 +184,7 @@ export function CrosswordExercise({ engine, onSubmit }: CrosswordExerciseProps) 
 
       <TextInput
         value={selected !== null ? entryValue(selected) : ''}
-        editable={selected !== null}
+        editable={selected !== null && !locked}
         onChangeText={value => (selected !== null ? writeEntry(selected, value) : undefined)}
         autoCapitalize="characters"
         autoCorrect={false}
@@ -210,7 +213,8 @@ export function CrosswordExercise({ engine, onSubmit }: CrosswordExerciseProps) 
               key={`${word}-${index}`}
               accessibilityRole="button"
               accessibilityLabel={`Usar ${word}`}
-              disabled={!activeEntry}
+              accessibilityState={{ disabled: locked || !activeEntry }}
+              disabled={locked || !activeEntry}
               onPress={() => fillFromBank(word)}
               style={[
                 styles.chip,
@@ -218,7 +222,7 @@ export function CrosswordExercise({ engine, onSubmit }: CrosswordExerciseProps) 
                   backgroundColor: colors.card,
                   borderColor: colors.line,
                   borderRadius: radius.pill,
-                  opacity: activeEntry ? 1 : 0.5,
+                  opacity: locked || !activeEntry ? 0.5 : 1,
                 },
               ]}>
               <AppText variant="small" weight="600">
@@ -238,6 +242,8 @@ export function CrosswordExercise({ engine, onSubmit }: CrosswordExerciseProps) 
               key={`${entry.word}-${index}`}
               accessibilityRole="button"
               accessibilityLabel={`${labels[index]} ${entry.clue}`}
+              accessibilityState={{ disabled: locked }}
+              disabled={locked}
               onPress={() => engine.selectEntry(index)}
               style={[
                 styles.clueRow,
@@ -271,7 +277,12 @@ export function CrosswordExercise({ engine, onSubmit }: CrosswordExerciseProps) 
         })}
       </View>
 
-      <PrimaryButton label="Comprobar crucigrama" onPress={check} style={{ marginTop: spacing.lg }} />
+      <PrimaryButton
+        label="Comprobar crucigrama"
+        onPress={check}
+        disabled={locked}
+        style={{ marginTop: spacing.lg }}
+      />
 
       {engine.checked ? (
         <View

@@ -1,18 +1,16 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ActivityView } from '@/components/activities/ActivityView';
 import { AppText } from '@/components/AppText';
-import { PrimaryButton, SecondaryButton } from '@/components/Buttons';
-import { EmptyState } from '@/components/EmptyState';
-import { Screen } from '@/components/Screen';
+import { IconButton, PrimaryButton, SecondaryButton } from '@/components/Buttons';
+import { Chevron } from '@/components/Chevron';
+import { Magnifier } from '@/components/Magnifier';
 import { ScreenHeader } from '@/components/ScreenHeader';
-import type { ActivityType } from '@/models/entities';
+import type { ActivityType, Exercise } from '@/models/entities';
 import { useTheme } from '@/theme/theme-provider';
 import { demoSteps } from '@/viewmodels/exampleLogic';
 import { hintsForType } from '@/viewmodels/exerciseHints';
-import { useExercise } from '@/viewmodels/useExerciseEngine';
 
 const TYPE_LABELS: Record<ActivityType, string> = {
   order: 'Ordena',
@@ -22,44 +20,42 @@ const TYPE_LABELS: Record<ActivityType, string> = {
   mcq: 'Opción múltiple',
 };
 
-export default function ExampleDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { exercise, isLoading } = useExercise(id ?? null);
-  const router = useRouter();
+interface ExampleRunnerProps {
+  exercise: Exercise;
+  index: number;
+  total: number;
+  isLast: boolean;
+  onNext: () => void;
+  onGoExercises: () => void;
+  onBack?: () => void;
+}
+
+export function ExampleRunner({
+  exercise,
+  index,
+  total,
+  isLast,
+  onNext,
+  onGoExercises,
+  onBack,
+}: ExampleRunnerProps) {
   const { colors, radius, spacing } = useTheme();
   const [variant, setVariant] = useState<'A' | 'B'>('A');
   const [revealedHints, setRevealedHints] = useState(0);
   const [answered, setAnswered] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
 
-  if (!isLoading && !exercise) {
-    return (
-      <Screen>
-        <EmptyState title="Sin ejemplo" message="No se encontró el ejemplo solicitado." />
-      </Screen>
-    );
-  }
-
-  if (!exercise) {
-    return (
-      <Screen>
-        <EmptyState title="Cargando" message="Preparando el ejemplo guiado." />
-      </Screen>
-    );
-  }
-
   const steps = demoSteps(exercise);
   const hints = hintsForType(exercise.type);
   const pairs = exercise.config.pairs ?? [];
-  const goExercises = () =>
-    router.push({ pathname: '/ejercicios', params: { lesson: exercise.lessonId } });
+  const label = TYPE_LABELS[exercise.type] ?? exercise.type;
 
   if (variant === 'A') {
     return (
-      <Screen>
+      <View>
         <ScreenHeader
-          onBack={() => router.back()}
-          eyebrow={`Ejemplo A · Demostración · ${TYPE_LABELS[exercise.type] ?? exercise.type}`}
+          onBack={onBack ?? onGoExercises}
+          eyebrow={`Ejemplo ${index + 1}/${total} · A · Demostración · ${label}`}
           title={exercise.prompt}
         />
 
@@ -76,8 +72,10 @@ export default function ExampleDetailScreen() {
                 Descripción
               </AppText>
             </View>
-            {pairs.map((pair, index) => (
-              <View key={`${pair.left}-${index}`} style={[styles.tableRow, { borderTopColor: colors.line }]}>
+            {pairs.map((pair, pairIndex) => (
+              <View
+                key={`${pair.left}-${pairIndex}`}
+                style={[styles.tableRow, { borderTopColor: colors.line }]}>
                 <AppText variant="small" weight="600" style={styles.cell}>
                   {pair.left}
                 </AppText>
@@ -89,12 +87,12 @@ export default function ExampleDetailScreen() {
           </View>
         ) : (
           <View style={[styles.steps, { marginTop: spacing.md }]}>
-            {steps.map((step, index) => (
+            {steps.map((step, stepIndex) => (
               <View
-                key={`${step.text}-${index}`}
+                key={`${step.text}-${stepIndex}`}
                 style={[styles.node, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
                 <AppText variant="code" color={colors.primary} weight="700">
-                  {String(index + 1).padStart(2, '0')}
+                  {String(stepIndex + 1).padStart(2, '0')}
                 </AppText>
                 <View style={styles.flex}>
                   <AppText weight="600">{step.text}</AppText>
@@ -108,19 +106,20 @@ export default function ExampleDetailScreen() {
         )}
 
         <PrimaryButton
+          compact
           label="Ahora inténtalo tú"
           onPress={() => setVariant('B')}
           style={{ marginTop: spacing.lg }}
         />
-      </Screen>
+      </View>
     );
   }
 
   return (
-    <Screen>
+    <View>
       <ScreenHeader
         onBack={() => setVariant('A')}
-        eyebrow={`Ejemplo B · Acompañamiento · ${TYPE_LABELS[exercise.type] ?? exercise.type}`}
+        eyebrow={`Ejemplo ${index + 1}/${total} · B · Acompañamiento · ${label}`}
         title={exercise.prompt}
       />
 
@@ -129,29 +128,26 @@ export default function ExampleDetailScreen() {
       </AppText>
 
       <View style={{ marginTop: spacing.md }}>
-        <ActivityView
-          exercise={exercise}
-          allowReset
-          onSubmit={(_answer, _correct) => {
-            setAnswered(true);
-          }}
-        />
+        <ActivityView exercise={exercise} allowReset onSubmit={() => setAnswered(true)} />
       </View>
 
       {hints.length > 0 ? (
         <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
-          {hints.slice(0, revealedHints).map((hint, index) => (
+          {hints.slice(0, revealedHints).map((hint, hintIndex) => (
             <View
               key={hint}
               style={[styles.hintBox, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
-              <AppText variant="small">{`Pista ${index + 1}: ${hint}`}</AppText>
+              <AppText variant="small">{`Pista ${hintIndex + 1}: ${hint}`}</AppText>
             </View>
           ))}
           {revealedHints < hints.length ? (
-            <SecondaryButton
-              label={revealedHints === 0 ? 'Ver una pista' : 'Ver otra pista'}
-              onPress={() => setRevealedHints(current => current + 1)}
-            />
+            <View style={styles.actions}>
+              <IconButton
+                accessibilityLabel="Ver una pista"
+                onPress={() => setRevealedHints(current => current + 1)}>
+                <Magnifier color={colors.muted} />
+              </IconButton>
+            </View>
           ) : null}
         </View>
       ) : null}
@@ -164,16 +160,22 @@ export default function ExampleDetailScreen() {
               <AppText variant="eyebrow">Solución completa</AppText>
               <AppText variant="small">{exercise.explanation}</AppText>
             </View>
-          ) : (
-            <SecondaryButton
-              label="Ver solución completa y el porqué"
-              onPress={() => setShowSolution(true)}
-            />
-          )}
-          <PrimaryButton label="Ir a ejercicios" onPress={goExercises} />
+          ) : null}
+          <View style={styles.actions}>
+            {showSolution ? null : (
+              <SecondaryButton label="Solución" onPress={() => setShowSolution(true)} />
+            )}
+            {isLast ? (
+              <PrimaryButton compact label="Ir a ejercicios" onPress={onGoExercises} />
+            ) : (
+              <IconButton accessibilityLabel="Siguiente ejemplo" onPress={onNext}>
+                <Chevron direction="right" color={colors.primary} />
+              </IconButton>
+            )}
+          </View>
         </View>
       ) : null}
-    </Screen>
+    </View>
   );
 }
 
@@ -187,4 +189,5 @@ const styles = StyleSheet.create({
   hint: { lineHeight: 18 },
   hintBox: { padding: 12 },
   solution: { borderWidth: 1, padding: 14, gap: 4 },
+  actions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 8 },
 });

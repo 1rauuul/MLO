@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
@@ -24,15 +24,22 @@ export default function TopicHubScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const lessonId = id ?? null;
   const { lesson, unit, exercises, evaluation, completed } = useLessonHub(lessonId);
-  const session = useSession();
+  const { record } = useSession();
   const router = useRouter();
   const { colors, radius } = useTheme();
 
-  useEffect(() => {
-    if (lesson) {
-      session.openLesson(lesson.unitId, lesson.id);
-    }
-  }, [lesson, session]);
+  useFocusEffect(
+    useCallback(() => {
+      if (lesson) {
+        record({
+          unitId: lesson.unitId,
+          lessonId: lesson.id,
+          lessonCode: lesson.code,
+          section: 'hub',
+        });
+      }
+    }, [lesson, record]),
+  );
 
   useEffect(() => {
     if (lesson && lesson.code === '1.1') {

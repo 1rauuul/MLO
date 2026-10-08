@@ -11,9 +11,10 @@ interface MatchExerciseProps {
   engine: MatchEngine;
   onSubmit: (answer: string, correct: boolean) => void;
   showReset?: boolean;
+  locked?: boolean;
 }
 
-export function MatchExercise({ engine, onSubmit, showReset = true }: MatchExerciseProps) {
+export function MatchExercise({ engine, onSubmit, showReset = true, locked = false }: MatchExerciseProps) {
   const { colors, radius, spacing } = useTheme();
   const complete = engine.assignment.every(item => item !== null);
 
@@ -43,8 +44,9 @@ export function MatchExercise({ engine, onSubmit, showReset = true }: MatchExerc
               <Pressable
                 key={left}
                 accessibilityRole="button"
-                accessibilityState={{ selected }}
+                accessibilityState={{ selected, disabled: locked }}
                 accessibilityLabel={`Concepto ${left}`}
+                disabled={locked}
                 onPress={() => engine.selectLeft(index)}
                 style={[
                   styles.item,
@@ -83,6 +85,8 @@ export function MatchExercise({ engine, onSubmit, showReset = true }: MatchExerc
                 key={right}
                 accessibilityRole="button"
                 accessibilityLabel={`Definición ${right}`}
+                accessibilityState={{ disabled: locked }}
+                disabled={locked}
                 onPress={() => engine.selectRight(position)}
                 style={[
                   styles.item,
@@ -117,7 +121,12 @@ export function MatchExercise({ engine, onSubmit, showReset = true }: MatchExerc
       </View>
 
       <View style={[styles.actions, { marginTop: spacing.lg }]}>
-        <PrimaryButton label="Comprobar" disabled={!complete} onPress={check} style={styles.action} />
+        <PrimaryButton
+          label="Comprobar"
+          disabled={locked || !complete}
+          onPress={check}
+          style={styles.action}
+        />
         {showReset ? <SecondaryButton label="Reintentar" onPress={engine.reset} style={styles.action} /> : null}
       </View>
 

@@ -73,9 +73,10 @@ function DraggableRow({ index, accent, onDrop, onMeasure, step, children }: Drag
 interface OrderExerciseProps {
   engine: ExerciseEngine;
   onSubmit: (answer: string, correct: boolean) => void;
+  locked?: boolean;
 }
 
-export function OrderExercise({ engine, onSubmit }: OrderExerciseProps) {
+export function OrderExercise({ engine, onSubmit, locked = false }: OrderExerciseProps) {
   const { colors, radius, spacing } = useTheme();
   const heights = useRef<Record<string, number>>({});
 
@@ -85,6 +86,9 @@ export function OrderExercise({ engine, onSubmit }: OrderExerciseProps) {
 
   const handleDrop = useCallback(
     (index: number, translationY: number) => {
+      if (locked) {
+        return;
+      }
       const steps = engine.steps;
       let top = 0;
       const centers = steps.map(step => {
@@ -107,7 +111,7 @@ export function OrderExercise({ engine, onSubmit }: OrderExerciseProps) {
         engine.moveTo(index, target);
       }
     },
-    [engine],
+    [engine, locked],
   );
 
   const check = () => {
@@ -144,12 +148,14 @@ export function OrderExercise({ engine, onSubmit }: OrderExerciseProps) {
                   glyph="↑"
                   accessibilityLabel={`Subir ${step}`}
                   onPress={() => engine.move(index, -1)}
+                  disabled={locked}
                   style={{ opacity: index === 0 ? 0.4 : 1 }}
                 />
                 <IconButton
                   glyph="↓"
                   accessibilityLabel={`Bajar ${step}`}
                   onPress={() => engine.move(index, 1)}
+                  disabled={locked}
                   style={{ opacity: index === engine.steps.length - 1 ? 0.4 : 1 }}
                 />
               </View>
@@ -161,8 +167,6 @@ export function OrderExercise({ engine, onSubmit }: OrderExerciseProps) {
       <AppText variant="small" color={colors.muted} style={{ marginTop: spacing.sm }}>
         Mantén presionada una opción para arrastrarla, o usa las flechas.
       </AppText>
-
-      <PrimaryButton label="Comprobar orden" onPress={check} style={{ marginTop: spacing.lg }} />
 
       {engine.checked ? (
         <View
@@ -179,6 +183,13 @@ export function OrderExercise({ engine, onSubmit }: OrderExerciseProps) {
           </AppText>
         </View>
       ) : null}
+
+      <PrimaryButton
+        label="Comprobar"
+        onPress={check}
+        disabled={locked}
+        style={{ marginTop: spacing.lg }}
+      />
     </View>
   );
 }
