@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useTheme } from '@/theme/theme-provider';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -11,6 +11,7 @@ interface ButtonProps {
   onPress: () => void;
   disabled?: boolean;
   compact?: boolean;
+  icon?: ReactNode;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 }
@@ -23,7 +24,15 @@ function compactStyle(compact?: boolean): StyleProp<ViewStyle> {
   return compact ? { alignSelf: 'flex-end' } : null;
 }
 
-export function PrimaryButton({ label, onPress, disabled, compact, style, accessibilityLabel }: ButtonProps) {
+export function PrimaryButton({
+  label,
+  onPress,
+  disabled,
+  compact,
+  icon,
+  style,
+  accessibilityLabel,
+}: ButtonProps) {
   const { colors, radius, scale } = useTheme();
   const reduced = useReducedMotion();
 
@@ -45,14 +54,25 @@ export function PrimaryButton({ label, onPress, disabled, compact, style, access
         pressStyle(pressed, reduced),
         style,
       ]}>
-      <AppText weight="600" color={colors.onPrimary} style={{ fontSize: 15 * scale }}>
-        {label}
-      </AppText>
+      <View style={styles.content}>
+        {icon}
+        <AppText weight="600" color={colors.onPrimary} style={{ fontSize: 15 * scale }}>
+          {label}
+        </AppText>
+      </View>
     </Pressable>
   );
 }
 
-export function SecondaryButton({ label, onPress, disabled, compact, style, accessibilityLabel }: ButtonProps) {
+export function SecondaryButton({
+  label,
+  onPress,
+  disabled,
+  compact,
+  icon,
+  style,
+  accessibilityLabel,
+}: ButtonProps) {
   const { colors, radius, scale } = useTheme();
   const reduced = useReducedMotion();
 
@@ -74,9 +94,12 @@ export function SecondaryButton({ label, onPress, disabled, compact, style, acce
         pressStyle(pressed, reduced),
         style,
       ]}>
-      <AppText weight="600" style={{ fontSize: 15 * scale }}>
-        {label}
-      </AppText>
+      <View style={styles.content}>
+        {icon}
+        <AppText weight="600" style={{ fontSize: 15 * scale }}>
+          {label}
+        </AppText>
+      </View>
     </Pressable>
   );
 }
@@ -128,6 +151,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 18,
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   iconButton: {
     minWidth: 44,

@@ -1,4 +1,10 @@
-import { hrefForLocation, isSubtopicPath, topicHref, type LocationLike } from './locationRoutes';
+import {
+  hrefForLocation,
+  isSubtopicPath,
+  nextLessonHref,
+  topicHref,
+  type LocationLike,
+} from './locationRoutes';
 
 const base: LocationLike = { lessonId: 'lesson-2', lessonCode: '2.1', section: null };
 
@@ -10,15 +16,35 @@ describe('topicHref', () => {
     });
   });
 
-  it('targets the lesson screen for lesson 1.1, which has no hub', () => {
-    expect(topicHref({ lessonId: 'lesson-1', lessonCode: '1.1' })).toEqual({
-      pathname: '/lecciones/[id]',
-      params: { id: 'lesson-1' },
-    });
+  it('targets the main screen for lesson 1.1, which has no hub', () => {
+    expect(topicHref({ lessonId: 'lesson-1', lessonCode: '1.1' })).toBe('/');
   });
 
   it('returns null without a lesson', () => {
     expect(topicHref({ lessonId: null, lessonCode: null })).toBeNull();
+  });
+});
+
+describe('nextLessonHref', () => {
+  const lessons = [
+    { id: 'lesson-1', code: '1.1' },
+    { id: 'lesson-2', code: '1.2' },
+    { id: 'lesson-3', code: '1.3' },
+  ];
+
+  it('targets the next lesson hub', () => {
+    expect(nextLessonHref(lessons, 'lesson-1')).toEqual({
+      pathname: '/tema/[id]',
+      params: { id: 'lesson-2' },
+    });
+  });
+
+  it('returns the main screen when there is no next lesson', () => {
+    expect(nextLessonHref(lessons, 'lesson-3')).toBe('/');
+  });
+
+  it('returns the main screen when the current lesson is not found', () => {
+    expect(nextLessonHref(lessons, 'missing')).toBe('/');
   });
 });
 
@@ -58,11 +84,8 @@ describe('hrefForLocation', () => {
     });
   });
 
-  it('routes a 1.1 hub to the lesson screen', () => {
-    expect(hrefForLocation({ lessonId: 'lesson-1', lessonCode: '1.1', section: 'hub' })).toEqual({
-      pathname: '/lecciones/[id]',
-      params: { id: 'lesson-1' },
-    });
+  it('routes a 1.1 hub to the main screen', () => {
+    expect(hrefForLocation({ lessonId: 'lesson-1', lessonCode: '1.1', section: 'hub' })).toBe('/');
   });
 
   it('returns null without a lesson or without a section', () => {

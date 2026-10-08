@@ -42,19 +42,36 @@ export function ExampleRunner({
   const { colors, radius, spacing } = useTheme();
   const [variant, setVariant] = useState<'A' | 'B'>('A');
   const [revealedHints, setRevealedHints] = useState(0);
-  const [answered, setAnswered] = useState(false);
-  const [showSolution, setShowSolution] = useState(false);
+  const [hasChecked, setHasChecked] = useState(false);
+  const [solveSignal, setSolveSignal] = useState(0);
+  const [solutionShown, setSolutionShown] = useState(false);
 
   const steps = demoSteps(exercise);
   const hints = hintsForType(exercise.type);
   const pairs = exercise.config.pairs ?? [];
   const label = TYPE_LABELS[exercise.type] ?? exercise.type;
 
+  const advanceLabel = isLast ? 'Ir a ejercicios' : 'Siguiente ejemplo';
+  const nextAction = (
+    <IconButton
+      accessibilityLabel={advanceLabel}
+      disabled={!hasChecked}
+      onPress={isLast ? onGoExercises : onNext}>
+      <Chevron
+        direction="right"
+        size={18}
+        color={hasChecked ? colors.text : colors.muted}
+        strokeWidth={2.2}
+      />
+    </IconButton>
+  );
+
   if (variant === 'A') {
     return (
       <View>
         <ScreenHeader
           onBack={onBack ?? onGoExercises}
+          action={nextAction}
           eyebrow={`Ejemplo ${index + 1}/${total} · A · Demostración · ${label}`}
           title={exercise.prompt}
         />
@@ -119,6 +136,7 @@ export function ExampleRunner({
     <View>
       <ScreenHeader
         onBack={() => setVariant('A')}
+        action={nextAction}
         eyebrow={`Ejemplo ${index + 1}/${total} · B · Acompañamiento · ${label}`}
         title={exercise.prompt}
       />
@@ -128,10 +146,32 @@ export function ExampleRunner({
       </AppText>
 
       <View style={{ marginTop: spacing.md }}>
-        <ActivityView exercise={exercise} allowReset onSubmit={() => setAnswered(true)} />
+        <ActivityView
+          exercise={exercise}
+          allowReset
+          variant="example"
+          revealSignal={solveSignal}
+          onSubmit={() => setHasChecked(true)}
+        />
       </View>
 
-      {hints.length > 0 ? (
+      {solutionShown ? (
+        <View
+          style={[
+            styles.solution,
+            {
+              borderColor: colors.success,
+              backgroundColor: colors.card,
+              borderRadius: radius.control,
+              marginTop: spacing.md,
+            },
+          ]}>
+          <AppText variant="eyebrow">Solución</AppText>
+          <AppText variant="small">{exercise.explanation}</AppText>
+        </View>
+      ) : null}
+
+      {revealedHints > 0 ? (
         <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
           {hints.slice(0, revealedHints).map((hint, hintIndex) => (
             <View
@@ -140,41 +180,28 @@ export function ExampleRunner({
               <AppText variant="small">{`Pista ${hintIndex + 1}: ${hint}`}</AppText>
             </View>
           ))}
-          {revealedHints < hints.length ? (
-            <View style={styles.actions}>
-              <IconButton
-                accessibilityLabel="Ver una pista"
-                onPress={() => setRevealedHints(current => current + 1)}>
-                <Magnifier color={colors.muted} />
-              </IconButton>
-            </View>
-          ) : null}
         </View>
       ) : null}
 
-      {answered ? (
-        <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
-          {showSolution ? (
-            <View
-              style={[styles.solution, { borderColor: colors.success, backgroundColor: colors.card, borderRadius: radius.control }]}>
-              <AppText variant="eyebrow">Solución completa</AppText>
-              <AppText variant="small">{exercise.explanation}</AppText>
-            </View>
-          ) : null}
-          <View style={styles.actions}>
-            {showSolution ? null : (
-              <SecondaryButton label="Solución" onPress={() => setShowSolution(true)} />
-            )}
-            {isLast ? (
-              <PrimaryButton compact label="Ir a ejercicios" onPress={onGoExercises} />
-            ) : (
-              <IconButton accessibilityLabel="Siguiente ejemplo" onPress={onNext}>
-                <Chevron direction="right" color={colors.primary} />
-              </IconButton>
-            )}
-          </View>
-        </View>
-      ) : null}
+      <View style={[styles.controls, { marginTop: spacing.lg }]}>
+        <SecondaryButton
+          label="Ver pista"
+          icon={<Magnifier size={16} color={colors.text} />}
+          disabled={revealedHints >= hints.length}
+          onPress={() => setRevealedHints(current => Math.min(hints.length, current + 1))}
+          style={styles.control}
+          accessibilityLabel="Ver pista"
+        />
+        <SecondaryButton
+          label="Ver solución"
+          onPress={() => {
+            setSolveSignal(current => current + 1);
+            setSolutionShown(true);
+          }}
+          style={styles.control}
+          accessibilityLabel="Ver solución"
+        />
+      </View>
     </View>
   );
 }
@@ -188,6 +215,7 @@ const styles = StyleSheet.create({
   cell: { flex: 1, lineHeight: 18, textAlign: 'justify' },
   hint: { lineHeight: 18 },
   hintBox: { padding: 12 },
+  controls: { flexDirection: 'row', gap: 12 },
+  control: { flex: 1 },
   solution: { borderWidth: 1, padding: 14, gap: 4 },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 8 },
 });

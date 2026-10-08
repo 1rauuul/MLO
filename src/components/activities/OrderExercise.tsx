@@ -74,10 +74,18 @@ interface OrderExerciseProps {
   engine: ExerciseEngine;
   onSubmit: (answer: string, correct: boolean) => void;
   locked?: boolean;
+  variant?: 'default' | 'example';
 }
 
-export function OrderExercise({ engine, onSubmit, locked = false }: OrderExerciseProps) {
+export function OrderExercise({
+  engine,
+  onSubmit,
+  locked = false,
+  variant = 'default',
+}: OrderExerciseProps) {
   const { colors, radius, spacing } = useTheme();
+  const example = variant === 'example';
+  const lastIndex = engine.steps.length - 1;
   const heights = useRef<Record<string, number>>({});
 
   const measure = useCallback((step: string, height: number) => {
@@ -132,6 +140,11 @@ export function OrderExercise({ engine, onSubmit, locked = false }: OrderExercis
               accent={accent}
               onDrop={handleDrop}
               onMeasure={measure}>
+              {example ? (
+                <AppText color={colors.muted} style={styles.handle}>
+                  ≡
+                </AppText>
+              ) : null}
               <View style={[styles.badge, { backgroundColor: `${accent}22` }]}>
                 <AppText variant="code" color={accent} weight="700">
                   {String(index + 1).padStart(2, '0')}
@@ -140,23 +153,25 @@ export function OrderExercise({ engine, onSubmit, locked = false }: OrderExercis
               <AppText style={styles.flex} weight="600">
                 {step}
               </AppText>
-              <AppText color={colors.muted} style={styles.handle}>
-                ≡
-              </AppText>
+              {!example ? (
+                <AppText color={colors.muted} style={styles.handle}>
+                  ≡
+                </AppText>
+              ) : null}
               <View style={styles.controls}>
                 <IconButton
                   glyph="↑"
                   accessibilityLabel={`Subir ${step}`}
                   onPress={() => engine.move(index, -1)}
-                  disabled={locked}
+                  disabled={locked || (example && index === 0)}
                   style={{ opacity: index === 0 ? 0.4 : 1 }}
                 />
                 <IconButton
                   glyph="↓"
                   accessibilityLabel={`Bajar ${step}`}
                   onPress={() => engine.move(index, 1)}
-                  disabled={locked}
-                  style={{ opacity: index === engine.steps.length - 1 ? 0.4 : 1 }}
+                  disabled={locked || (example && index === lastIndex)}
+                  style={{ opacity: index === lastIndex ? 0.4 : 1 }}
                 />
               </View>
             </DraggableRow>
@@ -165,7 +180,9 @@ export function OrderExercise({ engine, onSubmit, locked = false }: OrderExercis
       </View>
 
       <AppText variant="small" color={colors.muted} style={{ marginTop: spacing.sm }}>
-        Mantén presionada una opción para arrastrarla, o usa las flechas.
+        {example
+          ? 'Ordena las actividades según la secuencia estudiada. Arrastra las tarjetas o usa las flechas.'
+          : 'Mantén presionada una opción para arrastrarla, o usa las flechas.'}
       </AppText>
 
       {engine.checked ? (

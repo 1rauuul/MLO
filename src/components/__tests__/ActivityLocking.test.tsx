@@ -163,6 +163,7 @@ const makeOrderEngine = (): ExerciseEngine => ({
   move: jest.fn(),
   moveTo: jest.fn(),
   submit: jest.fn(() => true),
+  solve: jest.fn(),
   reset: jest.fn(),
 });
 
@@ -185,6 +186,7 @@ const makeFillEngine = (): FillEngine => ({
   placeWord: jest.fn(),
   clearBlank: jest.fn(),
   submit: jest.fn(() => true),
+  solve: jest.fn(),
   reset: jest.fn(),
 });
 
@@ -202,6 +204,7 @@ const makeMatchEngine = (): MatchEngine => ({
   selectLeft: jest.fn(),
   selectRight: jest.fn(),
   submit: jest.fn(() => true),
+  solve: jest.fn(),
   reset: jest.fn(),
 });
 
@@ -222,6 +225,7 @@ const makeCrosswordEngine = (): CrosswordEngine => ({
   selectEntry: jest.fn(),
   setLetter: jest.fn(),
   submit: jest.fn(() => true),
+  solve: jest.fn(),
   reset: jest.fn(),
 });
 

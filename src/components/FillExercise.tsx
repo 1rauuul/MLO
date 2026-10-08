@@ -12,11 +12,25 @@ interface FillExerciseProps {
   onSubmit: (answer: string, correct: boolean) => void;
   showReset?: boolean;
   locked?: boolean;
+  variant?: 'default' | 'example';
 }
 
-export function FillExercise({ engine, onSubmit, showReset = true, locked = false }: FillExerciseProps) {
+export function FillExercise({
+  engine,
+  onSubmit,
+  showReset = true,
+  locked = false,
+  variant = 'default',
+}: FillExerciseProps) {
   const { colors, radius, spacing } = useTheme();
+  const example = variant === 'example';
   const complete = engine.assignment.every(item => item !== null);
+  const errors = engine.assignment.filter((word, index) => {
+    if (word === null) {
+      return false;
+    }
+    return normalizeAnswer(word) !== normalizeAnswer(engine.answers[index] ?? '');
+  }).length;
 
   const check = () => {
     const correct = engine.submit();
@@ -69,8 +83,15 @@ export function FillExercise({ engine, onSubmit, showReset = true, locked = fals
 
   return (
     <View>
+      {example ? (
+        <AppText variant="small" color={colors.muted} style={styles.instruction}>
+          Toca una palabra y después un espacio. Toca una respuesta para devolverla al banco.
+        </AppText>
+      ) : null}
+
       <View style={styles.sentences}>{engine.sentences.map(renderSegments)}</View>
 
+      {example ? <AppText variant="eyebrow" style={styles.bankLabel}>Palabras disponibles</AppText> : null}
       <View style={[styles.bank, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
         {engine.bank.map((word, index) => (
           <Pressable
@@ -103,7 +124,13 @@ export function FillExercise({ engine, onSubmit, showReset = true, locked = fals
           onPress={check}
           style={styles.action}
         />
-        {showReset ? <SecondaryButton label="Reintentar" onPress={engine.reset} style={styles.action} /> : null}
+        {showReset ? (
+          <SecondaryButton
+            label={example ? 'Reiniciar' : 'Reintentar'}
+            onPress={engine.reset}
+            style={styles.action}
+          />
+        ) : null}
       </View>
 
       {engine.checked ? (
@@ -119,11 +146,25 @@ export function FillExercise({ engine, onSubmit, showReset = true, locked = fals
           <AppText color={engine.isCorrect ? colors.success : colors.danger} weight="700">
             {engine.isCorrect ? '✓ Conceptos completados' : '↻ Revisa los espacios marcados'}
           </AppText>
-          <AppText variant="small">
-            {engine.isCorrect
-              ? 'Las frases quedaron completas con los términos correctos.'
-              : 'Toca un espacio ocupado para devolver su palabra al banco.'}
-          </AppText>
+          {example ? (
+            engine.isCorrect ? (
+              <AppText variant="small">
+                Las frases quedaron completas con los términos correctos.
+              </AppText>
+            ) : (
+              <AppText variant="small">
+                {errors === 1
+                  ? 'Hay 1 respuesta por revisar. El espacio incorrecto está marcado. Puedes cambiarla y volver a comprobar.'
+                  : `Hay ${errors} respuestas por revisar. Los espacios incorrectos están marcados. Puedes cambiarlas y volver a comprobar.`}
+              </AppText>
+            )
+          ) : (
+            <AppText variant="small">
+              {engine.isCorrect
+                ? 'Las frases quedaron completas con los términos correctos.'
+                : 'Toca un espacio ocupado para devolver su palabra al banco.'}
+            </AppText>
+          )}
         </View>
       ) : null}
     </View>
@@ -131,6 +172,8 @@ export function FillExercise({ engine, onSubmit, showReset = true, locked = fals
 }
 
 const styles = StyleSheet.create({
+  instruction: { lineHeight: 18, marginBottom: 12 },
+  bankLabel: { marginTop: 12 },
   sentences: { gap: 14 },
   sentence: { fontSize: 14, lineHeight: 26 },
   blank: {

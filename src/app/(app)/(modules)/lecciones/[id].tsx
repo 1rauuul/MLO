@@ -8,7 +8,9 @@ import { EmptyState } from '@/components/EmptyState';
 import { RichContent } from '@/components/RichContent';
 import { Screen } from '@/components/Screen';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { nextLessonHref } from '@/navigation/locationRoutes';
 import { useTheme } from '@/theme/theme-provider';
+import { useCatalog } from '@/viewmodels/useCatalog';
 import { useExercisesForLesson } from '@/viewmodels/useExerciseEngine';
 import { useLessonContent } from '@/viewmodels/useLessonContent';
 import { useModuleProgress } from '@/viewmodels/useModuleProgress';
@@ -25,6 +27,7 @@ export default function LessonDetailScreen() {
   const { exercises } = useExercisesForLesson(lessonId);
   const { evaluation } = useEvaluationForLesson(lessonId);
   const { markCompleted } = useModuleProgress();
+  const { lessonsByUnit } = useCatalog();
   const { record } = useSession();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
@@ -74,6 +77,11 @@ export default function LessonDetailScreen() {
     } else if (evaluation) {
       router.push({ pathname: '/evaluacion', params: { lesson: lesson.id } });
     }
+  };
+
+  const finish = () => {
+    void markCompleted(lesson.id);
+    router.navigate(nextLessonHref(lessonsByUnit[lesson.unitId] ?? [], lesson.id));
   };
 
   return (
@@ -149,13 +157,7 @@ export default function LessonDetailScreen() {
           finalLabel ? (
             <PrimaryButton label={finalLabel} onPress={goNext} style={styles.footerButton} />
           ) : (
-            <PrimaryButton
-              compact
-              label="Terminar"
-              onPress={() => {
-                void markCompleted(lesson.id);
-              }}
-            />
+            <PrimaryButton compact label="Terminar" onPress={finish} />
           )
         ) : (
           <PrimaryButton

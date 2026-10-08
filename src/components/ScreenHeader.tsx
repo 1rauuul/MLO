@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/theme/theme-provider';
@@ -11,9 +12,10 @@ interface ScreenHeaderProps {
   eyebrow: string;
   title: string;
   trailing?: string;
+  action?: ReactNode;
 }
 
-export function ScreenHeader({ onBack, eyebrow, title, trailing }: ScreenHeaderProps) {
+export function ScreenHeader({ onBack, eyebrow, title, trailing, action }: ScreenHeaderProps) {
   const { spacing, colors } = useTheme();
 
   return (
@@ -27,7 +29,7 @@ export function ScreenHeader({ onBack, eyebrow, title, trailing }: ScreenHeaderP
           {title}
         </AppText>
       </View>
-      {trailing ? <AppText variant="code">{trailing}</AppText> : <View style={styles.spacer} />}
+      {action ?? (trailing ? <AppText variant="code">{trailing}</AppText> : <View style={styles.spacer} />)}
     </View>
   );
 }

@@ -29,6 +29,7 @@ export interface ExerciseEngine {
   move: (index: number, direction: -1 | 1) => void;
   moveTo: (from: number, to: number) => void;
   submit: (onResult?: (correct: boolean) => void) => boolean;
+  solve: () => void;
   reset: () => void;
 }
 
@@ -73,6 +74,15 @@ export function useExerciseEngine(exercise: Exercise | null): ExerciseEngine {
     [exercise, steps],
   );
 
+  const solve = useCallback(() => {
+    if (!exercise) {
+      return;
+    }
+    setSteps([...exercise.correctOrder]);
+    setIsCorrect(true);
+    setChecked(true);
+  }, [exercise]);
+
   const reset = useCallback(() => {
     if (!exercise) {
       return;
@@ -82,7 +92,7 @@ export function useExerciseEngine(exercise: Exercise | null): ExerciseEngine {
     setIsCorrect(false);
   }, [exercise]);
 
-  return { steps, checked, isCorrect, move, moveTo, submit, reset };
+  return { steps, checked, isCorrect, move, moveTo, submit, solve, reset };
 }
 
 interface UseExerciseForLessonResult {
@@ -213,6 +223,7 @@ export interface FillEngine {
   placeWord: (bankIndex: number) => void;
   clearBlank: (index: number) => void;
   submit: (onResult?: (correct: boolean) => void) => boolean;
+  solve: () => void;
   reset: () => void;
 }
 
@@ -313,6 +324,22 @@ export function useFillEngine(exercise: Exercise | null): FillEngine {
     [ordered, assignment],
   );
 
+  const solve = useCallback(() => {
+    const expected = extractFillAnswers(ordered);
+    const nextUsed = bank.map(() => false);
+    expected.forEach(word => {
+      const position = bank.findIndex((item, index) => !nextUsed[index] && item === word);
+      if (position !== -1) {
+        nextUsed[position] = true;
+      }
+    });
+    setAssignment([...expected]);
+    setUsed(nextUsed);
+    setActiveBlank(null);
+    setIsCorrect(true);
+    setChecked(true);
+  }, [ordered, bank]);
+
   return {
     sentences,
     answers,
@@ -326,6 +353,7 @@ export function useFillEngine(exercise: Exercise | null): FillEngine {
     placeWord,
     clearBlank,
     submit,
+    solve,
     reset,
   };
 }
@@ -341,6 +369,7 @@ export interface MatchEngine {
   selectLeft: (index: number) => void;
   selectRight: (position: number) => void;
   submit: (onResult?: (correct: boolean) => void) => boolean;
+  solve: () => void;
   reset: () => void;
 }
 
@@ -404,6 +433,13 @@ export function useMatchEngine(exercise: Exercise | null): MatchEngine {
     [pairs, rights, assignment],
   );
 
+  const solve = useCallback(() => {
+    setAssignment(pairs.map(pair => rights.indexOf(pair.right)));
+    setSelectedLeft(null);
+    setIsCorrect(true);
+    setChecked(true);
+  }, [pairs, rights]);
+
   return {
     pairs,
     lefts,
@@ -415,6 +451,7 @@ export function useMatchEngine(exercise: Exercise | null): MatchEngine {
     selectLeft,
     selectRight,
     submit,
+    solve,
     reset,
   };
 }
@@ -432,6 +469,7 @@ export interface CrosswordEngine {
   selectEntry: (index: number) => void;
   setLetter: (row: number, col: number, letter: string) => void;
   submit: (onResult?: (correct: boolean) => void) => boolean;
+  solve: () => void;
   reset: () => void;
 }
 
@@ -483,6 +521,21 @@ export function useCrosswordEngine(exercise: Exercise | null): CrosswordEngine {
     [config, letters],
   );
 
+  const solve = useCallback(() => {
+    const next: Record<string, string> = {};
+    for (const entry of crossword?.entries ?? []) {
+      const stepRow = entry.direction === 'down' ? 1 : 0;
+      const stepCol = entry.direction === 'across' ? 1 : 0;
+      entry.word.split('').forEach((character, offset) => {
+        next[`${entry.row + stepRow * offset}-${entry.col + stepCol * offset}`] =
+          character.toUpperCase();
+      });
+    }
+    setLetters(next);
+    setIsCorrect(true);
+    setChecked(true);
+  }, [crossword]);
+
   return {
     cells,
     entries: crossword?.entries ?? [],
@@ -496,6 +549,7 @@ export function useCrosswordEngine(exercise: Exercise | null): CrosswordEngine {
     selectEntry,
     setLetter,
     submit,
+    solve,
     reset,
   };
 }

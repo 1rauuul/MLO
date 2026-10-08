@@ -10,6 +10,8 @@ interface CapturedActivityProps {
   onSubmit: (answer: string, correct: boolean) => void;
   allowReset?: boolean;
   locked?: boolean;
+  variant?: string;
+  revealSignal?: number;
 }
 
 const mockBack = jest.fn();
@@ -125,49 +127,56 @@ describe('Ejemplos sequential flow', () => {
     expect(mockCapturedActivityProps?.allowReset).toBe(true);
   });
 
-  it('ofrece Siguiente ejemplo y no Ir a ejercicios en un ejemplo no final', () => {
-    const { getByRole, queryByRole } = render(<ExamplesScreen />);
+  it('mantiene Siguiente deshabilitado hasta comprobar', () => {
+    const { getByRole } = render(<ExamplesScreen />);
 
     fireEvent.press(getByRole('button', { name: 'Ahora inténtalo tú' }));
+
+    const next = getByRole('button', { name: 'Siguiente ejemplo' });
+    expect(next.props.accessibilityState).toEqual({ disabled: true });
+    fireEvent.press(next);
+    expect(mockNext).not.toHaveBeenCalled();
+
     act(() => mockCapturedActivityProps?.onSubmit('respuesta', true));
 
-    expect(getByRole('button', { name: 'Siguiente ejemplo' })).toBeTruthy();
-    expect(queryByRole('button', { name: 'Ir a ejercicios' })).toBeNull();
+    fireEvent.press(getByRole('button', { name: 'Siguiente ejemplo' }));
+    expect(mockNext).toHaveBeenCalledTimes(1);
   });
 
-  it('ofrece Ir a ejercicios en el último ejemplo y navega con la lección', () => {
+  it('ofrece Ir a ejercicios en el último ejemplo solo tras comprobar', () => {
     mockEngine = makeEngine([firstExercise, secondExercise], 1);
     const { getByRole, queryByRole } = render(<ExamplesScreen />);
 
     fireEvent.press(getByRole('button', { name: 'Ahora inténtalo tú' }));
-    act(() => mockCapturedActivityProps?.onSubmit('respuesta', true));
 
     expect(queryByRole('button', { name: 'Siguiente ejemplo' })).toBeNull();
     fireEvent.press(getByRole('button', { name: 'Ir a ejercicios' }));
+    expect(mockPush).not.toHaveBeenCalled();
 
+    act(() => mockCapturedActivityProps?.onSubmit('respuesta', true));
+
+    fireEvent.press(getByRole('button', { name: 'Ir a ejercicios' }));
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/ejercicios', params: { lesson: 'lesson-2' } });
   });
 
-  it('usa la lupa accesible para revelar pistas en la variante B', () => {
+  it('revela pistas con Ver pista', () => {
     const { getByRole, getByText } = render(<ExamplesScreen />);
 
     fireEvent.press(getByRole('button', { name: 'Ahora inténtalo tú' }));
-    fireEvent.press(getByRole('button', { name: 'Ver una pista' }));
+    fireEvent.press(getByRole('button', { name: 'Ver pista' }));
 
     expect(getByText('Pista 1: Lee la frase completa antes de colocar una palabra.')).toBeTruthy();
   });
 
-  it('etiqueta la solución como Solución y el avance como Siguiente ejemplo', () => {
-    const { getByRole, getByText, queryByRole } = render(<ExamplesScreen />);
+  it('resuelve la actividad y muestra la explicación debajo del ejercicio con Ver solución', () => {
+    const { getByRole, getByText } = render(<ExamplesScreen />);
 
     fireEvent.press(getByRole('button', { name: 'Ahora inténtalo tú' }));
-    act(() => mockCapturedActivityProps?.onSubmit('respuesta', true));
+    fireEvent.press(getByRole('button', { name: 'Ver solución' }));
 
-    expect(getByRole('button', { name: 'Siguiente ejemplo' })).toBeTruthy();
-    expect(queryByRole('button', { name: 'Regresar al tema' })).toBeNull();
-
-    fireEvent.press(getByRole('button', { name: 'Solución' }));
-    expect(getByText('Solución completa')).toBeTruthy();
+    expect(mockCapturedActivityProps?.revealSignal).toBe(1);
+    expect(getByText('Solución')).toBeTruthy();
+    expect(getByText('El requisito define la necesidad.')).toBeTruthy();
   });
 
   it('avanza al siguiente ejemplo y vuelve a la variante A', () => {

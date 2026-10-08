@@ -18,6 +18,7 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   const currentVersion = row?.user_version ?? 0;
   if (currentVersion >= DATABASE_VERSION) {
+    await db.execAsync(SCHEMA_DDL);
     return;
   }
 

@@ -16,9 +16,18 @@ export function topicHref(loc: {
     return null;
   }
   if (loc.lessonCode === '1.1') {
-    return { pathname: '/lecciones/[id]', params: { id: loc.lessonId } };
+    return '/';
   }
   return { pathname: '/tema/[id]', params: { id: loc.lessonId } };
+}
+
+export function nextLessonHref(
+  lessons: { id: string; code: string }[],
+  currentId: string,
+): Href {
+  const index = lessons.findIndex(lesson => lesson.id === currentId);
+  const next = index >= 0 ? lessons[index + 1] : undefined;
+  return next ? topicHref({ lessonId: next.id, lessonCode: next.code }) ?? '/' : '/';
 }
 
 export function hrefForLocation(loc: LocationLike): Href | null {

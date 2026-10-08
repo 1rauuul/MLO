@@ -30,6 +30,23 @@ describe('migrateAndSeed', () => {
     expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 9')).toBe(true);
   });
 
+  test('repara tablas faltantes cuando la versión ya está al día', async () => {
+    const statements: string[] = [];
+    const db = {
+      execAsync: async (sql: string) => {
+        statements.push(sql);
+      },
+      getFirstAsync: async () => ({ user_version: 9 }),
+    } as unknown as SQLiteDatabase;
+
+    await migrateAndSeed(db);
+
+    expect(
+      statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS last_location')),
+    ).toBe(true);
+    expect(statements.some(statement => statement.startsWith('PRAGMA user_version'))).toBe(false);
+  });
+
   test('includes the merged exercises in a fresh seed for l1.2', async () => {
     const statements: { sql: string; params: unknown[] }[] = [];
     const db = {
