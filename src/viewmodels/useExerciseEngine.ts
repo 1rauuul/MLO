@@ -24,6 +24,7 @@ import { useAuth } from './useAuth';
 
 export interface ExerciseEngine {
   steps: string[];
+  correctOrder: string[];
   checked: boolean;
   isCorrect: boolean;
   move: (index: number, direction: -1 | 1) => void;
@@ -92,7 +93,17 @@ export function useExerciseEngine(exercise: Exercise | null): ExerciseEngine {
     setIsCorrect(false);
   }, [exercise]);
 
-  return { steps, checked, isCorrect, move, moveTo, submit, solve, reset };
+  return {
+    steps,
+    correctOrder: exercise?.correctOrder ?? [],
+    checked,
+    isCorrect,
+    move,
+    moveTo,
+    submit,
+    solve,
+    reset,
+  };
 }
 
 interface UseExerciseForLessonResult {

@@ -158,6 +158,7 @@ jest.mock('@/components/activities/ActivityView', () => ({
 
 const makeOrderEngine = (): ExerciseEngine => ({
   steps: ['Analizar', 'Diseñar', 'Construir'],
+  correctOrder: ['Analizar', 'Diseñar', 'Construir'],
   checked: false,
   isCorrect: false,
   move: jest.fn(),
@@ -347,7 +348,7 @@ describe('OrderExercise locking', () => {
           return true;
         }),
       };
-      return <OrderExercise engine={engine} onSubmit={jest.fn()} />;
+      return <OrderExercise engine={engine} onSubmit={jest.fn()} variant="example" />;
     }
 
     const { getByRole, getByText, queryByText } = render(<ControlledOrder />);
@@ -356,6 +357,28 @@ describe('OrderExercise locking', () => {
     fireEvent.press(getByRole('button', { name: 'Comprobar' }));
 
     expect(getByText('✓ Secuencia correcta')).toBeTruthy();
+  });
+
+  it('oculta la leyenda en el flujo de ejercicios', () => {
+    function ControlledOrder() {
+      const [checked, setChecked] = useState(false);
+      const engine: ExerciseEngine = {
+        ...makeOrderEngine(),
+        checked,
+        isCorrect: true,
+        submit: jest.fn(() => {
+          setChecked(true);
+          return true;
+        }),
+      };
+      return <OrderExercise engine={engine} onSubmit={jest.fn()} />;
+    }
+
+    const { getByRole, queryByText } = render(<ControlledOrder />);
+    fireEvent.press(getByRole('button', { name: 'Comprobar' }));
+
+    expect(queryByText('✓ Secuencia correcta')).toBeNull();
+    expect(queryByText('↻ El orden no es el correcto')).toBeNull();
   });
 });
 
@@ -449,7 +472,7 @@ describe('CrosswordExercise locking', () => {
     const engine = makeCrosswordEngine();
     const onSubmit = jest.fn();
     const { getByRole, getByPlaceholderText } = render(
-      <CrosswordExercise engine={engine} onSubmit={onSubmit} locked />,
+      <CrosswordExercise engine={engine} onSubmit={onSubmit} locked variant="example" />,
     );
 
     const cell = getByRole('button', { name: 'Inicio H1' });
@@ -480,7 +503,7 @@ describe('CrosswordExercise locking', () => {
     const engine = makeCrosswordEngine();
     const onSubmit = jest.fn();
     const { getByRole, getByPlaceholderText } = render(
-      <CrosswordExercise engine={engine} onSubmit={onSubmit} />,
+      <CrosswordExercise engine={engine} onSubmit={onSubmit} variant="example" />,
     );
 
     fireEvent.press(getByRole('button', { name: 'Inicio H1' }));

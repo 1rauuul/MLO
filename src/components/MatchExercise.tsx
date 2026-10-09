@@ -12,10 +12,18 @@ interface MatchExerciseProps {
   onSubmit: (answer: string, correct: boolean) => void;
   showReset?: boolean;
   locked?: boolean;
+  variant?: 'default' | 'example';
 }
 
-export function MatchExercise({ engine, onSubmit, showReset = true, locked = false }: MatchExerciseProps) {
+export function MatchExercise({
+  engine,
+  onSubmit,
+  showReset = true,
+  locked = false,
+  variant = 'default',
+}: MatchExerciseProps) {
   const { colors, radius, spacing } = useTheme();
+  const example = variant === 'example';
   const complete = engine.assignment.every(item => item !== null);
 
   const check = () => {
@@ -130,7 +138,7 @@ export function MatchExercise({ engine, onSubmit, showReset = true, locked = fal
         {showReset ? <SecondaryButton label="Reintentar" onPress={engine.reset} style={styles.action} /> : null}
       </View>
 
-      {engine.checked ? (
+      {example && engine.checked ? (
         <View
           style={[
             styles.feedback,

@@ -12,6 +12,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import type { ActivityType, Exercise, ExerciseType, Question } from '@/models/entities';
 import { useTheme } from '@/theme/theme-provider';
 import { recommendReview } from '@/viewmodels/analyticsLogic';
+import { optionResult } from '@/viewmodels/quizLogic';
 import { useModuleProgress } from '@/viewmodels/useModuleProgress';
 import {
   useEvaluationEngine,
@@ -54,15 +55,8 @@ function McqQuestion({
   const { spacing } = useTheme();
   const [chosen, setChosen] = useState<number | null>(null);
 
-  const resultFor = (index: number): QuizOptionResult | undefined => {
-    if (!answered) {
-      return undefined;
-    }
-    if (index === question.answer) {
-      return 'correct';
-    }
-    return index === chosen ? 'wrong' : undefined;
-  };
+  const resultFor = (index: number): QuizOptionResult | undefined =>
+    optionResult(index, chosen, question.answer, answered);
 
   return (
     <View style={{ gap: spacing.md }}>
@@ -306,28 +300,6 @@ export default function EvaluationFlow() {
           />
         )}
       </View>
-
-      {engine.answered ? (
-        <View
-          style={[
-            styles.feedback,
-            {
-              borderColor: engine.lastCorrect ? colors.success : colors.danger,
-              backgroundColor: colors.card,
-              borderRadius: radius.control,
-            },
-          ]}>
-          <AppText color={engine.lastCorrect ? colors.success : colors.danger} weight="700">
-            {engine.lastCorrect ? '✓ Respuesta correcta' : '✗ Respuesta incorrecta'}
-          </AppText>
-          {question.type === 'mcq' && question.options[question.answer] ? (
-            <AppText variant="small" color={colors.success}>
-              {`Respuesta correcta: ${question.options[question.answer]}`}
-            </AppText>
-          ) : null}
-          <AppText variant="small">{question.explanation}</AppText>
-        </View>
-      ) : null}
 
       {engine.answered ? (
         <PrimaryButton

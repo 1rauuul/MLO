@@ -164,23 +164,6 @@ export default function PracticeScreen() {
       </View>
 
       {engine.answered ? (
-        <View
-          style={[
-            styles.feedback,
-            {
-              borderColor: engine.lastCorrect ? colors.success : colors.danger,
-              backgroundColor: colors.card,
-              borderRadius: radius.control,
-            },
-          ]}>
-          <AppText color={engine.lastCorrect ? colors.success : colors.danger} weight="700">
-            {engine.lastCorrect ? '✓ Respuesta correcta' : '✗ Respuesta incorrecta'}
-          </AppText>
-          {exercise.explanation ? <AppText variant="small">{exercise.explanation}</AppText> : null}
-        </View>
-      ) : null}
-
-      {engine.answered ? (
         <PrimaryButton
           label={isLast ? 'Ver resumen' : 'Siguiente ejercicio'}
           onPress={engine.next}

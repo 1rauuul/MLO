@@ -72,9 +72,17 @@ export function ActivityView({
         />
       );
     case 'match':
-      return <MatchExercise engine={match} onSubmit={onSubmit} showReset={allowReset} locked={locked} />;
+      return (
+        <MatchExercise
+          engine={match}
+          onSubmit={onSubmit}
+          showReset={allowReset}
+          locked={locked}
+          variant={variant}
+        />
+      );
     case 'crossword':
-      return <CrosswordExercise engine={crossword} onSubmit={onSubmit} locked={locked} />;
+      return <CrosswordExercise engine={crossword} onSubmit={onSubmit} locked={locked} variant={variant} />;
     default:
       return null;
   }

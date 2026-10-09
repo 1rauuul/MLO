@@ -87,6 +87,10 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
         );
       `);
     }
+    if (currentVersion < 10) {
+      await applyUnit1Content(db, false);
+      await applyUnit12ExerciseBank(db);
+    }
   }
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);

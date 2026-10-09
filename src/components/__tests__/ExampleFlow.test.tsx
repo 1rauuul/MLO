@@ -177,6 +177,11 @@ describe('Ejemplos sequential flow', () => {
     expect(mockCapturedActivityProps?.revealSignal).toBe(1);
     expect(getByText('Solución')).toBeTruthy();
     expect(getByText('El requisito define la necesidad.')).toBeTruthy();
+
+    const next = getByRole('button', { name: 'Siguiente ejemplo' });
+    expect(next.props.accessibilityState).toEqual({ disabled: false });
+    fireEvent.press(next);
+    expect(mockNext).toHaveBeenCalledTimes(1);
   });
 
   it('avanza al siguiente ejemplo y vuelve a la variante A', () => {

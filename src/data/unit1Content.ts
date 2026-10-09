@@ -139,7 +139,7 @@ export const unit12ExerciseBankAdditions: ExerciseSeed[] = [
     id: 'cross1.2a',
     lessonId: 'l1.2',
     type: 'crossword',
-    prompt: 'Crucigrama: conceptos del desarrollo profesional',
+    prompt: 'Crucigrama: atributos y tipos de software',
     instructions: 'Toca una celda y escribe la palabra que corresponde a la pista.',
     correctOrder: [],
     config: {
@@ -149,35 +149,35 @@ export const unit12ExerciseBankAdditions: ExerciseSeed[] = [
         entries: [
           {
             word: 'MANTENIMIENTO',
-            clue: 'Atributo que permite actualizar el software ante necesidades cambiantes',
+            clue: 'Atributo: facilidad para modificar el software cuando el cliente cambia sus necesidades.',
             row: 0,
             col: 0,
             direction: 'across',
           },
           {
             word: 'EFICIENCIA',
-            clue: 'Atributo que evita desperdiciar memoria y ciclos del procesador',
+            clue: 'Atributo de un sistema que hace buen uso de la memoria y del procesador: no malgasta recursos.',
             row: 0,
             col: 4,
             direction: 'down',
           },
           {
             word: 'GENERICO',
-            clue: 'Producto que se vende en el mercado abierto a cualquier cliente',
+            clue: 'Un procesador de textos es un producto ___: se desarrolla para venderlo a cualquier cliente del mercado.',
             row: 5,
             col: 3,
             direction: 'across',
           },
           {
             word: 'EVOLUCION',
-            clue: 'Actividad que modifica el sistema ante requisitos cambiantes',
+            clue: 'Actividad de seguir cambiando un sistema ya entregado para que continúe siendo útil al negocio.',
             row: 3,
             col: 10,
             direction: 'down',
           },
           {
             word: 'MEDIDA',
-            clue: 'Producto personalizado: producto "a la ___"',
+            clue: 'Software personalizado: se desarrolla "a la ___" del cliente.',
             row: 9,
             col: 7,
             direction: 'across',
@@ -187,7 +187,7 @@ export const unit12ExerciseBankAdditions: ExerciseSeed[] = [
       bank: ['ACEPTABILIDAD', 'SOFTWARE', 'CONFIGURACION'],
     },
     explanation:
-      'El crucigrama combina atributos de calidad, tipos de productos y la actividad de evolución del software.',
+      'Mantenimiento y eficiencia son atributos; genérico y "a la medida" son los dos tipos de producto; la evolución es la actividad que mantiene vivo al sistema después de entregarlo. Ojo con la diferencia: el mantenimiento es una cualidad del software y la evolución es algo que se hace con él.',
   },
   {
     id: 'fill1.2c',
@@ -294,16 +294,16 @@ export const unit1Exercises: ExerciseSeed[] = [
     prompt: 'Crucigrama de atributos del software',
     instructions: 'Toca una celda y escribe la palabra que corresponde a la pista.',
     correctOrder: [],
-    explanation: 'Los atributos esenciales son mantenimiento, confiabilidad y seguridad, eficiencia y aceptabilidad.',
+    explanation: 'Aceptabilidad, confiabilidad y eficiencia son atributos de calidad que van más allá de lo que el sistema hace. La ingeniería de software es la disciplina que busca lograrlos a lo largo de todo el proceso.',
     config: {
       crossword: {
         rows: 16,
         cols: 13,
         entries: [
-          { word: 'ACEPTABILIDAD', clue: 'Comprensible, utilizable y compatible con otros sistemas', row: 3, col: 0, direction: 'across' },
-          { word: 'CONFIABILIDAD', clue: 'Fiabilidad, seguridad y protección frente a fallas y ataques', row: 3, col: 1, direction: 'down' },
-          { word: 'EFICIENCIA', clue: 'No desperdicia memoria ni ciclos del procesador', row: 3, col: 2, direction: 'down' },
-          { word: 'INGENIERIA', clue: 'Disciplina que cubre todos los aspectos de la producción de software', row: 3, col: 7, direction: 'down' },
+          { word: 'ACEPTABILIDAD', clue: 'Cualidad que hace al software comprensible, fácil de usar y compatible con otros sistemas; si falla, los usuarios lo rechazan.', row: 3, col: 0, direction: 'across' },
+          { word: 'CONFIABILIDAD', clue: 'Cualidad por la que el sistema responde sin fallas y resiste ataques maliciosos: puedes contar con él.', row: 3, col: 1, direction: 'down' },
+          { word: 'EFICIENCIA', clue: 'Atributo de un sistema que aprovecha bien la memoria y el procesador, sin malgastar ciclos.', row: 3, col: 2, direction: 'down' },
+          { word: 'INGENIERIA', clue: '___ de software: disciplina que abarca todo el proceso de producción, desde la especificación hasta el mantenimiento.', row: 3, col: 7, direction: 'down' },
         ],
       },
       bank: ['MANTENIMIENTO', 'SOFTWARE', 'REUTILIZACION', 'CONFIGURACION'],
@@ -395,16 +395,16 @@ export const unit1Exercises: ExerciseSeed[] = [
     prompt: 'Crucigrama de ética profesional',
     instructions: 'Toca una celda y escribe la palabra que corresponde a la pista.',
     correctOrder: [],
-    explanation: 'Confidencialidad, competencia e integridad son deberes centrales del código de ética.',
+    explanation: 'Confidencialidad, competencia e integridad son deberes centrales del código de ética profesional. La honestidad forma parte de la integridad, pero el deber completo es más amplio: incluye evitar conflictos de interés.',
     config: {
       crossword: {
         rows: 14,
         cols: 17,
         entries: [
-          { word: 'CONFIDENCIALIDAD', clue: 'Respeto a la información del empleador o cliente', row: 3, col: 0, direction: 'across' },
-          { word: 'COMPETENCIA', clue: 'No aceptar trabajo fuera de la propia capacidad', row: 3, col: 0, direction: 'down' },
-          { word: 'INTEGRIDAD', clue: 'Honestidad e independencia en el juicio', row: 3, col: 4, direction: 'down' },
-          { word: 'ETICA', clue: 'Marco de conducta profesional', row: 3, col: 6, direction: 'down' },
+          { word: 'CONFIDENCIALIDAD', clue: 'Deber de guardar reserva sobre la información del empleador o del cliente, aunque no hayas firmado ningún acuerdo.', row: 3, col: 0, direction: 'across' },
+          { word: 'COMPETENCIA', clue: 'Deber de aceptar solo los trabajos para los que estás realmente capacitado.', row: 3, col: 0, direction: 'down' },
+          { word: 'INTEGRIDAD', clue: 'Deber de actuar con rectitud y sin conflictos de interés; aceptar un soborno para elegir un proveedor lo viola.', row: 3, col: 4, direction: 'down' },
+          { word: 'ETICA', clue: 'Conjunto de principios que orienta lo correcto en la conducta de un profesional.', row: 3, col: 6, direction: 'down' },
         ],
       },
       bank: ['PRODUCTO', 'JUICIO', 'COLEGAS', 'HONESTIDAD'],
@@ -497,16 +497,16 @@ export const unit1Exercises: ExerciseSeed[] = [
     prompt: 'Crucigrama de estudios de caso',
     instructions: 'Toca una celda y escribe la palabra que corresponde a la pista.',
     correctOrder: [],
-    explanation: 'La estación meteorológica y la bomba ejemplifican adquisición de datos y sistemas embebidos.',
+    explanation: 'La estación meteorológica ejemplifica la adquisición de datos a campo abierto; la bomba de insulina, un sistema embebido; y MHC identifica el caso de salud mental, donde la privacidad de la información es clave.',
     config: {
       crossword: {
         rows: 12,
         cols: 13,
         entries: [
-          { word: 'METEOROLOGICA', clue: 'Estación a campo abierto que adquiere datos', row: 3, col: 0, direction: 'across' },
-          { word: 'MHC', clue: 'Sistema de administración de pacientes de salud mental', row: 3, col: 0, direction: 'down' },
-          { word: 'EMBEBIDO', clue: 'Sistema que controla un dispositivo de hardware', row: 3, col: 1, direction: 'down' },
-          { word: 'INSULINA', clue: 'Hormona que administra la bomba automática', row: 3, col: 10, direction: 'down' },
+          { word: 'METEOROLOGICA', clue: 'Estación ___: opera a campo abierto y recoge datos del clima de forma automática.', row: 3, col: 0, direction: 'across' },
+          { word: 'MHC', clue: 'Siglas del caso de estudio sobre atención de salud mental.', row: 3, col: 0, direction: 'down' },
+          { word: 'EMBEBIDO', clue: 'Tipo de sistema cuyo software forma parte del hardware que controla.', row: 3, col: 1, direction: 'down' },
+          { word: 'INSULINA', clue: 'Hormona que la bomba automática suministra a personas con diabetes.', row: 3, col: 10, direction: 'down' },
         ],
       },
       bank: ['SENSORES', 'PACIENTES', 'SATELITAL', 'PRIVACIDAD'],
@@ -545,7 +545,7 @@ const eval12Questions: QuestionSeed[] = [
   { type: 'fill', config: { sentences: ['Aproximadamente el {{60}}% de los costos son de desarrollo.', 'Los productos se venden en el mercado {{abierto}}.'], bank: ['40', 'cerrado', 'privado', '80'] }, prompt: 'Completa las cifras y términos', options: [], answer: 0, explanation: 'Cerca del 60% de los costos son de desarrollo y el mercado de los productos genéricos es abierto.' },
   { type: 'order', config: {}, prompt: 'Ordena las actividades del proceso', options: ['Especificación del software', 'Desarrollo del software', 'Validación del software', 'Evolución del software'], answer: 0, explanation: 'El proceso va de la especificación a la evolución, pasando por desarrollo y validación.' },
   mcq('¿Qué práctica deja trazabilidad del trabajo profesional?', ['No documentar', 'Usar control de versiones y registrar incidencias', 'Cambiar el código en producción', 'Probar solo al final'], 1, 'Documentar y usar control de versiones deja evidencia de qué se decidió y cómo se validó.'),
-  { type: 'crossword', config: { crossword: { rows: 16, cols: 13, entries: [{ word: 'MANTENIMIENTO', clue: 'Permite evolucionar ante necesidades cambiantes', row: 3, col: 0, direction: 'across' as const }, { word: 'ACEPTABILIDAD', clue: 'Comprensible, utilizable y compatible', row: 3, col: 1, direction: 'down' as const }, { word: 'EFICIENCIA', clue: 'No desperdicia recursos del sistema', row: 3, col: 4, direction: 'down' as const }] }, bank: ['CONFIABILIDAD', 'SOFTWARE', 'USABILIDAD'] }, prompt: 'Completa el crucigrama de atributos', options: [], answer: 0, explanation: 'Mantenimiento, aceptabilidad y eficiencia son atributos esenciales del buen software.' },
+  { type: 'crossword', config: { crossword: { rows: 16, cols: 13, entries: [{ word: 'MANTENIMIENTO', clue: 'Tu cliente cambia sus reglas de negocio y el sistema debe poder ajustarse sin rehacerse desde cero: ¿qué atributo lo permite?', row: 3, col: 0, direction: 'across' as const }, { word: 'ACEPTABILIDAD', clue: 'Los usuarios no entienden la interfaz y el sistema no se integra con sus otras herramientas: falla este atributo.', row: 3, col: 1, direction: 'down' as const }, { word: 'EFICIENCIA', clue: 'Una aplicación tarda varios segundos en responder y consume casi toda la memoria del equipo: falla este atributo.', row: 3, col: 4, direction: 'down' as const }] }, bank: ['CONFIABILIDAD', 'SOFTWARE', 'USABILIDAD'] }, prompt: 'Completa el crucigrama de atributos', options: [], answer: 0, explanation: 'Cada escenario apunta a un atributo distinto: ajustarse al cambio es mantenimiento, ser comprensible y compatible es aceptabilidad, y aprovechar bien los recursos es eficiencia.' },
 ];
 
 const eval13Questions: QuestionSeed[] = [
@@ -563,7 +563,7 @@ const eval13Questions: QuestionSeed[] = [
   { type: 'fill', config: { sentences: ['El mal uso incluye diseminar {{malware}}.', 'Los códigos de {{conducta}} establecen estándares esperados.'], bank: ['virus', 'ética', 'leyes', 'principios'] }, prompt: 'Completa las frases', options: [], answer: 0, explanation: 'El mal uso va del uso trivial a la diseminación de malware; los códigos de conducta fijan estándares.' },
   { type: 'order', config: {}, prompt: 'Ordena el razonamiento ético', options: ['Identificar a los afectados', 'Reconocer el principio en juego', 'Evaluar riesgos y alternativas', 'Actuar y documentar la decisión'], answer: 0, explanation: 'El análisis ético parte de los afectados y termina en la acción documentada.' },
   mcq('¿Qué principio obliga a actuar conforme al interés del público?', ['PRODUCTO', 'PÚBLICO', 'GESTIÓN', 'UNO MISMO'], 1, 'PÚBLICO exige actuar consecuentemente con el interés del público, por encima de intereses particulares.'),
-  { type: 'crossword', config: { crossword: { rows: 19, cols: 11, entries: [{ word: 'COMPETENCIA', clue: 'No aceptar trabajo fuera de la propia capacidad', row: 3, col: 0, direction: 'across' as const }, { word: 'CONFIDENCIALIDAD', clue: 'Respeto a la información del cliente', row: 3, col: 0, direction: 'down' as const }, { word: 'ETICA', clue: 'Marco de conducta profesional', row: 3, col: 4, direction: 'down' as const }] }, bank: ['INTEGRIDAD', 'HONESTIDAD', 'PRODUCTO'] }, prompt: 'Completa el crucigrama de ética', options: [], answer: 0, explanation: 'Competencia, confidencialidad y ética son deberes centrales del código profesional.' },
+  { type: 'crossword', config: { crossword: { rows: 19, cols: 11, entries: [{ word: 'COMPETENCIA', clue: 'Te ofrecen un proyecto que supera tus habilidades y lo aceptas sin decir nada: incumples este deber.', row: 3, col: 0, direction: 'across' as const }, { word: 'CONFIDENCIALIDAD', clue: 'Publicas en redes los detalles internos del sistema de tu cliente: violas este deber, incluso sin un acuerdo firmado.', row: 3, col: 0, direction: 'down' as const }, { word: 'ETICA', clue: 'Marco de principios al que recurres cuando una instrucción de tu jefe choca con lo que es correcto.', row: 3, col: 4, direction: 'down' as const }] }, bank: ['INTEGRIDAD', 'HONESTIDAD', 'PRODUCTO'] }, prompt: 'Completa el crucigrama de ética', options: [], answer: 0, explanation: 'Aceptar trabajo que no puedes hacer bien va contra la competencia; divulgar información del cliente va contra la confidencialidad; y la ética es el marco que te guía cuando hay un dilema profesional.' },
 ];
 
 const eval14Questions: QuestionSeed[] = [
@@ -581,7 +581,7 @@ const eval14Questions: QuestionSeed[] = [
   { type: 'fill', config: { sentences: ['Las estaciones se despliegan en campo {{abierto}}.', 'La estación se comunica por {{satélite}}.'], bank: ['cerrado', 'cable', 'radio', 'remoto'] }, prompt: 'Completa las frases', options: [], answer: 0, explanation: 'El escenario es campo abierto con comunicación satelital.' },
   { type: 'order', config: {}, prompt: 'Ordena el funcionamiento de la bomba de insulina', options: ['Medir el nivel de azúcar en la sangre', 'Calcular la dosis necesaria', 'Enviar pulsos a la bomba', 'Administrar la insulina'], answer: 0, explanation: 'El sistema mide, calcula, envía pulsos y administra la dosis.' },
   mcq('¿Qué atributo es prioritario en el MHC-PMS?', ['Capacidad gráfica', 'Privacidad de la información clínica', 'Tamaño físico', 'Ancho de banda'], 1, 'El MHC-PMS maneja información sensible: la privacidad es un requerimiento crítico.'),
-  { type: 'crossword', config: { crossword: { rows: 11, cols: 8, entries: [{ word: 'INSULINA', clue: 'Hormona que administra la bomba', row: 3, col: 0, direction: 'across' as const }, { word: 'SENSORES', clue: 'Dispositivos que recogen datos del entorno', row: 3, col: 2, direction: 'down' as const }] }, bank: ['EMBEBIDO', 'MHC', 'PACIENTES'] }, prompt: 'Completa el crucigrama de estudios de caso', options: [], answer: 0, explanation: 'La bomba administra insulina y la estación meteorológica usa sensores.' },
+  { type: 'crossword', config: { crossword: { rows: 11, cols: 8, entries: [{ word: 'INSULINA', clue: 'Hormona que la bomba automática dosifica después de medir la glucosa de la persona.', row: 3, col: 0, direction: 'across' as const }, { word: 'SENSORES', clue: 'Dispositivos que miden variables del entorno, como temperatura, viento o humedad, y las convierten en datos.', row: 3, col: 2, direction: 'down' as const }] }, bank: ['EMBEBIDO', 'MHC', 'PACIENTES'] }, prompt: 'Completa el crucigrama de estudios de caso', options: [], answer: 0, explanation: 'La bomba administra insulina tras medir la glucosa, y la estación meteorológica obtiene sus datos mediante sensores.' },
 ];
 
 export const unit1Evaluations: EvaluationSeed[] = [

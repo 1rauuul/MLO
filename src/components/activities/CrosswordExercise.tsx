@@ -11,12 +11,19 @@ interface CrosswordExerciseProps {
   engine: CrosswordEngine;
   onSubmit: (answer: string, correct: boolean) => void;
   locked?: boolean;
+  variant?: 'default' | 'example';
 }
 
 const CELL = 24;
 
-export function CrosswordExercise({ engine, onSubmit, locked = false }: CrosswordExerciseProps) {
+export function CrosswordExercise({
+  engine,
+  onSubmit,
+  locked = false,
+  variant = 'default',
+}: CrosswordExerciseProps) {
   const { colors, radius, spacing } = useTheme();
+  const example = variant === 'example';
   const cellMap = new Map(engine.cells.map(cell => [`${cell.row}-${cell.col}`, cell]));
 
   const labels = useMemo(() => {
@@ -119,6 +126,10 @@ export function CrosswordExercise({ engine, onSubmit, locked = false }: Crosswor
 
   return (
     <View>
+      <AppText variant="small" color={colors.muted} style={styles.instruction}>
+        Toca una celda y escribe la palabra que corresponde a la pista. Escribe sin tildes.
+      </AppText>
+
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gridScroll}>
         <View style={styles.grid}>
           {Array.from({ length: engine.rows }).map((_, row) => (
@@ -206,7 +217,7 @@ export function CrosswordExercise({ engine, onSubmit, locked = false }: Crosswor
         ]}
       />
 
-      {bank.length > 0 ? (
+      {example && bank.length > 0 ? (
         <View style={[styles.bank, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
           {bank.map((word, index) => (
             <Pressable
@@ -284,7 +295,7 @@ export function CrosswordExercise({ engine, onSubmit, locked = false }: Crosswor
         style={{ marginTop: spacing.lg }}
       />
 
-      {engine.checked ? (
+      {example && engine.checked ? (
         <View
           style={[
             styles.feedback,
@@ -305,6 +316,7 @@ export function CrosswordExercise({ engine, onSubmit, locked = false }: Crosswor
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  instruction: { lineHeight: 18, marginBottom: 12 },
   gridScroll: { paddingVertical: 2 },
   grid: { gap: 2 },
   gridRow: { flexDirection: 'row', gap: 2 },

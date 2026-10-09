@@ -197,6 +197,7 @@ export function ExampleRunner({
           onPress={() => {
             setSolveSignal(current => current + 1);
             setSolutionShown(true);
+            setHasChecked(true);
           }}
           style={styles.control}
           accessibilityLabel="Ver solución"

@@ -38,16 +38,20 @@ export function FillExercise({
   };
 
   const renderBlank = (blankIndex: number) => {
-    const word = engine.assignment[blankIndex];
-    const expected = engine.answers[blankIndex];
+    const word = engine.assignment[blankIndex] ?? null;
+    const expected = engine.answers[blankIndex] ?? '';
     const isActive = engine.activeBlank === blankIndex;
+    const correct = word !== null && normalizeAnswer(word) === normalizeAnswer(expected);
     const stateColor = engine.checked
-      ? word !== null && normalizeAnswer(word) === normalizeAnswer(expected ?? '')
+      ? correct
         ? colors.success
         : colors.danger
       : isActive
         ? colors.primary
         : colors.line;
+    const stateBackground = engine.checked
+      ? `${correct ? colors.success : colors.danger}22`
+      : colors.soft;
     return (
       <Text
         key={`blank-${blankIndex}`}
@@ -59,7 +63,7 @@ export function FillExercise({
         style={[
           styles.blank,
           {
-            backgroundColor: colors.soft,
+            backgroundColor: stateBackground,
             borderColor: stateColor,
             color: word ? colors.text : colors.muted,
           },
@@ -133,7 +137,7 @@ export function FillExercise({
         ) : null}
       </View>
 
-      {engine.checked ? (
+      {example && engine.checked ? (
         <View
           style={[
             styles.feedback,

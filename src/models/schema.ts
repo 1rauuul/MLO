@@ -1,4 +1,4 @@
-export const DATABASE_VERSION = 9;
+export const DATABASE_VERSION = 10;
 
 export const SCHEMA_DDL = `
 CREATE TABLE IF NOT EXISTS accounts (

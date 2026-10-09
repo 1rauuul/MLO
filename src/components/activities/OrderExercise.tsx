@@ -19,16 +19,19 @@ import { accentForText } from './accents';
 const ROW_GAP = 10;
 const FALLBACK_HEIGHT = 64;
 
+type RowState = 'correct' | 'wrong' | null;
+
 interface DraggableRowProps {
   index: number;
   accent: string;
+  state: RowState;
   onDrop: (index: number, translationY: number) => void;
   onMeasure: (step: string, height: number) => void;
   step: string;
   children: ReactNode;
 }
 
-function DraggableRow({ index, accent, onDrop, onMeasure, step, children }: DraggableRowProps) {
+function DraggableRow({ index, accent, state, onDrop, onMeasure, step, children }: DraggableRowProps) {
   const { colors, radius } = useTheme();
   const translateY = useSharedValue(0);
   const active = useSharedValue(0);
@@ -61,7 +64,17 @@ function DraggableRow({ index, accent, onDrop, onMeasure, step, children }: Drag
         onLayout={event => onMeasure(step, event.nativeEvent.layout.height)}
         style={[
           styles.dragRow,
-          { backgroundColor: colors.card, borderColor: accent, borderRadius: radius.control },
+          {
+            backgroundColor:
+              state === 'correct'
+                ? `${colors.success}22`
+                : state === 'wrong'
+                  ? `${colors.danger}22`
+                  : colors.card,
+            borderColor:
+              state === 'correct' ? colors.success : state === 'wrong' ? colors.danger : accent,
+            borderRadius: radius.control,
+          },
           animatedStyle,
         ]}>
         {children}
@@ -132,12 +145,19 @@ export function OrderExercise({
       <View>
         {engine.steps.map((step, index) => {
           const accent = accentForText(step);
+          const state: RowState =
+            !example && engine.checked
+              ? engine.steps[index] === engine.correctOrder[index]
+                ? 'correct'
+                : 'wrong'
+              : null;
           return (
             <DraggableRow
               key={step}
               index={index}
               step={step}
               accent={accent}
+              state={state}
               onDrop={handleDrop}
               onMeasure={measure}>
               {example ? (
@@ -185,7 +205,7 @@ export function OrderExercise({
           : 'Mantén presionada una opción para arrastrarla, o usa las flechas.'}
       </AppText>
 
-      {engine.checked ? (
+      {example && engine.checked ? (
         <View
           style={[
             styles.feedback,
