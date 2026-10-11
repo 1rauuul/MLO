@@ -22,19 +22,37 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     return;
   }
 
-  if (currentVersion < 2) {
-    await db.execAsync(DROP_ALL_DDL);
-    await db.execAsync(SCHEMA_DDL);
+  let version = currentVersion;
+
+  if (version < 2) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(DROP_ALL_DDL);
+      await db.execAsync(SCHEMA_DDL);
+      await db.execAsync('PRAGMA user_version = 2');
+    });
     await seedDatabase(db);
-  } else {
-    if (currentVersion < 3) {
+    version = 2;
+  }
+
+  if (version < 3) {
+    await db.withTransactionAsync(async () => {
       await db.execAsync(`ALTER TABLE lessons ADD COLUMN content TEXT NOT NULL DEFAULT '[]'`);
-      await applyContentMigration(db);
-    }
-    if (currentVersion < 4) {
+      await db.execAsync('PRAGMA user_version = 3');
+    });
+    await applyContentMigration(db);
+    version = 3;
+  }
+
+  if (version < 4) {
+    await db.withTransactionAsync(async () => {
       await db.execAsync(`ALTER TABLE exercises ADD COLUMN config TEXT NOT NULL DEFAULT '{}'`);
-    }
-    if (currentVersion < 5) {
+      await db.execAsync('PRAGMA user_version = 4');
+    });
+    version = 4;
+  }
+
+  if (version < 5) {
+    await db.withTransactionAsync(async () => {
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS attempts (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,18 +82,32 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
         ALTER TABLE questions ADD COLUMN config TEXT NOT NULL DEFAULT '{}';
         ALTER TABLE exercises ADD COLUMN explanation TEXT NOT NULL DEFAULT '';
       `);
-      await applyUnit1Content(db);
-    }
-    if (currentVersion < 6) {
-      await applyUnit1Content(db);
-    }
-    if (currentVersion < 7) {
-      await applyUnit12ExerciseBank(db);
-    }
-    if (currentVersion < 8) {
-      await applyUnit1Content(db, false);
-    }
-    if (currentVersion < 9) {
+      await db.execAsync('PRAGMA user_version = 5');
+    });
+    await applyUnit1Content(db, false);
+    version = 5;
+  }
+
+  if (version < 6) {
+    await applyUnit1Content(db, false);
+    await db.execAsync('PRAGMA user_version = 6');
+    version = 6;
+  }
+
+  if (version < 7) {
+    await applyUnit12ExerciseBank(db);
+    await db.execAsync('PRAGMA user_version = 7');
+    version = 7;
+  }
+
+  if (version < 8) {
+    await applyUnit1Content(db, false);
+    await db.execAsync('PRAGMA user_version = 8');
+    version = 8;
+  }
+
+  if (version < 9) {
+    await db.withTransactionAsync(async () => {
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS last_location (
           account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
@@ -86,12 +118,15 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
           updated_at TEXT NOT NULL
         );
       `);
-    }
-    if (currentVersion < 10) {
-      await applyUnit1Content(db, false);
-      await applyUnit12ExerciseBank(db);
-    }
+      await db.execAsync('PRAGMA user_version = 9');
+    });
+    version = 9;
   }
 
-  await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
+  if (version < 10) {
+    await applyUnit1Content(db, false);
+    await applyUnit12ExerciseBank(db);
+    await db.execAsync('PRAGMA user_version = 10');
+    version = 10;
+  }
 }

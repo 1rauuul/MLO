@@ -353,10 +353,10 @@ describe('OrderExercise locking', () => {
 
     const { getByRole, getByText, queryByText } = render(<ControlledOrder />);
 
-    expect(queryByText('✓ Secuencia correcta')).toBeNull();
+    expect(queryByText('Secuencia correcta')).toBeNull();
     fireEvent.press(getByRole('button', { name: 'Comprobar' }));
 
-    expect(getByText('✓ Secuencia correcta')).toBeTruthy();
+    expect(getByText('Secuencia correcta')).toBeTruthy();
   });
 
   it('oculta la leyenda en el flujo de ejercicios', () => {
@@ -377,8 +377,8 @@ describe('OrderExercise locking', () => {
     const { getByRole, queryByText } = render(<ControlledOrder />);
     fireEvent.press(getByRole('button', { name: 'Comprobar' }));
 
-    expect(queryByText('✓ Secuencia correcta')).toBeNull();
-    expect(queryByText('↻ El orden no es el correcto')).toBeNull();
+    expect(queryByText('Secuencia correcta')).toBeNull();
+    expect(queryByText('El orden no es el correcto')).toBeNull();
   });
 });
 

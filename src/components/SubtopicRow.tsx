@@ -6,6 +6,7 @@ import { useTheme } from '@/theme/theme-provider';
 
 import { AppText } from './AppText';
 import { Chevron } from './Chevron';
+import { Icon } from './Icon';
 
 interface SubtopicRowProps {
   lesson: Lesson;
@@ -46,9 +47,7 @@ export function SubtopicRow({ lesson, completed, onPress, inline = false }: Subt
         {lesson.title}
       </AppText>
       {completed ? (
-        <AppText color={colors.success} weight="700">
-          ✓
-        </AppText>
+        <Icon name="check" size={17} color={colors.success} strokeWidth={2.5} />
       ) : (
         <Chevron direction="right" size={16} color={colors.muted} strokeWidth={2.2} />
       )}

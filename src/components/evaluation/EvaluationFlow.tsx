@@ -6,10 +6,12 @@ import { ActivityView } from '@/components/activities/ActivityView';
 import { AppText } from '@/components/AppText';
 import { PrimaryButton, SecondaryButton } from '@/components/Buttons';
 import { EmptyState } from '@/components/EmptyState';
+import { Icon } from '@/components/Icon';
 import { QuizOption, type QuizOptionResult } from '@/components/QuizOption';
 import { Screen } from '@/components/Screen';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import type { ActivityType, Exercise, ExerciseType, Question } from '@/models/entities';
+import { ACTIVITY_TYPE_LABELS as TYPE_LABELS } from '@/models/activityLabels';
 import { useTheme } from '@/theme/theme-provider';
 import { recommendReview } from '@/viewmodels/analyticsLogic';
 import { optionResult } from '@/viewmodels/quizLogic';
@@ -21,14 +23,6 @@ import {
 } from '@/viewmodels/useQuizEngine';
 import { useLessonContent } from '@/viewmodels/useLessonContent';
 import { useSession } from '@/viewmodels/useSession';
-
-const TYPE_LABELS: Record<ActivityType, string> = {
-  order: 'Ordena',
-  fill: 'Completa',
-  match: 'Enlaza',
-  crossword: 'Crucigrama',
-  mcq: 'Opción múltiple',
-};
 
 function asExercise(question: Question, lessonId: string): Exercise {
   return {
@@ -95,7 +89,7 @@ export default function EvaluationFlow() {
   const { record: recordLocation } = useSession();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
-  const recordedRef = useRef(false);
+  const recordedEvaluationRef = useRef<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -111,10 +105,10 @@ export default function EvaluationFlow() {
   );
 
   useEffect(() => {
-    if (engine.phase !== 'summary' || !evaluation || recordedRef.current) {
+    if (engine.phase !== 'summary' || !evaluation || recordedEvaluationRef.current === evaluation.id) {
       return;
     }
-    recordedRef.current = true;
+    recordedEvaluationRef.current = evaluation.id;
     const percent = engine.total === 0 ? 0 : Math.round((engine.correctCount / engine.total) * 100);
     void record(evaluation.id, percent, engine.correctCount, engine.total);
     if (lessonParam) {
@@ -213,9 +207,12 @@ export default function EvaluationFlow() {
                     borderRadius: radius.control,
                   },
                 ]}>
-                <AppText color={ok ? colors.success : colors.danger} weight="700">
-                  {ok ? '✓' : '✗'}
-                </AppText>
+                <Icon
+                  name={ok ? 'check' : 'close'}
+                  size={16}
+                  color={ok ? colors.success : colors.danger}
+                  strokeWidth={2.5}
+                />
                 <View style={styles.flex}>
                   <AppText variant="small" weight="600">
                     {item.prompt}
@@ -255,7 +252,15 @@ export default function EvaluationFlow() {
 
   const question = engine.question;
   if (!question) {
-    return null;
+    return (
+      <Screen>
+        <ScreenHeader onBack={() => router.back()} eyebrow="Evaluación" title="Sin reactivos" />
+        <EmptyState
+          title="Sin reactivos"
+          message="No hay reactivos disponibles para esta evaluación."
+        />
+      </Screen>
+    );
   }
 
   const isLast = engine.index >= engine.total - 1;
@@ -269,7 +274,11 @@ export default function EvaluationFlow() {
         trailing={`${engine.index + 1}/${engine.total}`}
       />
 
-      <View style={[styles.progressTrack, { backgroundColor: colors.soft }]}>
+      <View
+        accessibilityRole="progressbar"
+        accessibilityLabel={`Reactivo ${engine.index + 1} de ${engine.total}`}
+        accessibilityValue={{ min: 1, max: engine.total, now: engine.index + 1 }}
+        style={[styles.progressTrack, { backgroundColor: colors.soft }]}>
         <View
           style={[
             styles.progressValue,

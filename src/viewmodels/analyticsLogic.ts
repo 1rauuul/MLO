@@ -1,6 +1,5 @@
-import type { ActivityType, Attempt } from '@/models/entities';
-
-const KNOWN_ITEM_TYPES: ActivityType[] = ['order', 'fill', 'match', 'crossword', 'mcq'];
+import type { Attempt } from '@/models/entities';
+import { ACTIVITY_TYPES } from '@/models/entities';
 
 export interface AttemptSummary {
   total: number;
@@ -14,7 +13,7 @@ export function summarizeAttempts(attempts: Attempt[]): AttemptSummary {
   let correct = 0;
   let total = 0;
   for (const attempt of attempts) {
-    if (!KNOWN_ITEM_TYPES.includes(attempt.itemType)) {
+    if (!ACTIVITY_TYPES.includes(attempt.itemType)) {
       continue;
     }
     const bucket = byType[attempt.itemType] ?? { total: 0, correct: 0 };

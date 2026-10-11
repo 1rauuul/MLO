@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useTheme } from '@/theme/theme-provider';
 
 import { AppText } from './AppText';
+import { Icon } from './Icon';
 
 export type QuizOptionResult = 'correct' | 'wrong';
 
@@ -17,8 +18,6 @@ interface QuizOptionProps {
 export function QuizOption({ index, label, selected, result, onPress }: QuizOptionProps) {
   const { colors, radius } = useTheme();
   const letter = String.fromCharCode(65 + index);
-  const mark = result === 'correct' ? '✓' : result === 'wrong' ? '×' : letter;
-
   const borderColor =
     result === 'correct'
       ? colors.success
@@ -28,6 +27,17 @@ export function QuizOption({ index, label, selected, result, onPress }: QuizOpti
           ? colors.primary
           : colors.line;
 
+  const mark =
+    result === 'correct' ? (
+      <Icon name="check" size={16} color={borderColor} strokeWidth={2.5} />
+    ) : result === 'wrong' ? (
+      <Icon name="close" size={16} color={borderColor} strokeWidth={2.5} />
+    ) : (
+      <AppText variant="code" color={borderColor} weight="700">
+        {letter}
+      </AppText>
+    );
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -35,15 +45,12 @@ export function QuizOption({ index, label, selected, result, onPress }: QuizOpti
       accessibilityLabel={`Opción ${letter}: ${label}${result === 'correct' ? ', correcta' : result === 'wrong' ? ', incorrecta' : ''}`}
       disabled={!!result}
       onPress={onPress}
-      style={[
+      style={({ pressed }) => [
         styles.option,
         { borderColor, backgroundColor: colors.card, borderRadius: radius.control },
+        pressed && !result ? { opacity: 0.85 } : null,
       ]}>
-      <View style={[styles.letter, { backgroundColor: colors.soft }]}>
-        <AppText variant="code" color={borderColor} weight="700">
-          {mark}
-        </AppText>
-      </View>
+      <View style={[styles.letter, { backgroundColor: colors.soft }]}>{mark}</View>
       <AppText style={styles.label}>{label}</AppText>
     </Pressable>
   );

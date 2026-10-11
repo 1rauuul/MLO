@@ -28,7 +28,7 @@ function greetingDate(): string {
 export default function ModulesScreen() {
   const { colors, radius } = useTheme();
   const { account } = useAuth();
-  const { units, lessonsByUnit, progressMap, refresh } = useCatalog();
+  const { units, lessonsByUnit, progressMap, error, refresh } = useCatalog();
   const { location, resumeHref } = useSession();
   const router = useRouter();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -51,7 +51,10 @@ export default function ModulesScreen() {
   if (units.length === 0) {
     return (
       <Screen contentStyle={styles.content}>
-        <EmptyState title="Cargando catálogo" message="Preparando las unidades del curso." />
+        <EmptyState
+          title={error ? 'No se pudo cargar' : 'Cargando catálogo'}
+          message={error ?? 'Preparando las unidades del curso.'}
+        />
       </Screen>
     );
   }

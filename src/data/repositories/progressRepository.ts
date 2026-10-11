@@ -58,6 +58,7 @@ export async function resetAccountProgress(db: SQLiteDatabase, accountId: number
   await db.withTransactionAsync(async () => {
     await db.runAsync('DELETE FROM module_progress WHERE account_id = ?', accountId);
     await db.runAsync('DELETE FROM evaluation_results WHERE account_id = ?', accountId);
-    await db.runAsync('DELETE FROM results WHERE account_id = ?', accountId);
+    await db.runAsync('DELETE FROM attempts WHERE account_id = ?', accountId);
+    await db.runAsync('DELETE FROM last_location WHERE account_id = ?', accountId);
   });
 }

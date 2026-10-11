@@ -77,11 +77,6 @@ export async function selectUnits(db: SQLiteDatabase): Promise<Unit[]> {
   return rows.map(mapUnit);
 }
 
-export async function selectUnit(db: SQLiteDatabase, id: string): Promise<Unit | null> {
-  const row = await db.getFirstAsync<UnitRow>('SELECT * FROM units WHERE id = ?', id);
-  return row ? mapUnit(row) : null;
-}
-
 export async function selectLessonsByUnit(db: SQLiteDatabase, unitId: string): Promise<Lesson[]> {
   const rows = await db.getAllAsync<LessonRow>(
     'SELECT * FROM lessons WHERE unit_id = ? ORDER BY position',
@@ -93,9 +88,4 @@ export async function selectLessonsByUnit(db: SQLiteDatabase, unitId: string): P
 export async function selectLesson(db: SQLiteDatabase, id: string): Promise<Lesson | null> {
   const row = await db.getFirstAsync<LessonRow>('SELECT * FROM lessons WHERE id = ?', id);
   return row ? mapLesson(row) : null;
-}
-
-export async function selectAllLessons(db: SQLiteDatabase): Promise<Lesson[]> {
-  const rows = await db.getAllAsync<LessonRow>('SELECT * FROM lessons ORDER BY id');
-  return rows.map(mapLesson);
 }

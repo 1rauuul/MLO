@@ -21,6 +21,6 @@ export function homeTabForRoute(routeName: string): HomeTab {
     case '(profile)':
       return 'profile';
     default:
-      throw new Error(`Unknown authenticated tab route: ${routeName}`);
+      return 'modules';
   }
 }

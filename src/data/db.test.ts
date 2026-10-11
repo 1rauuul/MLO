@@ -30,6 +30,49 @@ describe('migrateAndSeed', () => {
     expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 10')).toBe(true);
   });
 
+  test('migra desde user_version=4 sin borrar attempts', async () => {
+    const statements: string[] = [];
+    const db = {
+      execAsync: async (sql: string) => {
+        statements.push(sql);
+      },
+      getFirstAsync: async () => ({ user_version: 4 }),
+      runAsync: async (sql: string) => {
+        statements.push(sql);
+        return { changes: 1, lastInsertRowId: 0 };
+      },
+      withTransactionAsync: async (task: () => Promise<void>) => task(),
+    } as unknown as SQLiteDatabase;
+
+    await migrateAndSeed(db);
+
+    expect(statements.some(statement => statement.startsWith('DELETE FROM attempts'))).toBe(false);
+    expect(statements.some(statement => statement.startsWith('DELETE FROM exercises'))).toBe(true);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 10')).toBe(true);
+  });
+
+  test('incluye la versión objetivo dentro de cada paso de migración', async () => {
+    const statements: string[] = [];
+    const db = {
+      execAsync: async (sql: string) => {
+        statements.push(sql);
+      },
+      getFirstAsync: async () => ({ user_version: 8 }),
+      runAsync: async (sql: string) => {
+        statements.push(sql);
+        return { changes: 1, lastInsertRowId: 0 };
+      },
+      withTransactionAsync: async (task: () => Promise<void>) => task(),
+    } as unknown as SQLiteDatabase;
+
+    await migrateAndSeed(db);
+
+    expect(statements.filter(statement => statement.startsWith('PRAGMA user_version'))).toEqual([
+      'PRAGMA user_version = 9',
+      'PRAGMA user_version = 10',
+    ]);
+  });
+
   test('repara tablas faltantes cuando la versión ya está al día', async () => {
     const statements: string[] = [];
     const db = {
@@ -45,6 +88,24 @@ describe('migrateAndSeed', () => {
       statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS last_location')),
     ).toBe(true);
     expect(statements.some(statement => statement.startsWith('PRAGMA user_version'))).toBe(false);
+  });
+
+  test('el seed es idempotente para units y lessons', async () => {
+    const statements: string[] = [];
+    const db = {
+      runAsync: async (sql: string) => {
+        statements.push(sql);
+        return { changes: 1, lastInsertRowId: 0 };
+      },
+      withTransactionAsync: async (task: () => Promise<void>) => task(),
+    } as unknown as SQLiteDatabase;
+
+    await seedDatabase(db);
+
+    const unitInsert = statements.find(statement => statement.startsWith('INSERT INTO units'));
+    const lessonInsert = statements.find(statement => statement.startsWith('INSERT INTO lessons'));
+    expect(unitInsert).toContain('ON CONFLICT(id) DO NOTHING');
+    expect(lessonInsert).toContain('ON CONFLICT(id) DO NOTHING');
   });
 
   test('includes the merged exercises in a fresh seed for l1.2', async () => {

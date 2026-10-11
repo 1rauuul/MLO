@@ -70,6 +70,20 @@ export async function saveSession(db: SQLiteDatabase, accountId: number): Promis
   );
 }
 
+export async function updatePasswordHash(
+  db: SQLiteDatabase,
+  accountId: number,
+  passwordHash: string,
+  salt: string,
+): Promise<void> {
+  await db.runAsync(
+    'UPDATE accounts SET password_hash = ?, salt = ? WHERE id = ?',
+    passwordHash,
+    salt,
+    accountId,
+  );
+}
+
 export async function clearSession(db: SQLiteDatabase): Promise<void> {
   await db.runAsync('DELETE FROM auth_session WHERE id = 1');
 }

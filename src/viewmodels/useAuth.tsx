@@ -17,21 +17,32 @@ import {
   selectAccountById,
   selectAccountByUsername,
   selectSessionAccountId,
+  updatePasswordHash,
 } from '@/data/repositories/accountRepository';
 import { createDefaultProfile } from '@/data/repositories/profileRepository';
 import { resetAccountProgress } from '@/data/repositories/progressRepository';
 import type { Account } from '@/models/entities';
 
 import {
-  hashPassword,
+  derivePasswordHash,
+  isLegacyPasswordHash,
   normalizeUsername,
+  PBKDF2_DEFAULT_ITERATIONS,
   validateLogin,
   validateRegistration,
-  verifyPassword,
+  verifyPasswordHash,
+  type ByteDigest,
   type Digest,
 } from './authLogic';
 
-const sha256: Digest = input => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, input);
+const sha256Hex: Digest = input => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, input);
+const sha256Bytes: ByteDigest = async input => {
+  const buffer = input.buffer.slice(
+    input.byteOffset,
+    input.byteOffset + input.byteLength,
+  ) as ArrayBuffer;
+  return new Uint8Array(await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, buffer));
+};
 
 export type AuthOutcome = { ok: true } | { ok: false; error: string };
 
@@ -59,22 +70,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
     (async () => {
-      const accountId = await selectSessionAccountId(db);
-      const loaded = accountId ? await selectAccountById(db, accountId) : null;
-      if (!active) {
-        return;
+      try {
+        const accountId = await selectSessionAccountId(db);
+        const loaded = accountId ? await selectAccountById(db, accountId) : null;
+        if (!active) {
+          return;
+        }
+        setAccount(
+          loaded
+            ? {
+                id: loaded.id,
+                username: loaded.username,
+                displayName: loaded.displayName,
+                createdAt: loaded.createdAt,
+              }
+            : null,
+        );
+      } catch {
+        if (active) {
+          setAccount(null);
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
       }
-      setAccount(
-        loaded
-          ? {
-              id: loaded.id,
-              username: loaded.username,
-              displayName: loaded.displayName,
-              createdAt: loaded.createdAt,
-            }
-          : null,
-      );
-      setIsLoading(false);
     })();
     return () => {
       active = false;
@@ -87,19 +107,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         return { ok: false, error };
       }
-      const username = normalizeUsername(input.username);
-      const existing = await selectAccountByUsername(db, username);
-      if (existing) {
-        return { ok: false, error: 'username_taken' };
+      try {
+        const username = normalizeUsername(input.username);
+        const existing = await selectAccountByUsername(db, username);
+        if (existing) {
+          return { ok: false, error: 'username_taken' };
+        }
+        const salt = Crypto.randomUUID();
+        const passwordHash = await derivePasswordHash(
+          input.password,
+          salt,
+          PBKDF2_DEFAULT_ITERATIONS,
+          sha256Bytes,
+        );
+        const displayName = input.displayName.trim();
+        const id = await insertAccount(db, { username, displayName, passwordHash, salt });
+        await createDefaultProfile(db, id);
+        await saveSession(db, id);
+        setAccount({ id, username, displayName, createdAt: new Date().toISOString() });
+        return { ok: true };
+      } catch {
+        return { ok: false, error: 'storage_error' };
       }
-      const salt = Crypto.randomUUID();
-      const passwordHash = await hashPassword(input.password, salt, sha256);
-      const displayName = input.displayName.trim();
-      const id = await insertAccount(db, { username, displayName, passwordHash, salt });
-      await createDefaultProfile(db, id);
-      await saveSession(db, id);
-      setAccount({ id, username, displayName, createdAt: new Date().toISOString() });
-      return { ok: true };
     },
     [db],
   );
@@ -109,22 +138,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (validateLogin(username, password)) {
         return { ok: false, error: 'missing' };
       }
-      const found = await selectAccountByUsername(db, normalizeUsername(username));
-      if (!found) {
-        return { ok: false, error: 'invalid_credentials' };
+      try {
+        const found = await selectAccountByUsername(db, normalizeUsername(username));
+        if (!found) {
+          return { ok: false, error: 'invalid_credentials' };
+        }
+        const valid = await verifyPasswordHash(
+          password,
+          found.salt,
+          found.passwordHash,
+          sha256Hex,
+          sha256Bytes,
+        );
+        if (!valid) {
+          return { ok: false, error: 'invalid_credentials' };
+        }
+        if (isLegacyPasswordHash(found.passwordHash)) {
+          const upgraded = await derivePasswordHash(
+            password,
+            found.salt,
+            PBKDF2_DEFAULT_ITERATIONS,
+            sha256Bytes,
+          );
+          await updatePasswordHash(db, found.id, upgraded, found.salt);
+        }
+        await saveSession(db, found.id);
+        setAccount({
+          id: found.id,
+          username: found.username,
+          displayName: found.displayName,
+          createdAt: found.createdAt,
+        });
+        return { ok: true };
+      } catch {
+        return { ok: false, error: 'storage_error' };
       }
-      const valid = await verifyPassword(password, found.salt, found.passwordHash, sha256);
-      if (!valid) {
-        return { ok: false, error: 'invalid_credentials' };
-      }
-      await saveSession(db, found.id);
-      setAccount({
-        id: found.id,
-        username: found.username,
-        displayName: found.displayName,
-        createdAt: found.createdAt,
-      });
-      return { ok: true };
     },
     [db],
   );

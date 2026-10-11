@@ -62,15 +62,6 @@ CREATE TABLE IF NOT EXISTS exercises (
   explanation TEXT NOT NULL DEFAULT ''
 );
 
-CREATE TABLE IF NOT EXISTS results (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-  exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
-  answer TEXT NOT NULL,
-  is_correct INTEGER NOT NULL,
-  created_at TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS evaluations (
   id TEXT PRIMARY KEY NOT NULL,
   lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
@@ -142,7 +133,6 @@ CREATE INDEX IF NOT EXISTS idx_exercises_lesson ON exercises(lesson_id);
 CREATE INDEX IF NOT EXISTS idx_evaluations_lesson ON evaluations(lesson_id);
 CREATE INDEX IF NOT EXISTS idx_questions_evaluation ON questions(evaluation_id);
 CREATE INDEX IF NOT EXISTS idx_progress_account ON module_progress(account_id);
-CREATE INDEX IF NOT EXISTS idx_results_account ON results(account_id);
 CREATE INDEX IF NOT EXISTS idx_eval_results_account ON evaluation_results(account_id);
 CREATE INDEX IF NOT EXISTS idx_attempts_account_lesson ON attempts(account_id, lesson_id);
 CREATE INDEX IF NOT EXISTS idx_attempts_account_type ON attempts(account_id, item_type);
@@ -152,7 +142,6 @@ export const DROP_ALL_DDL = `
 DROP TABLE IF EXISTS attempts;
 DROP TABLE IF EXISTS auth_session;
 DROP TABLE IF EXISTS evaluation_results;
-DROP TABLE IF EXISTS results;
 DROP TABLE IF EXISTS module_progress;
 DROP TABLE IF EXISTS last_location;
 DROP TABLE IF EXISTS learner_profile;

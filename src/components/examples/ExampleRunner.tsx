@@ -7,18 +7,11 @@ import { IconButton, PrimaryButton, SecondaryButton } from '@/components/Buttons
 import { Chevron } from '@/components/Chevron';
 import { Magnifier } from '@/components/Magnifier';
 import { ScreenHeader } from '@/components/ScreenHeader';
-import type { ActivityType, Exercise } from '@/models/entities';
+import type { Exercise } from '@/models/entities';
+import { ACTIVITY_TYPE_LABELS as TYPE_LABELS } from '@/models/activityLabels';
 import { useTheme } from '@/theme/theme-provider';
 import { demoSteps } from '@/viewmodels/exampleLogic';
 import { hintsForType } from '@/viewmodels/exerciseHints';
-
-const TYPE_LABELS: Record<ActivityType, string> = {
-  order: 'Ordena',
-  fill: 'Completa',
-  match: 'Enlaza',
-  crossword: 'Crucigrama',
-  mcq: 'Opción múltiple',
-};
 
 interface ExampleRunnerProps {
   exercise: Exercise;

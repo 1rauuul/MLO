@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/AppText';
 import { PrimaryButton, SecondaryButton } from '@/components/Buttons';
 import { EmptyState } from '@/components/EmptyState';
+import { Icon } from '@/components/Icon';
 import { RichContent } from '@/components/RichContent';
 import { Screen } from '@/components/Screen';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -23,7 +24,7 @@ const LAST_SECTION = SECTION_LABELS.length - 1;
 export default function LessonDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const lessonId = id ?? null;
-  const { lesson, isLoading } = useLessonContent(lessonId);
+  const { lesson, isLoading, error } = useLessonContent(lessonId);
   const { exercises } = useExercisesForLesson(lessonId);
   const { evaluation } = useEvaluationForLesson(lessonId);
   const { markCompleted } = useModuleProgress();
@@ -49,7 +50,10 @@ export default function LessonDetailScreen() {
   if (!isLoading && !lesson) {
     return (
       <Screen>
-        <EmptyState title="Sin lección" message="No se encontró la lección solicitada." />
+        <EmptyState
+          title={error ? 'No se pudo cargar' : 'Sin lección'}
+          message={error ?? 'No se encontró la lección solicitada.'}
+        />
       </Screen>
     );
   }
@@ -108,6 +112,7 @@ export default function LessonDetailScreen() {
             key={label}
             label={label}
             onPress={() => setSection(index)}
+            labelColor={section === index ? colors.onPrimary : undefined}
             style={[
               styles.tab,
               { backgroundColor: section === index ? colors.primary : colors.card },
@@ -136,9 +141,7 @@ export default function LessonDetailScreen() {
           <View style={styles.list}>
             {lesson.synthesis.map(item => (
               <View key={item} style={styles.synthesisRow}>
-                <AppText color={colors.success} weight="700">
-                  ✓
-                </AppText>
+                <Icon name="check" size={16} color={colors.success} strokeWidth={2.5} />
                 <AppText style={styles.flex}>{item}</AppText>
               </View>
             ))}

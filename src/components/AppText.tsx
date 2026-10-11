@@ -47,6 +47,7 @@ export function AppText({
 
   return (
     <Text
+      allowFontScaling={false}
       {...rest}
       style={[
         { color: color ?? colors.text },

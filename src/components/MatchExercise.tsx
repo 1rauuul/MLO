@@ -5,6 +5,7 @@ import type { MatchEngine } from '@/viewmodels/useExerciseEngine';
 
 import { AppText } from './AppText';
 import { PrimaryButton, SecondaryButton } from './Buttons';
+import { Icon } from './Icon';
 import { accentForIndex } from './activities/accents';
 
 interface MatchExerciseProps {
@@ -74,9 +75,12 @@ export function MatchExercise({
                   {left}
                 </AppText>
                 {engine.checked ? (
-                  <AppText color={correct ? colors.success : colors.danger} weight="700">
-                    {correct ? '✓' : '✗'}
-                  </AppText>
+                  <Icon
+                    name={correct ? 'check' : 'close'}
+                    size={16}
+                    color={correct ? colors.success : colors.danger}
+                    strokeWidth={2.5}
+                  />
                 ) : null}
               </Pressable>
             );
@@ -118,9 +122,12 @@ export function MatchExercise({
                   {right}
                 </AppText>
                 {engine.checked && owner !== -1 ? (
-                  <AppText color={correct ? colors.success : colors.danger} weight="700">
-                    {correct ? '✓' : '✗'}
-                  </AppText>
+                  <Icon
+                    name={correct ? 'check' : 'close'}
+                    size={16}
+                    color={correct ? colors.success : colors.danger}
+                    strokeWidth={2.5}
+                  />
                 ) : null}
               </Pressable>
             );
@@ -148,9 +155,17 @@ export function MatchExercise({
               borderRadius: radius.control,
             },
           ]}>
-          <AppText color={engine.isCorrect ? colors.success : colors.danger} weight="700">
-            {engine.isCorrect ? '✓ Conceptos enlazados' : '↻ Hay enlaces que no corresponden'}
-          </AppText>
+          <View style={styles.feedbackRow}>
+            <Icon
+              name={engine.isCorrect ? 'check' : 'refresh'}
+              size={16}
+              color={engine.isCorrect ? colors.success : colors.danger}
+              strokeWidth={2.5}
+            />
+            <AppText color={engine.isCorrect ? colors.success : colors.danger} weight="700">
+              {engine.isCorrect ? 'Conceptos enlazados' : 'Hay enlaces que no corresponden'}
+            </AppText>
+          </View>
           <AppText variant="small">
             {engine.isCorrect
               ? 'Cada concepto quedó con su definición correcta.'
@@ -185,4 +200,5 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 12 },
   action: { flex: 1 },
   feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
+  feedbackRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

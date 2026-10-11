@@ -255,3 +255,22 @@ npx expo export --platform ios
 **Primero curar la base de datos (A), blindar la robustez (B), cerrar las decisiones de alcance
 (C), limpiar (D), probar (E) y solo entonces añadir validación en dispositivo y contenido
 (F) — con verificación por comandos en cada iteración.**
+
+---
+
+## 12. Estado de ejecución (2026-10-08, rama `fix/estabilizacion-datos`)
+
+| Iteración | Estado | Evidencia |
+|---|---|---|
+| I1 — Datos (A1–A3) | Completado | tests `progressRepository`, `usePracticeEngine`, `db.test` (v4 sin borrar attempts) |
+| I2 — Robustez (B1–B5) | Completado | PBKDF2+HMAC verificados vs `node:crypto`; migraciones por paso; 8 repos con tests |
+| I3 — Decisiones + limpieza (C, D1–D7) | Completado | `docs/reviewer/decisiones-alcance.md`; `results` y código muerto retirados |
+| I4 — Pruebas (E) | Completado | pantallas `login`, `register`, módulos, perfil y CHAEA |
+| I6 — Personalización (F5) | Completado | `chaLogic.ts` + pantalla `(profile)/personalizacion` |
+| F1/F2 (EAS/offline) y F3/F4 (contenido U2–5) | **Pendiente** | Requieren cuenta EAS y material fuente |
+
+**Verificación final:** `tsc` exit 0 · `npm run lint` exit 0 · **34 suites / 208 tests OK** ·
+cobertura 83.75% stmts (repos 98.4%) · `expo-doctor` **21/21** · exports web/Android/iOS OK.
+
+**Símbolos huérfanos justificados:** `src/models/metadata.ts` se conserva como ficha LOM
+descriptiva (decisión C3/F6); el resto del código muerto listado fue retirado.

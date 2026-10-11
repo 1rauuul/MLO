@@ -1,15 +1,14 @@
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { insertAttempt, selectAttemptsByLesson } from '@/data/repositories/attemptRepository';
 import { selectExercisesByLesson } from '@/data/repositories/exerciseRepository';
-import type { Exercise, ExerciseType } from '@/models/entities';
+import type { Exercise } from '@/models/entities';
+import { EXERCISE_TYPES } from '@/models/entities';
 
 import { summarizeAttempts, type AttemptSummary } from './analyticsLogic';
 import { shuffleItems } from './exerciseLogic';
 import { useAuth } from './useAuth';
-
-const KNOWN_TYPES: ExerciseType[] = ['order', 'fill', 'match', 'crossword'];
 
 export type PracticePhase = 'running' | 'summary';
 
@@ -38,6 +37,7 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
   const [summary, setSummary] = useState<AttemptSummary>(summarizeAttempts([]));
   const [isLoading, setIsLoading] = useState(true);
+  const answeredRef = useRef(false);
 
   useEffect(() => {
     if (!lessonId) {
@@ -47,9 +47,10 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
     }
     let active = true;
     setIsLoading(true);
+    answeredRef.current = false;
     (async () => {
       const loaded = (await selectExercisesByLesson(db, lessonId)).filter(exercise =>
-        KNOWN_TYPES.includes(exercise.type),
+        EXERCISE_TYPES.includes(exercise.type),
       );
       if (!active) {
         return;
@@ -82,16 +83,23 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
 
   const submit = useCallback(
     (answer: string, correct: boolean) => {
-      setAnswered(current => {
-        if (current) {
-          return current;
-        }
-        setLastCorrect(correct);
-        if (account && lessonId) {
-          void insertAttempt(db, account.id, 'practice', currentItemId(order, index), typeAt(order, index), lessonId, correct);
-        }
-        return true;
-      });
+      if (answeredRef.current) {
+        return;
+      }
+      answeredRef.current = true;
+      setAnswered(true);
+      setLastCorrect(correct);
+      if (account && lessonId) {
+        void insertAttempt(
+          db,
+          account.id,
+          'practice',
+          currentItemId(order, index),
+          typeAt(order, index),
+          lessonId,
+          correct,
+        );
+      }
     },
     [db, account, lessonId, order, index],
   );
@@ -101,6 +109,7 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
       setIndex(current => current + 1);
       setAnswered(false);
       setLastCorrect(null);
+      answeredRef.current = false;
       return;
     }
     void refreshSummary();

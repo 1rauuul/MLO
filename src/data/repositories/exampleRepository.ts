@@ -72,19 +72,3 @@ export async function selectExamplesByLesson(db: SQLiteDatabase, lessonId: strin
   );
   return rows.map(mapExample);
 }
-
-export async function selectExample(db: SQLiteDatabase, id: string): Promise<Example | null> {
-  const row = await db.getFirstAsync<ExampleRow>('SELECT * FROM examples WHERE id = ?', id);
-  return row ? mapExample(row) : null;
-}
-
-export async function selectExampleByLesson(
-  db: SQLiteDatabase,
-  lessonId: string,
-): Promise<Example | null> {
-  const row = await db.getFirstAsync<ExampleRow>(
-    'SELECT * FROM examples WHERE lesson_id = ? ORDER BY rowid LIMIT 1',
-    lessonId,
-  );
-  return row ? mapExample(row) : null;
-}

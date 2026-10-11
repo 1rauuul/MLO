@@ -44,8 +44,3 @@ export function useTheme(): ThemeValue {
   }
   return context;
 }
-
-export function useScaledFont(size: number): number {
-  const { scale } = useTheme();
-  return Math.round(size * scale);
-}

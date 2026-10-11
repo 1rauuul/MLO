@@ -9,4 +9,8 @@ describe('tab route mapping', () => {
     expect(tabRouteName(tab)).toBe(route);
     expect(homeTabForRoute(route)).toBe(tab);
   });
+
+  it('devuelve modules para rutas desconocidas sin lanzar', () => {
+    expect(homeTabForRoute('(desconocida)')).toBe('modules');
+  });
 });

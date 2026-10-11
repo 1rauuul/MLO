@@ -22,11 +22,14 @@ Reglas:
   directamente; solo consume hooks de `src/viewmodels`.
 - Los repositorios exponen funciones async (`select*`, `insert*`, `mark*`) que reciben la
   `SQLiteDatabase` como primer argumento.
-- El esquema conserva 6 entidades (`Lesson`, `Example`, `Exercise`, `Result`, `Evaluation`,
-  `Question`) y **mantiene `Exercise`/`Result` y `Evaluation`/`Question` como tablas
-  separadas** (feedback inmediato por reactivo vs. puntaje acumulado). Se añaden
-  `LearnerProfile`, `ModuleProgress` y `EvaluationResult` para la capa de personalización y
-  el historial.
+- El esquema conserva las entidades núcleo (`Lesson`, `Example`, `Exercise`, `Evaluation`,
+  `Question`) y **mantiene `Exercise` y `Evaluation`/`Question` como tablas separadas**
+  (feedback inmediato por reactivo vs. puntaje acumulado). La bitácora real de intentos es
+  `attempts` (`source = 'practice' | 'evaluation'`); la antigua tabla `results` se retiró por
+  quedar inerte. Se añaden `LearnerProfile`, `ModuleProgress`, `EvaluationResult`, `Attempt`,
+  `Account` y `last_location` para autenticación, personalización, analítica e historial.
+- `PRAGMA foreign_keys` es por conexión: se activa en `migrateAndSeed` (`src/data/db.ts`) sobre
+  la conexión del `SQLiteProvider`; no abrir conexiones paralelas sin reactivar el pragma.
 
 ## Estructura de carpetas
 
@@ -41,11 +44,14 @@ Reglas:
 
 ## Convenciones de nombres
 
-- Hooks: `use` + PascalCase (`useLessonContent`, `useExerciseEngine`, `useQuizEngine`,
-  `useModuleProgress`, `useLearnerProfile`, `useCatalog`, `useSession`).
+- Hooks: `use` + PascalCase (`useLessonContent`, `usePracticeEngine`, `useEvaluationEngine`
+  en `useQuizEngine.ts`, `useModuleProgress`, `useLearnerProfile`, `useCatalog`, `useSession`).
 - Repositorios: `<entidad>Repository.ts` con funciones `selectX`, `insertX`, `markX`,
   `countX`, `saveX`.
-- Lógica pura testeable: `exerciseLogic.ts`, `quizLogic.ts`.
+- Lógica pura testeable: `exerciseLogic.ts`, `quizLogic.ts`, `analyticsLogic.ts`, `chaLogic.ts`.
+- Los filtros de tipos de actividad viven en `models/entities.ts` (`EXERCISE_TYPES`,
+  `ACTIVITY_TYPES`); las etiquetas en `models/activityLabels.ts`; los mensajes de auth en
+  `viewmodels/authMessages.ts`.
 
 ## Comandos
 
@@ -56,7 +62,12 @@ Reglas:
 
 ## Notas de alcance
 
-- `app/personalizacion` (cuestionario CHAEA) queda como extensión de la Fase 4; el estilo de
-  aprendizaje ya se persiste y se ajusta desde el Perfil.
+- `app/personalizacion` (cuestionario CHAEA abreviado) está implementado en
+  `src/app/(app)/(profile)/personalizacion`; guarda el estilo dominante vía
+  `useLearnerProfile.saveQuestionnaire` y la lógica pura vive en `viewmodels/chaLogic.ts`.
+- Las contraseñas se derivan con PBKDF2-HMAC-SHA256 (`viewmodels/authLogic.ts`); las cuentas
+  con hash legacy SHA-256 se re-hashean de forma transparente al iniciar sesión.
 - Los subtemas de las unidades 2–5 tienen contenido introductorio; el contenido completo de
   la Unidad 1 proviene de `prototipo/tablas-ingenieria.md`.
+- Los metadatos LOM (`src/models/metadata.ts`) se mantienen como ficha descriptiva (referencia
+  conceptual); no hay empaquetado SCORM/LOM en runtime.

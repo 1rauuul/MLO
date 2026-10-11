@@ -2,9 +2,8 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
 
 import { selectExercisesByLesson } from '@/data/repositories/exerciseRepository';
-import type { Exercise, ExerciseType } from '@/models/entities';
-
-const KNOWN_TYPES: ExerciseType[] = ['order', 'fill', 'match', 'crossword'];
+import type { Exercise } from '@/models/entities';
+import { EXERCISE_TYPES } from '@/models/entities';
 
 export interface ExamplesEngine {
   items: Exercise[];
@@ -33,7 +32,7 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
     setIsLoading(true);
     (async () => {
       const loaded = (await selectExercisesByLesson(db, lessonId)).filter(exercise =>
-        KNOWN_TYPES.includes(exercise.type),
+        EXERCISE_TYPES.includes(exercise.type),
       );
       if (!active) {
         return;

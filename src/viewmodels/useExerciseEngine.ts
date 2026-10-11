@@ -1,7 +1,7 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { insertResult, selectExercise, selectExercisesByLesson } from '@/data/repositories/exerciseRepository';
+import { selectExercisesByLesson } from '@/data/repositories/exerciseRepository';
 import type { CrosswordEntry, Exercise, ExerciseConfig, MatchPair } from '@/models/entities';
 
 import {
@@ -20,8 +20,6 @@ import {
   type CrosswordCell,
   type FillSegment,
 } from './exerciseLogic';
-import { useAuth } from './useAuth';
-
 export interface ExerciseEngine {
   steps: string[];
   correctOrder: string[];
@@ -106,90 +104,9 @@ export function useExerciseEngine(exercise: Exercise | null): ExerciseEngine {
   };
 }
 
-interface UseExerciseForLessonResult {
-  exercise: Exercise | null;
-  isLoading: boolean;
-}
-
-export function useExerciseForLesson(lessonId: string | null): UseExerciseForLessonResult {
-  const db = useSQLiteContext();
-  const [exercise, setExercise] = useState<Exercise | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!lessonId) {
-      setExercise(null);
-      setIsLoading(false);
-      return;
-    }
-    let active = true;
-    setIsLoading(true);
-    (async () => {
-      const loaded = await selectExercisesByLesson(db, lessonId);
-      if (!active) {
-        return;
-      }
-      setExercise(loaded[0] ?? null);
-      setIsLoading(false);
-    })();
-    return () => {
-      active = false;
-    };
-  }, [db, lessonId]);
-
-  return { exercise, isLoading };
-}
-
-export function useRecordExerciseResult(): (
-  exerciseId: string,
-  answer: string,
-  correct: boolean,
-) => Promise<void> {
-  const db = useSQLiteContext();
-  const { account } = useAuth();
-  return useCallback(
-    async (exerciseId: string, answer: string, correct: boolean) => {
-      if (!account) {
-        return;
-      }
-      await insertResult(db, account.id, exerciseId, answer, correct);
-    },
-    [db, account],
-  );
-}
-
 interface UseExercisesForLessonResult {
   exercises: Exercise[];
   isLoading: boolean;
-}
-
-export function useExercise(id: string | null): { exercise: Exercise | null; isLoading: boolean } {
-  const db = useSQLiteContext();
-  const [exercise, setExercise] = useState<Exercise | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!id) {
-      setExercise(null);
-      setIsLoading(false);
-      return;
-    }
-    let active = true;
-    setIsLoading(true);
-    (async () => {
-      const loaded = await selectExercise(db, id);
-      if (!active) {
-        return;
-      }
-      setExercise(loaded);
-      setIsLoading(false);
-    })();
-    return () => {
-      active = false;
-    };
-  }, [db, id]);
-
-  return { exercise, isLoading };
 }
 
 export function useExercisesForLesson(lessonId: string | null): UseExercisesForLessonResult {

@@ -7,91 +7,11 @@ import {
   selectEvaluationByLesson,
   selectQuestions,
 } from '@/data/repositories/evaluationRepository';
-import type { ActivityType, Evaluation, Question } from '@/models/entities';
+import type { Evaluation, Question } from '@/models/entities';
+import { ACTIVITY_TYPES } from '@/models/entities';
 
 import { summarizeAttempts, type AttemptSummary } from './analyticsLogic';
-import { computeScore, countCorrect } from './quizLogic';
 import { useAuth } from './useAuth';
-
-const KNOWN_ACTIVITY_TYPES: ActivityType[] = ['order', 'fill', 'match', 'crossword', 'mcq'];
-
-export interface QuizEngine {
-  index: number;
-  total: number;
-  question: Question | null;
-  chosen: number | null;
-  answers: number[];
-  score: number;
-  correctCount: number;
-  finished: boolean;
-  choose: (value: number) => void;
-  next: () => void;
-  restart: () => void;
-}
-
-export function useQuizEngine(questions: Question[]): QuizEngine {
-  const [index, setIndex] = useState(0);
-  const [chosen, setChosen] = useState<number | null>(null);
-  const [answers, setAnswers] = useState<number[]>([]);
-  const [finished, setFinished] = useState(false);
-
-  const total = questions.length;
-  const question = questions[index] ?? null;
-  const score = computeScore(questions, answers);
-  const correctCount = countCorrect(questions, answers);
-
-  const restart = useCallback(() => {
-    setIndex(0);
-    setChosen(null);
-    setAnswers([]);
-    setFinished(false);
-  }, []);
-
-  useEffect(() => {
-    restart();
-  }, [questions, restart]);
-
-  const choose = useCallback(
-    (value: number) => {
-      if (chosen !== null) {
-        return;
-      }
-      setChosen(value);
-      setAnswers(previous => {
-        const copy = [...previous];
-        copy[index] = value;
-        return copy;
-      });
-    },
-    [chosen, index],
-  );
-
-  const next = useCallback(() => {
-    if (chosen === null) {
-      return;
-    }
-    if (index >= total - 1) {
-      setFinished(true);
-      return;
-    }
-    setIndex(current => current + 1);
-    setChosen(null);
-  }, [chosen, index, total]);
-
-  return {
-    index,
-    total,
-    question,
-    chosen,
-    answers,
-    score,
-    correctCount,
-    finished,
-    choose,
-    next,
-    restart,
-  };
-}
 
 interface UseEvaluationForLessonResult {
   evaluation: Evaluation | null;
@@ -171,7 +91,7 @@ export function useEvaluationEngine(questions: Question[], lessonId: string | nu
   const db = useSQLiteContext();
   const { account } = useAuth();
   const usable = useMemo(
-    () => questions.filter(question => KNOWN_ACTIVITY_TYPES.includes(question.type)),
+    () => questions.filter(question => ACTIVITY_TYPES.includes(question.type)),
     [questions],
   );
   const [index, setIndex] = useState(0);

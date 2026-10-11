@@ -4,9 +4,10 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useTheme } from '@/theme/theme-provider';
 
 import { AppText } from './AppText';
+import { Icon, type IconName } from './Icon';
 
 interface HubTileProps {
-  icon: string;
+  icon: IconName;
   label: string;
   note: string;
   accent: string;
@@ -32,9 +33,7 @@ export function HubTile({ icon, label, note, accent, onPress }: HubTileProps) {
         pressed && !reduced ? { transform: [{ scale: 0.97 }] } : null,
       ]}>
       <View style={[styles.icon, { backgroundColor: `${accent}1C` }]}>
-        <AppText style={styles.glyph} color={accent}>
-          {icon}
-        </AppText>
+        <Icon name={icon} size={22} color={accent} strokeWidth={2.2} />
       </View>
       <View>
         <AppText variant="heading" style={styles.label}>
@@ -60,10 +59,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  glyph: {
-    fontSize: 22,
-    lineHeight: 26,
   },
   label: {
     fontSize: 16,

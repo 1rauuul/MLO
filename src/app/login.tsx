@@ -8,11 +8,7 @@ import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { useTheme } from '@/theme/theme-provider';
 import { useAuth } from '@/viewmodels/useAuth';
-
-const MESSAGES: Record<string, string> = {
-  missing: 'Completa usuario y contraseña.',
-  invalid_credentials: 'Usuario o contraseña incorrectos.',
-};
+import { AUTH_MESSAGES } from '@/viewmodels/authMessages';
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -21,13 +17,24 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {
-    const result = await login(username, password);
-    if (result.ok) {
-      router.replace('/');
-    } else {
-      setError(MESSAGES[result.error] ?? 'No se pudo iniciar sesión.');
+    if (submitting) {
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const result = await login(username, password);
+      if (result.ok) {
+        router.replace('/');
+        return;
+      }
+      setError(AUTH_MESSAGES[result.error] ?? 'No se pudo iniciar sesión.');
+    } catch {
+      setError(AUTH_MESSAGES.storage_error ?? 'No se pudo iniciar sesión.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -45,25 +52,42 @@ export default function LoginScreen() {
         <TextField
           label="Usuario"
           value={username}
-          onChangeText={setUsername}
+          onChangeText={value => {
+            setUsername(value);
+            setError(null);
+          }}
           autoCapitalize="none"
           autoCorrect={false}
+          autoComplete="username"
+          textContentType="username"
+          returnKeyType="next"
           placeholder="tu.usuario"
         />
         <TextField
           label="Contraseña"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={value => {
+            setPassword(value);
+            setError(null);
+          }}
           secureTextEntry
+          autoComplete="current-password"
+          textContentType="password"
+          returnKeyType="done"
+          onSubmitEditing={submit}
           placeholder="••••••"
         />
         {error ? (
-          <AppText variant="small" color={colors.danger}>
+          <AppText variant="small" color={colors.danger} accessibilityLiveRegion="polite">
             {error}
           </AppText>
         ) : null}
-        <PrimaryButton label="Entrar" onPress={submit} />
-        <SecondaryButton label="Crear cuenta" onPress={() => router.push('/register')} />
+        <PrimaryButton label="Entrar" onPress={submit} disabled={submitting} />
+        <SecondaryButton
+          label="Crear cuenta"
+          onPress={() => router.push('/register')}
+          disabled={submitting}
+        />
       </View>
       <AppText variant="small" style={{ marginTop: spacing.lg }}>
         Tus datos se guardan solo en este dispositivo.

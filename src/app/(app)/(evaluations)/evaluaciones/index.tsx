@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/AppText';
 import { Chevron } from '@/components/Chevron';
 import { EmptyState } from '@/components/EmptyState';
+import { Icon } from '@/components/Icon';
 import { Screen } from '@/components/Screen';
 import { SectionHeading } from '@/components/SectionHeading';
 import type { EvaluationResult } from '@/models/entities';
@@ -14,8 +15,9 @@ import { useRecentResults } from '@/viewmodels/useRecentResults';
 
 export default function EvaluationsScreen() {
   const { colors, radius } = useTheme();
-  const { summaries } = useEvaluationsCatalog();
-  const { results, refresh: refreshResults } = useRecentResults();
+  const { summaries, isLoading, error } = useEvaluationsCatalog();
+  const { results, refresh: refreshResults, isLoading: resultsLoading, error: resultsError } =
+    useRecentResults();
   const router = useRouter();
 
   useFocusEffect(
@@ -38,7 +40,11 @@ export default function EvaluationsScreen() {
         title="Tus evaluaciones"
         trailing={String(summaries.length).padStart(2, '0')}
       />
-      {summaries.length === 0 ? (
+      {isLoading ? (
+        <EmptyState title="Cargando" message="Preparando tus evaluaciones." />
+      ) : error ? (
+        <EmptyState title="No se pudo cargar" message={error} />
+      ) : summaries.length === 0 ? (
         <EmptyState title="Sin evaluaciones" message="Aún no hay comprobaciones disponibles." />
       ) : (
         <View style={styles.list}>
@@ -58,9 +64,7 @@ export default function EvaluationsScreen() {
                 { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control },
               ]}>
               <View style={[styles.historyMark, { backgroundColor: colors.soft }]}>
-                <AppText color={colors.primary} weight="700">
-                  ✓
-                </AppText>
+                <Icon name="check" size={16} color={colors.primary} strokeWidth={2.5} />
               </View>
               <View style={styles.flex}>
                 <AppText weight="600">{item.title}</AppText>
@@ -75,7 +79,11 @@ export default function EvaluationsScreen() {
       )}
 
       <SectionHeading eyebrow="Resultados recientes" title="Tu historial" />
-      {results.length === 0 ? (
+      {resultsLoading ? (
+        <EmptyState title="Cargando" message="Preparando tu historial." />
+      ) : resultsError ? (
+        <EmptyState title="No se pudo cargar" message={resultsError} />
+      ) : results.length === 0 ? (
         <EmptyState
           title="Sin resultados todavía"
           message="Completa una evaluación y aquí verás tu puntuación."
@@ -100,9 +108,7 @@ function ResultRow({ result }: { result: EvaluationResult }) {
         { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control },
       ]}>
       <View style={[styles.historyMark, { backgroundColor: colors.soft }]}>
-        <AppText color={colors.success} weight="700">
-          ✓
-        </AppText>
+        <Icon name="check" size={16} color={colors.success} strokeWidth={2.5} />
       </View>
       <View style={styles.flex}>
         <AppText weight="600">{`Comprobación ${result.correctCount}/${result.totalCount}`}</AppText>

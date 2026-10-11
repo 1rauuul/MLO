@@ -286,7 +286,7 @@ export async function seedDatabase(db: SQLiteDatabase): Promise<void> {
   await db.withTransactionAsync(async () => {
     for (const unit of units) {
       await db.runAsync(
-        'INSERT INTO units (id, number, title, description, difficulty, color) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO units (id, number, title, description, difficulty, color) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING',
         unit.id,
         unit.number,
         unit.title,
@@ -299,7 +299,7 @@ export async function seedDatabase(db: SQLiteDatabase): Promise<void> {
     const lessons = [...unitOneLessons, ...buildSimpleLessons()];
     for (const lesson of lessons) {
       await db.runAsync(
-        'INSERT INTO lessons (id, unit_id, code, title, eyebrow, body, code_sample, context_title, context_body, synthesis, content, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO lessons (id, unit_id, code, title, eyebrow, body, code_sample, context_title, context_body, synthesis, content, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING',
         lesson.id,
         lesson.unitId,
         lesson.code,

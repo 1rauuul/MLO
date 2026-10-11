@@ -4,11 +4,12 @@ import { useTheme } from '@/theme/theme-provider';
 import type { HomeTab } from '@/navigation/tabRoutes';
 
 import { AppText } from './AppText';
+import { Icon, type IconName } from './Icon';
 
-const tabs: { id: HomeTab; icon: string; label: string }[] = [
-  { id: 'modules', icon: '▦', label: 'Módulos' },
-  { id: 'assessments', icon: '✓', label: 'Evaluaciones' },
-  { id: 'profile', icon: '◉', label: 'Perfil' },
+const tabs: { id: HomeTab; icon: IconName; label: string }[] = [
+  { id: 'modules', icon: 'module', label: 'Módulos' },
+  { id: 'assessments', icon: 'eval', label: 'Evaluaciones' },
+  { id: 'profile', icon: 'user', label: 'Perfil' },
 ];
 
 interface BottomTabBarProps {
@@ -46,12 +47,11 @@ export function BottomTabBar({ active, onChange, bottomInset = 0 }: BottomTabBar
                 styles.iconPill,
                 { backgroundColor: isActive ? `${colors.primary}2E` : 'transparent' },
               ]}>
-              <AppText
+              <Icon
+                name={tab.icon}
+                size={18}
                 color={isActive ? colors.primary : colors.muted}
-                weight={isActive ? '700' : '500'}
-                style={styles.glyph}>
-                {tab.icon}
-              </AppText>
+              />
             </View>
             <AppText
               variant="small"
@@ -85,9 +85,5 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  glyph: {
-    fontSize: 18,
-    lineHeight: 20,
   },
 });

@@ -8,6 +8,56 @@
 
 ---
 
+## 0-bis. Actualización — estabilización de datos y auditoría
+
+> Fecha de corte: 8–9 de octubre de 2026. Rama: `fix/estabilizacion-datos`.
+> Origen: `docs/reviewer/review-auditoria.md` y `docs/reviewer/siguientes-pasos.md`.
+
+**Bloque A — Integridad de datos (P1)**
+
+- `resetAccountProgress` ahora borra también `attempts` y `last_location`; el Perfil limpia la
+  ubicación de sesión al reiniciar (`progressRepository.ts`, `perfil/index.tsx`).
+- `usePracticeEngine.submit` ya no ejecuta `insertAttempt` dentro de un actualizador de estado
+  (guard con `useRef`): un solo intento por pulsación.
+- Migración a `user_version` 5 preserva `attempts` (`applyUnit1Content(db, false)`).
+
+**Bloque B — Robustez (P2)**
+
+- `migrateAndSeed` aplica cada paso en su propia transacción y fija `user_version` por paso.
+- Hooks de datos con estado `error`; formularios deshabilitan el envío mientras es `await`.
+- `EvaluationFlow` registra por `evaluation.id` (sin perder el segundo resultado).
+- Contraseñas con **PBKDF2-HMAC-SHA256** + rehash de cuentas legacy al iniciar sesión.
+- Tests de los 8 repositorios y de pantallas (`login`, `register`, módulos, perfil).
+
+**Bloque C/D — Decisiones y limpieza**
+
+- Eliminada la tabla `results` y su código inerte; `attempts` es la bitácora real.
+- Código muerto retirado (`useQuizEngine`, `useAttempts`, `useExample`, `selectUnit`,
+  `selectAllLessons`, `selectExample(ByLesson)`, `useScaledFont`, `ResultModal`, `global.css`).
+- Etiquetas/filtros/mensajes centralizados (`activityLabels.ts`, `entities.ts`, `authMessages.ts`).
+- `homeTabForRoute` ya no lanza; `FillExercise` con accesibilidad; `seedDatabase` idempotente.
+- Paquetes alineados a SDK 57 (`npx expo install --fix`).
+
+**Bloque F — Personalización**
+
+- Cuestionario CHAEA abreviado en `(profile)/personalizacion` + `chaLogic.ts` (Fase 4 iniciada).
+
+**Verificación (evidencia)**
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Typecheck estricto | `npx tsc --noEmit` | exit 0 |
+| Pruebas | `npm test -- --runInBand` | 34 suites / 208 tests OK |
+| Lint | `npm run lint` | exit 0 (0 errores, 0 warnings) |
+
+**Pendiente de esta línea**
+
+- F1/F2: EAS Build Android/iOS y validación 100 % offline en dispositivo (requiere cuenta EAS).
+- F3/F4: contenido completo y actividades de las Unidades 2–5 (requiere material fuente).
+- F6: cobertura verificada de las 9 categorías LOM (hoy ficha descriptiva parcial).
+
+---
+
 ## 0. Actualización — implementación real (sesión posterior)
 
 > Fecha de corte: 21–22 de septiembre de 2026. Sustituye al corte de Fases 0–3 de abajo.

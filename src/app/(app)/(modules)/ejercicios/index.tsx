@@ -9,19 +9,12 @@ import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import type { ActivityType } from '@/models/entities';
+import { ACTIVITY_TYPE_LABELS as TYPE_LABELS } from '@/models/activityLabels';
 import { useTheme } from '@/theme/theme-provider';
 import { recommendReview } from '@/viewmodels/analyticsLogic';
 import { useLessonContent } from '@/viewmodels/useLessonContent';
 import { usePracticeEngine } from '@/viewmodels/usePracticeEngine';
 import { useSession } from '@/viewmodels/useSession';
-
-const TYPE_LABELS: Record<ActivityType, string> = {
-  order: 'Ordena',
-  fill: 'Completa',
-  match: 'Enlaza',
-  crossword: 'Crucigrama',
-  mcq: 'Opción múltiple',
-};
 
 export default function PracticeScreen() {
   const { lesson: lessonParam } = useLocalSearchParams<{ lesson?: string }>();
@@ -112,7 +105,7 @@ export default function PracticeScreen() {
         )}
 
         <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
-          <PrimaryButton label="Ir a la evaluación" onPress={goEvaluation} />
+          {lessonParam ? <PrimaryButton label="Ir a la evaluación" onPress={goEvaluation} /> : null}
           {recommendation === 'lesson' ? (
             <SecondaryButton label="Repasar la lección" onPress={goLesson} />
           ) : null}

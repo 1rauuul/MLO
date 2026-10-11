@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native
 
 import { AppText } from '@/components/AppText';
 import { PrimaryButton } from '@/components/Buttons';
+import { Icon } from '@/components/Icon';
 import { useTheme } from '@/theme/theme-provider';
 import { shuffleItems } from '@/viewmodels/exerciseLogic';
 import type { CrosswordEngine } from '@/viewmodels/useExerciseEngine';
@@ -148,6 +149,7 @@ export function CrosswordExercise({
                     accessibilityLabel={start ? `Inicio ${start.join(', ')}` : 'Celda'}
                     accessibilityState={{ disabled: locked }}
                     disabled={locked}
+                    hitSlop={10}
                     onPress={() => selectCellEntry(row, col)}
                     style={[
                       styles.cell,
@@ -199,6 +201,7 @@ export function CrosswordExercise({
         onChangeText={value => (selected !== null ? writeEntry(selected, value) : undefined)}
         autoCapitalize="characters"
         autoCorrect={false}
+        accessibilityLabel={activeEntry ? `Respuesta de ${labels[selected!]}: ${activeEntry.clue}` : 'Respuesta del crucigrama'}
         placeholder={
           activeEntry
             ? `${activeEntry.word.length} letras · ${labels[selected!]}`
@@ -226,6 +229,7 @@ export function CrosswordExercise({
               accessibilityLabel={`Usar ${word}`}
               accessibilityState={{ disabled: locked || !activeEntry }}
               disabled={locked || !activeEntry}
+              hitSlop={8}
               onPress={() => fillFromBank(word)}
               style={[
                 styles.chip,
@@ -279,9 +283,12 @@ export function CrosswordExercise({
                 </AppText>
               </View>
               {engine.checked ? (
-                <AppText color={correct ? colors.success : colors.danger} weight="700">
-                  {correct ? '✓' : '✗'}
-                </AppText>
+                <Icon
+                  name={correct ? 'check' : 'close'}
+                  size={16}
+                  color={correct ? colors.success : colors.danger}
+                  strokeWidth={2.5}
+                />
               ) : null}
             </Pressable>
           );
@@ -305,9 +312,17 @@ export function CrosswordExercise({
               borderRadius: radius.control,
             },
           ]}>
-          <AppText color={engine.isCorrect ? colors.success : colors.danger} weight="700">
-            {engine.isCorrect ? '✓ Crucigrama correcto' : '↻ Hay palabras incorrectas'}
-          </AppText>
+          <View style={styles.feedbackRow}>
+            <Icon
+              name={engine.isCorrect ? 'check' : 'refresh'}
+              size={16}
+              color={engine.isCorrect ? colors.success : colors.danger}
+              strokeWidth={2.5}
+            />
+            <AppText color={engine.isCorrect ? colors.success : colors.danger} weight="700">
+              {engine.isCorrect ? 'Crucigrama correcto' : 'Hay palabras incorrectas'}
+            </AppText>
+          </View>
         </View>
       ) : null}
     </View>
@@ -343,4 +358,5 @@ const styles = StyleSheet.create({
   bank: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 12, marginTop: 12 },
   chip: { paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1 },
   feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
+  feedbackRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

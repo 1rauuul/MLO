@@ -9,6 +9,7 @@ interface UseLessonContentResult {
   lesson: Lesson | null;
   examples: Example[];
   isLoading: boolean;
+  error: string | null;
 }
 
 export function useLessonContent(lessonId: string | null): UseLessonContentResult {
@@ -16,6 +17,7 @@ export function useLessonContent(lessonId: string | null): UseLessonContentResul
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [examples, setExamples] = useState<Example[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!lessonId) {
@@ -27,17 +29,27 @@ export function useLessonContent(lessonId: string | null): UseLessonContentResul
 
     let active = true;
     setIsLoading(true);
+    setError(null);
     (async () => {
-      const [loadedLesson, loadedExamples] = await Promise.all([
-        selectLesson(db, lessonId),
-        selectExamplesByLesson(db, lessonId),
-      ]);
-      if (!active) {
-        return;
+      try {
+        const [loadedLesson, loadedExamples] = await Promise.all([
+          selectLesson(db, lessonId),
+          selectExamplesByLesson(db, lessonId),
+        ]);
+        if (!active) {
+          return;
+        }
+        setLesson(loadedLesson);
+        setExamples(loadedExamples);
+      } catch {
+        if (active) {
+          setError('No se pudo cargar la lección.');
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
       }
-      setLesson(loadedLesson);
-      setExamples(loadedExamples);
-      setIsLoading(false);
     })();
 
     return () => {
@@ -45,5 +57,5 @@ export function useLessonContent(lessonId: string | null): UseLessonContentResul
     };
   }, [db, lessonId]);
 
-  return { lesson, examples, isLoading };
+  return { lesson, examples, isLoading, error };
 }

@@ -10,6 +10,10 @@ export type LocationSection = 'hub' | 'lesson' | 'example' | 'exercise' | 'quiz'
 
 export type ExerciseType = Exclude<ActivityType, 'mcq'>;
 
+export const EXERCISE_TYPES: ExerciseType[] = ['order', 'fill', 'match', 'crossword'];
+
+export const ACTIVITY_TYPES: ActivityType[] = [...EXERCISE_TYPES, 'mcq'];
+
 export interface MatchPair {
   left: string;
   right: string;
@@ -87,14 +91,6 @@ export interface Exercise {
   correctOrder: string[];
   config: ExerciseConfig;
   explanation: string;
-}
-
-export interface ExerciseResult {
-  id: number;
-  exerciseId: string;
-  answer: string;
-  isCorrect: boolean;
-  createdAt: string;
 }
 
 export interface Evaluation {

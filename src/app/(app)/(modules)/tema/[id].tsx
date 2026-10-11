@@ -5,15 +5,17 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/AppText';
 import { EmptyState } from '@/components/EmptyState';
 import { HubTile } from '@/components/HubTile';
+import { Icon } from '@/components/Icon';
 import { Screen } from '@/components/Screen';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useTheme } from '@/theme/theme-provider';
 import { useLessonHub } from '@/viewmodels/useLessonHub';
 import { useSession } from '@/viewmodels/useSession';
+import type { IconName } from '@/components/Icon';
 
 interface HubAction {
   key: string;
-  icon: string;
+  icon: IconName;
   label: string;
   note: string;
   accent: string;
@@ -58,7 +60,7 @@ export default function TopicHubScreen() {
   const actions: HubAction[] = [
     {
       key: 'lesson',
-      icon: '▤',
+      icon: 'lesson',
       label: 'Lecciones',
       note: 'Concepto y síntesis',
       accent: colors.primary,
@@ -69,7 +71,7 @@ export default function TopicHubScreen() {
   if (exercises.length > 0) {
     actions.push({
       key: 'examples',
-      icon: '⇄',
+      icon: 'examples',
       label: 'Ejemplos',
       note: 'Demostración + acompañamiento',
       accent: colors.success,
@@ -80,7 +82,7 @@ export default function TopicHubScreen() {
   if (exercises.length > 0) {
     actions.push({
       key: 'exercises',
-      icon: '◫',
+      icon: 'exercises',
       label: 'Ejercicios',
       note: 'Resuelve el banco de ejercicios',
       accent: colors.warning,
@@ -91,7 +93,7 @@ export default function TopicHubScreen() {
   if (evaluation) {
     actions.push({
       key: 'eval',
-      icon: '✓',
+      icon: 'eval',
       label: 'Evaluación',
       note: 'Comprueba tu avance',
       accent: colors.danger,
@@ -121,9 +123,11 @@ export default function TopicHubScreen() {
             borderRadius: radius.control,
           },
         ]}>
-        <AppText color={completed ? colors.success : colors.primary} weight="700">
-          {completed ? '✓' : '◐'}
-        </AppText>
+        <Icon
+          name={completed ? 'check' : 'clock'}
+          size={18}
+          color={completed ? colors.success : colors.primary}
+        />
         <AppText weight="600" style={styles.flex}>
           {completed ? 'Tema completado' : 'En progreso'}
         </AppText>

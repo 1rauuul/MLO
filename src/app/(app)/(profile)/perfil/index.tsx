@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
@@ -14,13 +14,16 @@ import { useAuth } from '@/viewmodels/useAuth';
 import { useCatalog } from '@/viewmodels/useCatalog';
 import { useLearnerProfile } from '@/viewmodels/useLearnerProfile';
 import { useRecentResults } from '@/viewmodels/useRecentResults';
+import { useSession } from '@/viewmodels/useSession';
 
 const LEARNING_STYLES: LearningStyle[] = ['Activo', 'Reflexivo', 'Teórico', 'Pragmático'];
 
 export default function ProfileScreen() {
   const { colors, radius, spacing } = useTheme();
+  const router = useRouter();
   const { account, logout, resetProgress } = useAuth();
   const { style, setStyle, darkMode, setDarkMode, largeText, setLargeText } = useLearnerProfile();
+  const { clear: clearLocation } = useSession();
   const { lessonsByUnit, progressMap, refresh } = useCatalog();
   const { averageScore, refresh: refreshResults } = useRecentResults();
 
@@ -46,7 +49,10 @@ export default function ProfileScreen() {
           text: 'Reiniciar',
           style: 'destructive',
           onPress: () => {
-            void resetProgress().then(() => Promise.all([refresh(), refreshResults()]));
+            void resetProgress().then(() => {
+              clearLocation();
+              return Promise.all([refresh(), refreshResults()]);
+            });
           },
         },
       ],
@@ -115,6 +121,11 @@ export default function ProfileScreen() {
       <AppText variant="small" style={{ marginTop: spacing.sm }}>
         {`Personalizaremos los ejemplos y recomendaciones hacia un enfoque ${style.toLowerCase()}.`}
       </AppText>
+      <SecondaryButton
+        label="Cuestionario CHAEA"
+        onPress={() => router.push('/personalizacion' as Href)}
+        style={{ marginTop: spacing.sm }}
+      />
 
       <SectionHeading eyebrow="Accesibilidad" title="Ajustes de lectura" />
       <View style={styles.list}>

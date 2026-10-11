@@ -14,6 +14,7 @@ interface ButtonProps {
   icon?: ReactNode;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
+  labelColor?: string;
 }
 
 function pressStyle(pressed: boolean, reduced: boolean): StyleProp<ViewStyle> {
@@ -72,6 +73,7 @@ export function SecondaryButton({
   icon,
   style,
   accessibilityLabel,
+  labelColor,
 }: ButtonProps) {
   const { colors, radius, scale } = useTheme();
   const reduced = useReducedMotion();
@@ -96,7 +98,7 @@ export function SecondaryButton({
       ]}>
       <View style={styles.content}>
         {icon}
-        <AppText weight="600" style={{ fontSize: 15 * scale }}>
+        <AppText weight="600" color={labelColor} style={{ fontSize: 15 * scale }}>
           {label}
         </AppText>
       </View>

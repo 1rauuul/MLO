@@ -11,6 +11,7 @@ import Animated, {
 
 import { AppText } from '@/components/AppText';
 import { IconButton, PrimaryButton } from '@/components/Buttons';
+import { Icon } from '@/components/Icon';
 import { useTheme } from '@/theme/theme-provider';
 import type { ExerciseEngine } from '@/viewmodels/useExerciseEngine';
 
@@ -60,25 +61,33 @@ function DraggableRow({ index, accent, state, onDrop, onMeasure, step, children 
 
   return (
     <GestureDetector gesture={pan}>
-      <Animated.View
-        onLayout={event => onMeasure(step, event.nativeEvent.layout.height)}
-        style={[
-          styles.dragRow,
-          {
-            backgroundColor:
-              state === 'correct'
-                ? `${colors.success}22`
-                : state === 'wrong'
-                  ? `${colors.danger}22`
-                  : colors.card,
-            borderColor:
-              state === 'correct' ? colors.success : state === 'wrong' ? colors.danger : accent,
-            borderRadius: radius.control,
-          },
-          animatedStyle,
-        ]}>
-        {children}
-      </Animated.View>
+<Animated.View
+            onLayout={event => onMeasure(step, event.nativeEvent.layout.height)}
+            style={[
+              styles.dragRow,
+              {
+                backgroundColor:
+                  state === 'correct'
+                    ? `${colors.success}22`
+                    : state === 'wrong'
+                      ? `${colors.danger}22`
+                      : colors.card,
+                borderColor:
+                  state === 'correct' ? colors.success : state === 'wrong' ? colors.danger : accent,
+                borderRadius: radius.control,
+              },
+              animatedStyle,
+            ]}>
+            {children}
+            {state ? (
+              <Icon
+                name={state === 'correct' ? 'check' : 'close'}
+                size={16}
+                color={state === 'correct' ? colors.success : colors.danger}
+                strokeWidth={2.5}
+              />
+            ) : null}
+          </Animated.View>
     </GestureDetector>
   );
 }
@@ -161,9 +170,7 @@ export function OrderExercise({
               onDrop={handleDrop}
               onMeasure={measure}>
               {example ? (
-                <AppText color={colors.muted} style={styles.handle}>
-                  ≡
-                </AppText>
+                <Icon name="reorder" size={18} color={colors.muted} />
               ) : null}
               <View style={[styles.badge, { backgroundColor: `${accent}22` }]}>
                 <AppText variant="code" color={accent} weight="700">
@@ -174,25 +181,23 @@ export function OrderExercise({
                 {step}
               </AppText>
               {!example ? (
-                <AppText color={colors.muted} style={styles.handle}>
-                  ≡
-                </AppText>
+                <Icon name="reorder" size={18} color={colors.muted} />
               ) : null}
               <View style={styles.controls}>
                 <IconButton
-                  glyph="↑"
                   accessibilityLabel={`Subir ${step}`}
                   onPress={() => engine.move(index, -1)}
                   disabled={locked || (example && index === 0)}
-                  style={{ opacity: index === 0 ? 0.4 : 1 }}
-                />
+                  style={{ opacity: index === 0 ? 0.4 : 1 }}>
+                  <Icon name="arrow-up" size={18} color={colors.text} />
+                </IconButton>
                 <IconButton
-                  glyph="↓"
                   accessibilityLabel={`Bajar ${step}`}
                   onPress={() => engine.move(index, 1)}
                   disabled={locked || (example && index === lastIndex)}
-                  style={{ opacity: index === lastIndex ? 0.4 : 1 }}
-                />
+                  style={{ opacity: index === lastIndex ? 0.4 : 1 }}>
+                  <Icon name="arrow-down" size={18} color={colors.text} />
+                </IconButton>
               </View>
             </DraggableRow>
           );
@@ -215,9 +220,17 @@ export function OrderExercise({
               borderRadius: radius.control,
             },
           ]}>
-          <AppText color={engine.isCorrect ? colors.success : colors.danger} weight="700">
-            {engine.isCorrect ? '✓ Secuencia correcta' : '↻ El orden no es el correcto'}
-          </AppText>
+          <View style={styles.feedbackRow}>
+            <Icon
+              name={engine.isCorrect ? 'check' : 'refresh'}
+              size={16}
+              color={engine.isCorrect ? colors.success : colors.danger}
+              strokeWidth={2.5}
+            />
+            <AppText color={engine.isCorrect ? colors.success : colors.danger} weight="700">
+              {engine.isCorrect ? 'Secuencia correcta' : 'El orden no es el correcto'}
+            </AppText>
+          </View>
         </View>
       ) : null}
 
@@ -251,7 +264,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  handle: { fontSize: 18 },
   controls: { flexDirection: 'row', gap: 6 },
   feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
+  feedbackRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

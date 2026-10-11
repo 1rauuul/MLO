@@ -8,16 +8,7 @@ import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { useTheme } from '@/theme/theme-provider';
 import { useAuth } from '@/viewmodels/useAuth';
-
-const MESSAGES: Record<string, string> = {
-  name_empty: 'Escribe tu nombre.',
-  username_empty: 'Elige un usuario.',
-  username_short: 'El usuario debe tener al menos 3 caracteres.',
-  username_invalid: 'Usa solo letras, números, punto, guion o guion bajo.',
-  password_short: 'La contraseña debe tener al menos 6 caracteres.',
-  password_mismatch: 'Las contraseñas no coinciden.',
-  username_taken: 'Ese usuario ya existe en este dispositivo.',
-};
+import { AUTH_MESSAGES } from '@/viewmodels/authMessages';
 
 export default function RegisterScreen() {
   const { register } = useAuth();
@@ -28,13 +19,24 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {
-    const result = await register({ displayName, username, password, confirm });
-    if (result.ok) {
-      router.replace('/');
-    } else {
-      setError(MESSAGES[result.error] ?? 'No se pudo crear la cuenta.');
+    if (submitting) {
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const result = await register({ displayName, username, password, confirm });
+      if (result.ok) {
+        router.replace('/');
+        return;
+      }
+      setError(AUTH_MESSAGES[result.error] ?? 'No se pudo crear la cuenta.');
+    } catch {
+      setError(AUTH_MESSAGES.storage_error ?? 'No se pudo crear la cuenta.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -51,38 +53,67 @@ export default function RegisterScreen() {
         <TextField
           label="Nombre"
           value={displayName}
-          onChangeText={setDisplayName}
+          onChangeText={value => {
+            setDisplayName(value);
+            setError(null);
+          }}
+          autoComplete="name"
+          textContentType="name"
+          returnKeyType="next"
           placeholder="Valentina Ríos"
         />
         <TextField
           label="Usuario"
           value={username}
-          onChangeText={setUsername}
+          onChangeText={value => {
+            setUsername(value);
+            setError(null);
+          }}
           autoCapitalize="none"
           autoCorrect={false}
+          autoComplete="username"
+          textContentType="username"
+          returnKeyType="next"
           placeholder="valentina"
         />
         <TextField
           label="Contraseña"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={value => {
+            setPassword(value);
+            setError(null);
+          }}
           secureTextEntry
+          autoComplete="new-password"
+          textContentType="newPassword"
+          returnKeyType="next"
           placeholder="••••••"
         />
         <TextField
           label="Confirmar contraseña"
           value={confirm}
-          onChangeText={setConfirm}
+          onChangeText={value => {
+            setConfirm(value);
+            setError(null);
+          }}
           secureTextEntry
+          autoComplete="new-password"
+          textContentType="newPassword"
+          returnKeyType="done"
+          onSubmitEditing={submit}
           placeholder="••••••"
         />
         {error ? (
-          <AppText variant="small" color={colors.danger}>
+          <AppText variant="small" color={colors.danger} accessibilityLiveRegion="polite">
             {error}
           </AppText>
         ) : null}
-        <PrimaryButton label="Crear cuenta" onPress={submit} />
-        <SecondaryButton label="Ya tengo cuenta" onPress={() => router.back()} />
+        <PrimaryButton label="Crear cuenta" onPress={submit} disabled={submitting} />
+        <SecondaryButton
+          label="Ya tengo cuenta"
+          onPress={() => router.back()}
+          disabled={submitting}
+        />
       </View>
       <AppText variant="small" style={{ marginTop: spacing.lg }}>
         El progreso empieza en cero.

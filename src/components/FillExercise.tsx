@@ -6,6 +6,7 @@ import type { FillEngine } from '@/viewmodels/useExerciseEngine';
 
 import { AppText } from './AppText';
 import { PrimaryButton, SecondaryButton } from './Buttons';
+import { Icon } from './Icon';
 
 interface FillExerciseProps {
   engine: FillEngine;
@@ -22,7 +23,7 @@ export function FillExercise({
   locked = false,
   variant = 'default',
 }: FillExerciseProps) {
-  const { colors, radius, spacing } = useTheme();
+  const { colors, radius, spacing, scale } = useTheme();
   const example = variant === 'example';
   const complete = engine.assignment.every(item => item !== null);
   const errors = engine.assignment.filter((word, index) => {
@@ -55,6 +56,12 @@ export function FillExercise({
     return (
       <Text
         key={`blank-${blankIndex}`}
+        allowFontScaling={false}
+        accessibilityRole="button"
+        accessibilityLabel={`Espacio ${blankIndex + 1}${word ? `: ${word}` : ', vacío'}${
+          engine.checked ? (correct ? ', correcto' : ', incorrecto') : ''
+        }`}
+        accessibilityState={{ disabled: locked }}
         onPress={
           locked
             ? undefined
@@ -66,6 +73,7 @@ export function FillExercise({
             backgroundColor: stateBackground,
             borderColor: stateColor,
             color: word ? colors.text : colors.muted,
+            fontSize: 13 * scale,
           },
         ]}>
         {word ?? '_____'}
@@ -74,10 +82,12 @@ export function FillExercise({
   };
 
   const renderSegments = (segments: FillSegment[], sentenceIndex: number) => (
-    <AppText key={`s-${sentenceIndex}`} style={styles.sentence}>
+    <AppText key={`s-${sentenceIndex}`} style={[styles.sentence, { fontSize: 14 * scale }]}>
       {segments.map((segment, index) =>
         segment.blank === null ? (
-          <Text key={`t-${index}`}>{segment.text}</Text>
+          <Text key={`t-${index}`} allowFontScaling={false}>
+            {segment.text}
+          </Text>
         ) : (
           renderBlank(segment.blank)
         ),
@@ -104,6 +114,7 @@ export function FillExercise({
             accessibilityLabel={`Palabra ${word}`}
             accessibilityState={{ disabled: locked || engine.used[index] }}
             disabled={locked || engine.used[index]}
+            hitSlop={8}
             onPress={() => engine.placeWord(index)}
             style={[
               styles.chip,
@@ -147,9 +158,17 @@ export function FillExercise({
               borderRadius: radius.control,
             },
           ]}>
-          <AppText color={engine.isCorrect ? colors.success : colors.danger} weight="700">
-            {engine.isCorrect ? '✓ Conceptos completados' : '↻ Revisa los espacios marcados'}
-          </AppText>
+          <View style={styles.feedbackRow}>
+            <Icon
+              name={engine.isCorrect ? 'check' : 'refresh'}
+              size={16}
+              color={engine.isCorrect ? colors.success : colors.danger}
+              strokeWidth={2.5}
+            />
+            <AppText color={engine.isCorrect ? colors.success : colors.danger} weight="700">
+              {engine.isCorrect ? 'Conceptos completados' : 'Revisa los espacios marcados'}
+            </AppText>
+          </View>
           {example ? (
             engine.isCorrect ? (
               <AppText variant="small">
@@ -194,4 +213,5 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 12 },
   action: { flex: 1 },
   feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
+  feedbackRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

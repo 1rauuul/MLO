@@ -51,25 +51,3 @@ export async function selectExercisesByLesson(db: SQLiteDatabase, lessonId: stri
   );
   return rows.map(mapExercise);
 }
-
-export async function selectExercise(db: SQLiteDatabase, id: string): Promise<Exercise | null> {
-  const row = await db.getFirstAsync<ExerciseRow>('SELECT * FROM exercises WHERE id = ?', id);
-  return row ? mapExercise(row) : null;
-}
-
-export async function insertResult(
-  db: SQLiteDatabase,
-  accountId: number,
-  exerciseId: string,
-  answer: string,
-  isCorrect: boolean,
-): Promise<void> {
-  await db.runAsync(
-    'INSERT INTO results (account_id, exercise_id, answer, is_correct, created_at) VALUES (?, ?, ?, ?, ?)',
-    accountId,
-    exerciseId,
-    answer,
-    isCorrect ? 1 : 0,
-    new Date().toISOString(),
-  );
-}

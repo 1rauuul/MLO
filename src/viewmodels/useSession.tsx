@@ -66,11 +66,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       };
     }
     (async () => {
-      const loaded = await selectLocation(db, account.id);
-      if (!active) {
-        return;
+      try {
+        const loaded = await selectLocation(db, account.id);
+        if (!active) {
+          return;
+        }
+        setLocation(loaded ?? EMPTY_LOCATION);
+      } catch {
+        if (active) {
+          setLocation(EMPTY_LOCATION);
+        }
       }
-      setLocation(loaded ?? EMPTY_LOCATION);
     })();
     return () => {
       active = false;
