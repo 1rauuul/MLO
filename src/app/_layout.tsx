@@ -4,11 +4,11 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { DATABASE_NAME, migrateAndSeed } from '@/data/db';
-import { AppThemeProvider } from '@/theme/theme-provider';
-import { AuthProvider, useAuth } from '@/viewmodels/useAuth';
-import { LearnerProfileProvider } from '@/viewmodels/useLearnerProfile';
-import { SessionProvider } from '@/viewmodels/useSession';
+import { DATABASE_NAME, migrateAndSeed } from '@/shared/services/db/database';
+import { AppThemeProvider } from '@/shared/theme/ThemeProvider';
+import { AuthProvider, useAuth } from '@/features/auth/viewmodel/useAuth';
+import { LearnerProfileProvider } from '@/features/profile/viewmodel/useLearnerProfile';
+import { SessionProvider } from '@/features/auth/viewmodel/useSession';
 
 void SplashScreen.preventAutoHideAsync();
 

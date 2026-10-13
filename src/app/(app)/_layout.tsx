@@ -1,8 +1,8 @@
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppTabBar } from '@/components/AppTabBar';
-import { tabRouteName } from '@/navigation/tabRoutes';
+import { AppTabBar } from '@/shared/components/AppTabBar';
+import { tabRouteName } from '@/shared/utils/navigation/tabRoutes';
 
 export default function AppLayout() {
   const { bottom } = useSafeAreaInsets();

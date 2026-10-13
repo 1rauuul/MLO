@@ -1,5 +1,1 @@
-import EvaluationFlow from '@/components/evaluation/EvaluationFlow';
-
-export default function EvaluationsEvaluationRoute() {
-  return <EvaluationFlow />;
-}
+export { default } from '@/features/evaluations/view/EvaluationScreen';
