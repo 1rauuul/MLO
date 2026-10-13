@@ -8,7 +8,7 @@
 
 **Tech Stack:** Expo SDK 57, Expo Router (`Stack.Protected`), expo-sqlite, expo-crypto, TypeScript estricto, Jest/jest-expo.
 
-**Spec:** `docs/superpowers/specs/2026-09-21-auth-ui-nav-design.md`
+**Spec:** `docs/especificaciones/2026-09-21-auth-ui-nav-design.md`
 
 ## Global Constraints
 
@@ -2335,7 +2335,7 @@ Expected: exit 0.
 
 - [ ] **Step 2: Revisión de criterios de aceptación del spec**
 
-Comprobar manualmente contra `docs/superpowers/specs/2026-09-21-auth-ui-nav-design.md` §11:
+Comprobar manualmente contra `docs/especificaciones/2026-09-21-auth-ui-nav-design.md` §11:
 1. Sin sesión redirige a `login`.
 2. Registro/login/logout funcionan.
 3. Errores locales controlados.

@@ -107,4 +107,4 @@ Banco de **ejemplos y ejercicios** (práctica) de la lección `l1.2`, según
 # Notas para tu merge
 
 - Mantén `id` únicos (no colisiones con los listados).
-- En crucigramas, verifica que las intersecciones compartan letra (ver `docs/crucigramas-unidad1.md`).
+- En crucigramas, verifica que las intersecciones compartan letra (ver `docs/contenido/crucigramas-unidad1.md`).

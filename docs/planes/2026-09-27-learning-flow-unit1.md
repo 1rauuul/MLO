@@ -8,7 +8,7 @@
 
 **Tech Stack:** Expo SDK 57, Expo Router, expo-sqlite, TypeScript estricto, Jest/jest-expo.
 
-**Spec:** `docs/superpowers/specs/2026-09-27-learning-flow-unit1-design.md`
+**Spec:** `docs/especificaciones/2026-09-27-learning-flow-unit1-design.md`
 
 ## Global Constraints
 
@@ -477,7 +477,7 @@ export interface Attempt {
 - Modify: `src/components/RichContent.tsx` (`textAlign: 'justify'`)
 - Modify: `src/app/(app)/lecciones/[id].tsx` (cuerpo justificado; pie sin evaluación para 1.1)
 - Modify: `src/app/(app)/tema/[id].tsx` (mosaicos condicionales; 1.1 sin prácticas ni evaluación)
-- Modify: `status/mapa-navegacion.md` y `status/ESTADO-PROYECTO.md`
+- Modify: `docs/arquitectura/mapa-navegacion.md` y `docs/estado/estado-proyecto.md`
 
 - [ ] **Step 1: Justificar** párrafos y cuerpo de lección (`textAlign: 'justify'`).
 - [ ] **Step 2: 1.1 solo lección**: sin mosaico de ejemplo/práctica/evaluación; el pie termina
@@ -497,7 +497,7 @@ npx expo export --platform android
 
 ## Apéndice A — Contenido de la Unidad 1
 
-> Redactado desde `Unidad 1 ingdelsoftware.md`. Todo el contenido es editable en
+> Redactado desde `docs/contenido/unidad-1.md`. Todo el contenido es editable en
 > `src/data/unit1Content.ts`.
 
 ### A.1 Tema 1.1 — Introducción

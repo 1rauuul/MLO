@@ -8,7 +8,7 @@
 
 **Tech Stack:** Expo SDK 57, Expo Router 57, React Native 0.86, TypeScript strict, Jest/jest-expo, `@testing-library/react-native`.
 
-**Spec:** `docs/superpowers/specs/2026-09-29-global-navigation-design.md`
+**Spec:** `docs/especificaciones/2026-09-29-global-navigation-design.md`
 
 ## Global Constraints
 

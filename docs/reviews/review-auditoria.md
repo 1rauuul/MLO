@@ -1,6 +1,6 @@
 # Auditoría técnica profunda — MLO Ingeniería de Software
 
-> Documento **nuevo**; no modifica `docs/review.md`. Fecha de ejecución: 2026-10-08.
+> Documento **nuevo**; no modifica `docs/reviews/review.md`. Fecha de ejecución: 2026-10-08.
 > Método: ejecución de comandos reales + inspección estática del código. Cada afirmación cita archivo, símbolo y línea.
 
 ## Convenciones de evidencia

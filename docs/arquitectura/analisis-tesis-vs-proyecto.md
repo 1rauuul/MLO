@@ -164,7 +164,7 @@ Recomiendo **B con la parte de A**: implementar el orden por estilo como funció
 
 ## 5. Correcciones a los documentos existentes
 
-El análisis previo `docs/reviewer/comparacion-propuesto-vs-implementado.md` y `docs/reviewer/arquitectura-oam-react-native.md` contienen afirmaciones que este análisis contradice o no puede confirmar:
+El análisis previo `docs/arquitectura/comparacion-propuesto-vs-implementado.md` y `docs/arquitectura/oam-react-native.md` contienen afirmaciones que este análisis contradice o no puede confirmar:
 
 | Afirmación en el documento previo | Estado real |
 | --- | --- |

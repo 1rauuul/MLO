@@ -186,7 +186,7 @@ export interface Attempt {
 - `TextCheck` (lección): `textAlign: 'justify'` en `RichContent` y en el cuerpo.
 - Pantallas de resumen (práctica y evaluación) con score por tipo y recomendación.
 
-## 9. Contenido Unidad 1 (a autorar desde `Unidad 1 ingdelsoftware.md`)
+## 9. Contenido Unidad 1 (a autorar desde `docs/contenido/unidad-1.md`)
 
 | Tema | Lección | Ejemplo A/B | Práctica | Evaluación |
 |---|---|---|---|---|

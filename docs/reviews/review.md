@@ -1,6 +1,6 @@
 # Review del proyecto — MLO Ingeniería de Software
 
-Análisis guiado, solo lectura, por fases. Fuente de intención: `AGENTS.md` y `docs/superpowers/specs/`.
+Análisis guiado, solo lectura, por fases. Fuente de intención: `AGENTS.md` y `docs/especificaciones/`.
 
 ---
 
@@ -40,7 +40,7 @@ Raíz:
 | `scripts/` | Utilidades Node. |
 | `status/` | Por revisar. |
 | `app.json`, `metro.config.js`, `eslint.config.js`, `tsconfig.json` | Configuración Expo/Metro/ESLint/TS. |
-| `mapa-navegacion.html` | Mapa visual de navegación. |
+| `docs/arquitectura/mapa-navegacion.html` | Mapa visual de navegación. |
 
 Dentro de `src/`:
 

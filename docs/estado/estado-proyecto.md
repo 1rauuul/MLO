@@ -11,7 +11,7 @@
 ## 0-bis. Actualización — estabilización de datos y auditoría
 
 > Fecha de corte: 8–9 de octubre de 2026. Rama: `fix/estabilizacion-datos`.
-> Origen: `docs/reviewer/review-auditoria.md` y `docs/reviewer/siguientes-pasos.md`.
+> Origen: `docs/reviews/review-auditoria.md` y `docs/estado/siguientes-pasos.md`.
 
 **Bloque A — Integridad de datos (P1)**
 
@@ -78,7 +78,7 @@
 - **UI**: alineada a la referencia (hero azul, avatar con iniciales, anillos, chips),
   paleta intacta, chevrons SVG en lugar de glifos de flecha.
 - **Contenido**: lectura por bloques ricos (`lessons.content`: párrafos, listas y tablas)
-  para 1.1 y 1.2 desde `Introducción a la ISW.md`; `RichContent` respeta tablas.
+  para 1.1 y 1.2 desde `docs/contenido/introduccion-isw.md`; `RichContent` respeta tablas.
 - **Ejercicios interactivos (Unidad 1, lecciones 1.2–1.4)**: tipos `order`, `fill`
   (completar con banco de palabras) y `match` (enlazar pares), con lógica pura testeada
   (`exerciseLogic.ts`) y engines `useExerciseEngine`/`useFillEngine`/`useMatchEngine`.

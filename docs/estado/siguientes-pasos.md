@@ -1,8 +1,8 @@
 # Siguientes pasos propuestos — MLO Ingeniería de Software
 
 > Fecha: 2026-10-08. Documento de propuesta; no modifica código.
-> Fuentes: `status/ESTADO-PROYECTO.md`, `docs/reviewer/review.md`, `docs/reviewer/review-auditoria.md`,
-> `docs/reviewer/arquitectura-oam-react-native.md`, `docs/reviewer/comparacion-propuesto-vs-implementado.md`.
+> Fuentes: `docs/estado/estado-proyecto.md`, `docs/reviews/review.md`, `docs/reviews/review-auditoria.md`,
+> `docs/arquitectura/oam-react-native.md`, `docs/arquitectura/comparacion-propuesto-vs-implementado.md`.
 > Referencias de código con `archivo:símbolo:línea` al estado actual del repositorio.
 
 ---
@@ -215,8 +215,8 @@ actividades de las 5 unidades presentes; decisión C2 implementada o documentada
 | I5 — Validación y contenido | F1–F4 | I4 | EAS builds + unidades 2–5 completas |
 | I6 — Personalización/cierre | F5 (si se decide), F6, sincronización documental | I5 | reporte alineado con implementación real |
 
-Cada iteración debe actualizar `status/ESTADO-PROYECTO.md` (tabla de verificación: tsc, lint,
-tests, cobertura, expo-doctor, export) y, cuando aplique, `docs/reviewer/arquitectura-oam-react-native.md`
+Cada iteración debe actualizar `docs/estado/estado-proyecto.md` (tabla de verificación: tsc, lint,
+tests, cobertura, expo-doctor, export) y, cuando aplique, `docs/arquitectura/oam-react-native.md`
 y `AGENTS.md` (correcciones listadas en comparación §9).
 
 ---
@@ -264,7 +264,7 @@ npx expo export --platform ios
 |---|---|---|
 | I1 — Datos (A1–A3) | Completado | tests `progressRepository`, `usePracticeEngine`, `db.test` (v4 sin borrar attempts) |
 | I2 — Robustez (B1–B5) | Completado | PBKDF2+HMAC verificados vs `node:crypto`; migraciones por paso; 8 repos con tests |
-| I3 — Decisiones + limpieza (C, D1–D7) | Completado | `docs/reviewer/decisiones-alcance.md`; `results` y código muerto retirados |
+| I3 — Decisiones + limpieza (C, D1–D7) | Completado | `docs/estado/decisiones-alcance.md`; `results` y código muerto retirados |
 | I4 — Pruebas (E) | Completado | pantallas `login`, `register`, módulos, perfil y CHAEA |
 | I6 — Personalización (F5) | Completado | `chaLogic.ts` + pantalla `(profile)/personalizacion` |
 | F1/F2 (EAS/offline) y F3/F4 (contenido U2–5) | **Pendiente** | Requieren cuenta EAS y material fuente |
