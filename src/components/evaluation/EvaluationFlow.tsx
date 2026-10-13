@@ -1,20 +1,19 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef } from 'react';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { ActivityView } from '@/components/activities/ActivityView';
 import { AppText } from '@/components/AppText';
 import { PrimaryButton, SecondaryButton } from '@/components/Buttons';
 import { EmptyState } from '@/components/EmptyState';
 import { Icon } from '@/components/Icon';
-import { QuizOption, type QuizOptionResult } from '@/components/QuizOption';
+import { QuizOption } from '@/components/QuizOption';
 import { Screen } from '@/components/Screen';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import type { ActivityType, Exercise, ExerciseType, Question } from '@/models/entities';
 import { ACTIVITY_TYPE_LABELS as TYPE_LABELS } from '@/models/activityLabels';
 import { useTheme } from '@/theme/theme-provider';
 import { recommendReview } from '@/viewmodels/analyticsLogic';
-import { optionResult } from '@/viewmodels/quizLogic';
 import { useModuleProgress } from '@/viewmodels/useModuleProgress';
 import {
   useEvaluationEngine,
@@ -39,18 +38,14 @@ function asExercise(question: Question, lessonId: string): Exercise {
 
 function McqQuestion({
   question,
-  answered,
-  onAnswer,
+  chosen,
+  onSelect,
 }: {
   question: Question;
-  answered: boolean;
-  onAnswer: (correct: boolean) => void;
+  chosen: number | null;
+  onSelect: (index: number) => void;
 }) {
   const { spacing } = useTheme();
-  const [chosen, setChosen] = useState<number | null>(null);
-
-  const resultFor = (index: number): QuizOptionResult | undefined =>
-    optionResult(index, chosen, question.answer, answered);
 
   return (
     <View style={{ gap: spacing.md }}>
@@ -60,21 +55,9 @@ function McqQuestion({
           index={index}
           label={option}
           selected={chosen === index}
-          result={resultFor(index)}
-          onPress={() => {
-            if (!answered) {
-              setChosen(index);
-            }
-          }}
+          onPress={() => onSelect(index)}
         />
       ))}
-      {!answered ? (
-        <PrimaryButton
-          label="Comprobar"
-          disabled={chosen === null}
-          onPress={() => onAnswer(chosen === question.answer)}
-        />
-      ) : null}
     </View>
   );
 }
@@ -263,12 +246,21 @@ export default function EvaluationFlow() {
     );
   }
 
-  const isLast = engine.index >= engine.total - 1;
+  const handleExit = () => {
+    Alert.alert(
+      'Salir de la evaluación',
+      'Si sales ahora perderás el progreso de esta evaluación.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Salir', style: 'destructive', onPress: () => router.back() },
+      ],
+    );
+  };
 
   return (
     <Screen>
       <ScreenHeader
-        onBack={() => router.back()}
+        onBack={handleExit}
         eyebrow={`Reactivo ${String(engine.index + 1).padStart(2, '0')} · ${TYPE_LABELS[question.type] ?? question.type}`}
         title="Evaluación"
         trailing={`${engine.index + 1}/${engine.total}`}
@@ -296,27 +288,36 @@ export default function EvaluationFlow() {
           <McqQuestion
             key={question.id}
             question={question}
-            answered={engine.answered}
-            onAnswer={correct => engine.submit('', correct)}
+            chosen={engine.answer?.type === 'mcq' ? engine.answer.chosen : null}
+            onSelect={index => engine.setAnswer({ type: 'mcq', chosen: index })}
           />
         ) : (
           <ActivityView
             key={question.id}
             exercise={asExercise(question, lessonParam ?? '')}
             allowReset={false}
-            locked={engine.answered}
-            onSubmit={(answer, correct) => engine.submit(answer, correct)}
+            hideCheck
+            initialAnswer={engine.answer}
+            onAnswerChange={answer => engine.setAnswer(answer)}
+            onSubmit={() => {}}
           />
         )}
       </View>
 
-      {engine.answered ? (
-        <PrimaryButton
-          label={isLast ? 'Ver resultado' : 'Siguiente reactivo'}
-          onPress={engine.next}
-          style={{ marginTop: spacing.lg }}
+      <View style={[styles.nav, { marginTop: spacing.lg }]}>
+        <SecondaryButton
+          label="Anterior"
+          disabled={engine.index === 0}
+          onPress={engine.goPrev}
+          style={styles.navButton}
         />
-      ) : null}
+        <PrimaryButton
+          label={engine.isLast ? 'Calificar' : 'Enviar'}
+          disabled={!engine.canSend}
+          onPress={engine.send}
+          style={styles.navButton}
+        />
+      </View>
     </Screen>
   );
 }
@@ -331,4 +332,6 @@ const styles = StyleSheet.create({
   review: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12, borderWidth: 1 },
   card: { borderWidth: 1, padding: 18, gap: 4 },
   feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
+  nav: { flexDirection: 'row', gap: 12 },
+  navButton: { flex: 1 },
 });

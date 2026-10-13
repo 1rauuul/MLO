@@ -1,5 +1,5 @@
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { selectExercisesByLesson } from '@/data/repositories/exerciseRepository';
 import type { CrosswordEntry, Exercise, ExerciseConfig, MatchPair } from '@/models/entities';
@@ -32,7 +32,8 @@ export interface ExerciseEngine {
   reset: () => void;
 }
 
-export function useExerciseEngine(exercise: Exercise | null): ExerciseEngine {
+export function useExerciseEngine(exercise: Exercise | null, initialSteps?: string[]): ExerciseEngine {
+  const initialRef = useRef(initialSteps);
   const [steps, setSteps] = useState<string[]>([]);
   const [checked, setChecked] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
@@ -44,7 +45,7 @@ export function useExerciseEngine(exercise: Exercise | null): ExerciseEngine {
       setIsCorrect(false);
       return;
     }
-    setSteps(scrambleOrder(exercise.correctOrder));
+    setSteps(initialRef.current ? [...initialRef.current] : scrambleOrder(exercise.correctOrder));
     setChecked(false);
     setIsCorrect(false);
   }, [exercise]);
@@ -141,6 +142,7 @@ export function useExercisesForLesson(lessonId: string | null): UseExercisesForL
 export interface FillEngine {
   sentences: FillSegment[][];
   answers: string[];
+  ordered: string[];
   bank: string[];
   used: boolean[];
   assignment: (string | null)[];
@@ -155,7 +157,13 @@ export interface FillEngine {
   reset: () => void;
 }
 
-export function useFillEngine(exercise: Exercise | null): FillEngine {
+export interface FillInitial {
+  ordered: string[];
+  assignment: (string | null)[];
+}
+
+export function useFillEngine(exercise: Exercise | null, initial?: FillInitial): FillEngine {
+  const initialRef = useRef(initial);
   const sourceSentences = useMemo(
     () => (exercise?.type === 'fill' ? (exercise.config.sentences ?? []) : []),
     [exercise],
@@ -167,7 +175,9 @@ export function useFillEngine(exercise: Exercise | null): FillEngine {
   const [ordered, setOrdered] = useState<string[]>([]);
 
   useEffect(() => {
-    setOrdered(shuffleItems(sourceSentences, Math.random));
+    setOrdered(
+      initialRef.current?.ordered ? [...initialRef.current.ordered] : shuffleItems(sourceSentences, Math.random),
+    );
   }, [sourceSentences]);
 
   const sentences = useMemo(() => splitFillSentences(ordered), [ordered]);
@@ -182,9 +192,22 @@ export function useFillEngine(exercise: Exercise | null): FillEngine {
 
   const reset = useCallback(() => {
     const expected = extractFillAnswers(ordered);
-    setBank(buildFillBank(ordered, Math.random, bankExtra));
-    setUsed(Array.from({ length: expected.length + bankExtra.length }, () => false));
-    setAssignment(expected.map(() => null));
+    const nextBank = buildFillBank(ordered, Math.random, bankExtra);
+    setBank(nextBank);
+    const seed = initialRef.current;
+    const nextAssignment = seed?.assignment ? [...seed.assignment] : expected.map(() => null);
+    const nextUsed = nextBank.map(() => false);
+    nextAssignment.forEach(word => {
+      if (word === null) {
+        return;
+      }
+      const position = nextBank.findIndex((item, index) => !nextUsed[index] && item === word);
+      if (position !== -1) {
+        nextUsed[position] = true;
+      }
+    });
+    setUsed(nextUsed);
+    setAssignment(nextAssignment);
     setActiveBlank(null);
     setChecked(false);
     setIsCorrect(false);
@@ -271,6 +294,7 @@ export function useFillEngine(exercise: Exercise | null): FillEngine {
   return {
     sentences,
     answers,
+    ordered,
     bank,
     used,
     assignment,
@@ -301,7 +325,13 @@ export interface MatchEngine {
   reset: () => void;
 }
 
-export function useMatchEngine(exercise: Exercise | null): MatchEngine {
+export interface MatchInitial {
+  rights: string[];
+  assignment: (number | null)[];
+}
+
+export function useMatchEngine(exercise: Exercise | null, initial?: MatchInitial): MatchEngine {
+  const initialRef = useRef(initial);
   const pairs = useMemo(
     () => (exercise?.type === 'match' ? (exercise.config.pairs ?? []) : []),
     [exercise],
@@ -315,8 +345,14 @@ export function useMatchEngine(exercise: Exercise | null): MatchEngine {
   const [isCorrect, setIsCorrect] = useState(false);
 
   const reset = useCallback(() => {
-    setRights(shuffleItems(pairs.map(pair => pair.right), Math.random));
-    setAssignment(pairs.map(() => null));
+    setRights(
+      initialRef.current?.rights
+        ? [...initialRef.current.rights]
+        : shuffleItems(pairs.map(pair => pair.right), Math.random),
+    );
+    setAssignment(
+      initialRef.current?.assignment ? [...initialRef.current.assignment] : pairs.map(() => null),
+    );
     setSelectedLeft(null);
     setChecked(false);
     setIsCorrect(false);
@@ -401,7 +437,11 @@ export interface CrosswordEngine {
   reset: () => void;
 }
 
-export function useCrosswordEngine(exercise: Exercise | null): CrosswordEngine {
+export function useCrosswordEngine(
+  exercise: Exercise | null,
+  initialLetters?: Record<string, string>,
+): CrosswordEngine {
+  const initialRef = useRef(initialLetters);
   const crossword = useMemo(
     () => (exercise?.type === 'crossword' ? exercise.config.crossword : undefined),
     [exercise],
@@ -418,7 +458,7 @@ export function useCrosswordEngine(exercise: Exercise | null): CrosswordEngine {
   const [isCorrect, setIsCorrect] = useState(false);
 
   const reset = useCallback(() => {
-    setLetters({});
+    setLetters(initialRef.current ? { ...initialRef.current } : {});
     setSelectedEntry(null);
     setChecked(false);
     setIsCorrect(false);

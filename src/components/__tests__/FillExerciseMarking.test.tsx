@@ -24,6 +24,7 @@ function makeEngine(overrides: Partial<FillEngine>): FillEngine {
   return {
     sentences: [[{ text: 'El ', blank: null }, { text: '', blank: 0 }]],
     answers: ['bueno'],
+    ordered: [],
     bank: [],
     used: [],
     assignment: ['malo'],

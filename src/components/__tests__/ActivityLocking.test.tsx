@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { View as MockAnimatedView, type ViewProps } from 'react-native';
 import type { Exercise, Question } from '@/models/entities';
 import type { AttemptSummary } from '@/viewmodels/analyticsLogic';
+import type { EvaluationAnswer } from '@/viewmodels/evaluationLogic';
 import type { EvaluationEngine } from '@/viewmodels/useQuizEngine';
 import type { PracticeEngine } from '@/viewmodels/usePracticeEngine';
 import type { ExamplesEngine } from '@/viewmodels/useExamplesEngine';
@@ -22,6 +23,9 @@ interface CapturedActivityProps {
   onSubmit: (answer: string, correct: boolean) => void;
   allowReset?: boolean;
   locked?: boolean;
+  hideCheck?: boolean;
+  initialAnswer?: EvaluationAnswer | null;
+  onAnswerChange?: (answer: EvaluationAnswer) => void;
 }
 
 const mockBack = jest.fn();
@@ -177,6 +181,7 @@ const makeFillEngine = (): FillEngine => ({
     ],
   ],
   answers: ['requisito'],
+  ordered: [],
   bank: ['término', 'artefacto'],
   used: [false, false],
   assignment: ['requisito'],
@@ -260,13 +265,16 @@ const makeEvaluationEngine = (answered: boolean): EvaluationEngine => ({
   items: [fillQuestion],
   question: fillQuestion,
   phase: 'running',
-  answered,
-  lastCorrect: answered,
+  answers: answered ? [{ type: 'fill', ordered: [], assignment: ['requisito'] }] : [null],
+  answer: answered ? { type: 'fill', ordered: [], assignment: ['requisito'] } : null,
+  canSend: answered,
+  isLast: true,
   correctCount: 0,
   outcomes: [answered],
   summary: noneSummary,
-  submit: jest.fn(),
-  next: jest.fn(),
+  setAnswer: jest.fn(),
+  goPrev: jest.fn(),
+  send: jest.fn(),
   restart: jest.fn(),
 });
 
@@ -573,20 +581,20 @@ describe('Ejercicios screen wiring', () => {
 });
 
 describe('Evaluación flow wiring', () => {
-  it('locks the activity after the reactivo is answered', () => {
+  it('muestra la actividad editable, sin comprobar y con la respuesta inicial', () => {
     mockEvaluationEngine = makeEvaluationEngine(true);
     render(<EvaluationFlow />);
 
     expect(mockCapturedActivityProps?.exercise.id).toBe('q-1');
     expect(mockCapturedActivityProps?.allowReset).toBe(false);
-    expect(mockCapturedActivityProps?.locked).toBe(true);
-  });
-
-  it('keeps the activity interactive before the reactivo is answered', () => {
-    mockEvaluationEngine = makeEvaluationEngine(false);
-    render(<EvaluationFlow />);
-
-    expect(mockCapturedActivityProps?.locked).toBe(false);
+    expect(mockCapturedActivityProps?.locked).toBeUndefined();
+    expect(mockCapturedActivityProps?.hideCheck).toBe(true);
+    expect(mockCapturedActivityProps?.initialAnswer).toEqual({
+      type: 'fill',
+      ordered: [],
+      assignment: ['requisito'],
+    });
+    expect(typeof mockCapturedActivityProps?.onAnswerChange).toBe('function');
   });
 });
 

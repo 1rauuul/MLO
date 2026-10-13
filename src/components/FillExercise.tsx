@@ -14,6 +14,7 @@ interface FillExerciseProps {
   showReset?: boolean;
   locked?: boolean;
   variant?: 'default' | 'example';
+  hideCheck?: boolean;
 }
 
 export function FillExercise({
@@ -22,6 +23,7 @@ export function FillExercise({
   showReset = true,
   locked = false,
   variant = 'default',
+  hideCheck = false,
 }: FillExerciseProps) {
   const { colors, radius, spacing, scale } = useTheme();
   const example = variant === 'example';
@@ -132,21 +134,25 @@ export function FillExercise({
         ))}
       </View>
 
-      <View style={[styles.actions, { marginTop: spacing.lg }]}>
-        <PrimaryButton
-          label="Comprobar"
-          disabled={locked || !complete}
-          onPress={check}
-          style={styles.action}
-        />
-        {showReset ? (
-          <SecondaryButton
-            label={example ? 'Reiniciar' : 'Reintentar'}
-            onPress={engine.reset}
-            style={styles.action}
-          />
-        ) : null}
-      </View>
+      {hideCheck && !showReset ? null : (
+        <View style={[styles.actions, { marginTop: spacing.lg }]}>
+          {hideCheck ? null : (
+            <PrimaryButton
+              label="Comprobar"
+              disabled={locked || !complete}
+              onPress={check}
+              style={styles.action}
+            />
+          )}
+          {showReset ? (
+            <SecondaryButton
+              label={example ? 'Reiniciar' : 'Reintentar'}
+              onPress={engine.reset}
+              style={styles.action}
+            />
+          ) : null}
+        </View>
+      )}
 
       {example && engine.checked ? (
         <View

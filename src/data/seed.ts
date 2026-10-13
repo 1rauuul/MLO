@@ -3,14 +3,14 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import type { Complexity, UnitColor } from '@/models/entities';
 
 import { richContent } from './richContent';
+import { l12ExerciseBank } from './banks/l1.2';
+import type { ExerciseSeed } from './banks/types';
 import {
   unit1Evaluations,
   unit1Examples,
   unit1Exercises,
-  unit12ExerciseBankAdditions,
   type EvaluationSeed,
   type ExampleSeed,
-  type ExerciseSeed,
   type QuestionSeed,
 } from './unit1Content';
 
@@ -274,12 +274,16 @@ export async function applyUnit1Content(db: SQLiteDatabase, clearAttempts = true
   });
 }
 
-export async function applyUnit12ExerciseBank(db: SQLiteDatabase): Promise<void> {
+export async function applyExerciseBank(db: SQLiteDatabase, bank: ExerciseSeed[]): Promise<void> {
   await db.withTransactionAsync(async () => {
-    for (const exercise of unit12ExerciseBankAdditions) {
+    for (const exercise of bank) {
       await insertExerciseRow(db, exercise);
     }
   });
+}
+
+export async function applyUnit12ExerciseBank(db: SQLiteDatabase): Promise<void> {
+  return applyExerciseBank(db, l12ExerciseBank);
 }
 
 export async function seedDatabase(db: SQLiteDatabase): Promise<void> {

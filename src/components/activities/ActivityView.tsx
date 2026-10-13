@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import type { Exercise } from '@/models/entities';
+import type { EvaluationAnswer } from '@/viewmodels/evaluationLogic';
 import {
   useCrosswordEngine,
   useExerciseEngine,
@@ -22,6 +23,9 @@ interface ActivityViewProps {
   locked?: boolean;
   variant?: ActivityVariant;
   revealSignal?: number;
+  initialAnswer?: EvaluationAnswer | null;
+  onAnswerChange?: (answer: EvaluationAnswer) => void;
+  hideCheck?: boolean;
 }
 
 export function ActivityView({
@@ -31,16 +35,64 @@ export function ActivityView({
   locked = false,
   variant = 'default',
   revealSignal = 0,
+  initialAnswer = null,
+  onAnswerChange,
+  hideCheck = false,
 }: ActivityViewProps) {
-  const order = useExerciseEngine(exercise);
-  const fill = useFillEngine(exercise);
-  const match = useMatchEngine(exercise);
-  const crossword = useCrosswordEngine(exercise);
+  const order = useExerciseEngine(
+    exercise,
+    initialAnswer?.type === 'order' ? initialAnswer.steps : undefined,
+  );
+  const fill = useFillEngine(
+    exercise,
+    initialAnswer?.type === 'fill'
+      ? { ordered: initialAnswer.ordered, assignment: initialAnswer.assignment }
+      : undefined,
+  );
+  const match = useMatchEngine(
+    exercise,
+    initialAnswer?.type === 'match'
+      ? { rights: initialAnswer.rights, assignment: initialAnswer.assignment }
+      : undefined,
+  );
+  const crossword = useCrosswordEngine(
+    exercise,
+    initialAnswer?.type === 'crossword' ? initialAnswer.letters : undefined,
+  );
 
   const enginesRef = useRef({ order, fill, match, crossword });
   useEffect(() => {
     enginesRef.current = { order, fill, match, crossword };
   });
+
+  const onChangeRef = useRef(onAnswerChange);
+  useEffect(() => {
+    onChangeRef.current = onAnswerChange;
+  });
+
+  useEffect(() => {
+    if (exercise.type === 'order') {
+      onChangeRef.current?.({ type: 'order', steps: order.steps });
+    }
+  }, [exercise.type, order.steps]);
+
+  useEffect(() => {
+    if (exercise.type === 'fill') {
+      onChangeRef.current?.({ type: 'fill', ordered: fill.ordered, assignment: fill.assignment });
+    }
+  }, [exercise.type, fill.ordered, fill.assignment]);
+
+  useEffect(() => {
+    if (exercise.type === 'match') {
+      onChangeRef.current?.({ type: 'match', rights: match.rights, assignment: match.assignment });
+    }
+  }, [exercise.type, match.rights, match.assignment]);
+
+  useEffect(() => {
+    if (exercise.type === 'crossword') {
+      onChangeRef.current?.({ type: 'crossword', letters: crossword.letters });
+    }
+  }, [exercise.type, crossword.letters]);
 
   useEffect(() => {
     if (revealSignal <= 0) {
@@ -60,7 +112,9 @@ export function ActivityView({
 
   switch (exercise.type) {
     case 'order':
-      return <OrderExercise engine={order} onSubmit={onSubmit} locked={locked} variant={variant} />;
+      return (
+        <OrderExercise engine={order} onSubmit={onSubmit} locked={locked} variant={variant} hideCheck={hideCheck} />
+      );
     case 'fill':
       return (
         <FillExercise
@@ -69,6 +123,7 @@ export function ActivityView({
           showReset={allowReset}
           locked={locked}
           variant={variant}
+          hideCheck={hideCheck}
         />
       );
     case 'match':
@@ -79,10 +134,13 @@ export function ActivityView({
           showReset={allowReset}
           locked={locked}
           variant={variant}
+          hideCheck={hideCheck}
         />
       );
     case 'crossword':
-      return <CrosswordExercise engine={crossword} onSubmit={onSubmit} locked={locked} variant={variant} />;
+      return (
+        <CrosswordExercise engine={crossword} onSubmit={onSubmit} locked={locked} variant={variant} hideCheck={hideCheck} />
+      );
     default:
       return null;
   }

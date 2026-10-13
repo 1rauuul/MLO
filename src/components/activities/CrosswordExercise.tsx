@@ -13,6 +13,7 @@ interface CrosswordExerciseProps {
   onSubmit: (answer: string, correct: boolean) => void;
   locked?: boolean;
   variant?: 'default' | 'example';
+  hideCheck?: boolean;
 }
 
 const CELL = 24;
@@ -22,6 +23,7 @@ export function CrosswordExercise({
   onSubmit,
   locked = false,
   variant = 'default',
+  hideCheck = false,
 }: CrosswordExerciseProps) {
   const { colors, radius, spacing } = useTheme();
   const example = variant === 'example';
@@ -295,12 +297,14 @@ export function CrosswordExercise({
         })}
       </View>
 
-      <PrimaryButton
-        label="Comprobar crucigrama"
-        onPress={check}
-        disabled={locked}
-        style={{ marginTop: spacing.lg }}
-      />
+      {hideCheck ? null : (
+        <PrimaryButton
+          label="Comprobar crucigrama"
+          onPress={check}
+          disabled={locked}
+          style={{ marginTop: spacing.lg }}
+        />
+      )}
 
       {example && engine.checked ? (
         <View

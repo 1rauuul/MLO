@@ -17,6 +17,18 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
 
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   const currentVersion = row?.user_version ?? 0;
+
+  // Fresh install: SCHEMA_DDL already contains every column and seedDatabase loads
+  // all content, so skip the incremental ALTERs (they would duplicate columns).
+  if (currentVersion === 0) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(SCHEMA_DDL);
+      await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
+    });
+    await seedDatabase(db);
+    return;
+  }
+
   if (currentVersion >= DATABASE_VERSION) {
     await db.execAsync(SCHEMA_DDL);
     return;

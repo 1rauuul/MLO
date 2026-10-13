@@ -30,6 +30,27 @@ describe('migrateAndSeed', () => {
     expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 10')).toBe(true);
   });
 
+  test('instalación nueva siembra directo en la última versión sin ALTERs duplicados', async () => {
+    const statements: string[] = [];
+    const db = {
+      execAsync: async (sql: string) => {
+        statements.push(sql);
+      },
+      getFirstAsync: async () => ({ user_version: 0 }),
+      runAsync: async (sql: string) => {
+        statements.push(sql);
+        return { changes: 1, lastInsertRowId: 0 };
+      },
+      withTransactionAsync: async (task: () => Promise<void>) => task(),
+    } as unknown as SQLiteDatabase;
+
+    await migrateAndSeed(db);
+
+    expect(statements.some(statement => statement.includes('ALTER TABLE lessons ADD COLUMN content'))).toBe(false);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 10')).toBe(true);
+    expect(statements.some(statement => statement.startsWith('INSERT INTO units'))).toBe(true);
+  });
+
   test('migra desde user_version=4 sin borrar attempts', async () => {
     const statements: string[] = [];
     const db = {

@@ -14,6 +14,7 @@ interface MatchExerciseProps {
   showReset?: boolean;
   locked?: boolean;
   variant?: 'default' | 'example';
+  hideCheck?: boolean;
 }
 
 export function MatchExercise({
@@ -22,6 +23,7 @@ export function MatchExercise({
   showReset = true,
   locked = false,
   variant = 'default',
+  hideCheck = false,
 }: MatchExerciseProps) {
   const { colors, radius, spacing } = useTheme();
   const example = variant === 'example';
@@ -135,15 +137,19 @@ export function MatchExercise({
         </View>
       </View>
 
-      <View style={[styles.actions, { marginTop: spacing.lg }]}>
-        <PrimaryButton
-          label="Comprobar"
-          disabled={locked || !complete}
-          onPress={check}
-          style={styles.action}
-        />
-        {showReset ? <SecondaryButton label="Reintentar" onPress={engine.reset} style={styles.action} /> : null}
-      </View>
+      {hideCheck && !showReset ? null : (
+        <View style={[styles.actions, { marginTop: spacing.lg }]}>
+          {hideCheck ? null : (
+            <PrimaryButton
+              label="Comprobar"
+              disabled={locked || !complete}
+              onPress={check}
+              style={styles.action}
+            />
+          )}
+          {showReset ? <SecondaryButton label="Reintentar" onPress={engine.reset} style={styles.action} /> : null}
+        </View>
+      )}
 
       {example && engine.checked ? (
         <View

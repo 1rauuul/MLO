@@ -97,6 +97,7 @@ interface OrderExerciseProps {
   onSubmit: (answer: string, correct: boolean) => void;
   locked?: boolean;
   variant?: 'default' | 'example';
+  hideCheck?: boolean;
 }
 
 export function OrderExercise({
@@ -104,6 +105,7 @@ export function OrderExercise({
   onSubmit,
   locked = false,
   variant = 'default',
+  hideCheck = false,
 }: OrderExerciseProps) {
   const { colors, radius, spacing } = useTheme();
   const example = variant === 'example';
@@ -234,12 +236,14 @@ export function OrderExercise({
         </View>
       ) : null}
 
-      <PrimaryButton
-        label="Comprobar"
-        onPress={check}
-        disabled={locked}
-        style={{ marginTop: spacing.lg }}
-      />
+      {hideCheck ? null : (
+        <PrimaryButton
+          label="Comprobar"
+          onPress={check}
+          disabled={locked}
+          style={{ marginTop: spacing.lg }}
+        />
+      )}
     </View>
   );
 }

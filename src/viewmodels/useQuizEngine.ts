@@ -11,6 +11,11 @@ import type { Evaluation, Question } from '@/models/entities';
 import { ACTIVITY_TYPES } from '@/models/entities';
 
 import { summarizeAttempts, type AttemptSummary } from './analyticsLogic';
+import {
+  isAnswerComplete,
+  isAnswerCorrect,
+  type EvaluationAnswer,
+} from './evaluationLogic';
 import { useAuth } from './useAuth';
 
 interface UseEvaluationForLessonResult {
@@ -77,13 +82,16 @@ export interface EvaluationEngine {
   items: Question[];
   question: Question | null;
   phase: 'running' | 'summary';
-  answered: boolean;
-  lastCorrect: boolean | null;
+  answers: (EvaluationAnswer | null)[];
+  answer: EvaluationAnswer | null;
+  canSend: boolean;
+  isLast: boolean;
   correctCount: number;
   outcomes: (boolean | null)[];
   summary: AttemptSummary;
-  submit: (answer: string, correct: boolean) => void;
-  next: () => void;
+  setAnswer: (answer: EvaluationAnswer) => void;
+  goPrev: () => void;
+  send: () => void;
   restart: () => void;
 }
 
@@ -95,8 +103,7 @@ export function useEvaluationEngine(questions: Question[], lessonId: string | nu
     [questions],
   );
   const [index, setIndex] = useState(0);
-  const [answered, setAnswered] = useState(false);
-  const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
+  const [answers, setAnswers] = useState<(EvaluationAnswer | null)[]>([]);
   const [correctCount, setCorrectCount] = useState(0);
   const [outcomes, setOutcomes] = useState<(boolean | null)[]>([]);
   const [phase, setPhase] = useState<'running' | 'summary'>('running');
@@ -113,8 +120,7 @@ export function useEvaluationEngine(questions: Question[], lessonId: string | nu
 
   const restart = useCallback(() => {
     setIndex(0);
-    setAnswered(false);
-    setLastCorrect(null);
+    setAnswers(usable.map(() => null));
     setCorrectCount(0);
     setOutcomes(usable.map(() => null));
     setPhase('running');
@@ -124,53 +130,79 @@ export function useEvaluationEngine(questions: Question[], lessonId: string | nu
     restart();
   }, [usable, restart]);
 
-  const submit = useCallback(
-    (answer: string, correct: boolean) => {
-      if (answered || phase !== 'running') {
-        return;
-      }
-      const question = usable[index];
-      if (question && account && lessonId) {
-        void insertAttempt(db, account.id, 'evaluation', question.id, question.type, lessonId, correct);
-      }
-      setAnswered(true);
-      setLastCorrect(correct);
-      setOutcomes(previous => {
+  const setAnswer = useCallback(
+    (answer: EvaluationAnswer) => {
+      setAnswers(previous => {
         const next = [...previous];
-        next[index] = correct;
+        next[index] = answer;
         return next;
       });
-      if (correct) {
-        setCorrectCount(current => current + 1);
-      }
     },
-    [answered, phase, usable, index, db, account, lessonId],
+    [index],
   );
 
-  const next = useCallback(() => {
-    if (index < usable.length - 1) {
-      setIndex(current => current + 1);
-      setAnswered(false);
-      setLastCorrect(null);
-      return;
+  const goPrev = useCallback(() => {
+    setIndex(current => Math.max(0, current - 1));
+  }, []);
+
+  const grade = useCallback(() => {
+    const results = usable.map((question, i) => {
+      const answer = answers[i];
+      return answer ? isAnswerCorrect(question, answer) : false;
+    });
+    setOutcomes(results);
+    setCorrectCount(results.filter(Boolean).length);
+    if (account && lessonId) {
+      usable.forEach((question, i) => {
+        if (answers[i]) {
+          void insertAttempt(
+            db,
+            account.id,
+            'evaluation',
+            question.id,
+            question.type,
+            lessonId,
+            results[i],
+          );
+        }
+      });
     }
     void refreshSummary();
     setPhase('summary');
-  }, [index, usable.length, refreshSummary]);
+  }, [usable, answers, db, account, lessonId, refreshSummary]);
+
+  const send = useCallback(() => {
+    const question = usable[index];
+    const answer = answers[index] ?? null;
+    if (!question || !isAnswerComplete(question, answer)) {
+      return;
+    }
+    if (index < usable.length - 1) {
+      setIndex(current => current + 1);
+      return;
+    }
+    grade();
+  }, [usable, answers, index, grade]);
+
+  const question = usable[index] ?? null;
+  const answer = answers[index] ?? null;
 
   return {
     index,
     total: usable.length,
     items: usable,
-    question: usable[index] ?? null,
+    question,
     phase,
-    answered,
-    lastCorrect,
+    answers,
+    answer,
+    canSend: question ? isAnswerComplete(question, answer) : false,
+    isLast: index >= usable.length - 1,
     correctCount,
     outcomes,
     summary,
-    submit,
-    next,
+    setAnswer,
+    goPrev,
+    send,
     restart,
   };
 }
