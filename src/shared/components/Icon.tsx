@@ -16,7 +16,11 @@ export type IconName =
   | 'exercises'
   | 'eval'
   | 'user'
-  | 'clock';
+  | 'clock'
+  | 'eye'
+  | 'eye-off'
+  | 'info'
+  | 'circle';
 
 type ChildConfig =
   | { kind: 'path'; d: string }
@@ -92,6 +96,21 @@ const DEFS: Record<IconName, ChildConfig[]> = {
     { kind: 'circle', cx: 12, cy: 12, r: 9 },
     { kind: 'path', d: 'M12 6.5V12l3.5 2' },
   ],
+  eye: [
+    { kind: 'path', d: 'M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z' },
+    { kind: 'circle', cx: 12, cy: 12, r: 2.5 },
+  ],
+  'eye-off': [
+    { kind: 'path', d: 'M3 3l18 18' },
+    { kind: 'path', d: 'M10.6 6.2A10.7 10.7 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-3.1 3.7' },
+    { kind: 'path', d: 'M6.1 6.1A17 17 0 0 0 2.5 12s3.5 6 9.5 6a10.7 10.7 0 0 0 2-.2' },
+  ],
+  info: [
+    { kind: 'circle', cx: 12, cy: 12, r: 9 },
+    { kind: 'path', d: 'M12 11v5' },
+    { kind: 'path', d: 'M12 8h.01' },
+  ],
+  circle: [{ kind: 'circle', cx: 12, cy: 12, r: 8 }],
 };
 
 interface IconProps {

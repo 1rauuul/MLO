@@ -55,7 +55,7 @@ describe('initials', () => {
 });
 
 describe('validateRegistration', () => {
-  const base = { displayName: 'Ana', username: 'ana', password: 'secreto', confirm: 'secreto' };
+  const base = { displayName: 'Ana', username: 'ana', password: 'secreto1', confirm: 'secreto1' };
   it('acepta datos válidos', () => {
     expect(validateRegistration(base)).toBeNull();
   });

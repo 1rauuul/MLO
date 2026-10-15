@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
@@ -15,6 +15,7 @@ interface ButtonProps {
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
   labelColor?: string;
+  loading?: boolean;
 }
 
 function pressStyle(pressed: boolean, reduced: boolean): StyleProp<ViewStyle> {
@@ -33,6 +34,7 @@ export function PrimaryButton({
   icon,
   style,
   accessibilityLabel,
+  loading,
 }: ButtonProps) {
   const { colors, radius, scale } = useTheme();
   const reduced = useReducedMotion();
@@ -41,15 +43,15 @@ export function PrimaryButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ disabled: !!disabled }}
-      disabled={disabled}
+      accessibilityState={{ disabled: !!disabled || !!loading }}
+      disabled={disabled || loading}
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
         {
           backgroundColor: colors.primary,
           borderRadius: radius.control,
-          opacity: disabled ? 0.5 : 1,
+          opacity: disabled || loading ? 0.5 : 1,
         },
         compactStyle(compact),
         pressStyle(pressed, reduced),
@@ -57,6 +59,7 @@ export function PrimaryButton({
       ]}>
       <View style={styles.content}>
         {icon}
+        {loading ? <ActivityIndicator size="small" color={colors.onPrimary} /> : null}
         <AppText weight="600" color={colors.onPrimary} style={{ fontSize: 15 * scale }}>
           {label}
         </AppText>
@@ -74,6 +77,7 @@ export function SecondaryButton({
   style,
   accessibilityLabel,
   labelColor,
+  loading,
 }: ButtonProps) {
   const { colors, radius, scale } = useTheme();
   const reduced = useReducedMotion();
@@ -82,15 +86,15 @@ export function SecondaryButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ disabled: !!disabled }}
-      disabled={disabled}
+      accessibilityState={{ disabled: !!disabled || !!loading }}
+      disabled={disabled || loading}
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
         {
           backgroundColor: colors.soft,
           borderRadius: radius.control,
-          opacity: disabled ? 0.5 : 1,
+          opacity: disabled || loading ? 0.5 : 1,
         },
         compactStyle(compact),
         pressStyle(pressed, reduced),
@@ -98,6 +102,7 @@ export function SecondaryButton({
       ]}>
       <View style={styles.content}>
         {icon}
+        {loading ? <ActivityIndicator size="small" color={colors.text} /> : null}
         <AppText weight="600" color={labelColor} style={{ fontSize: 15 * scale }}>
           {label}
         </AppText>

@@ -1,3 +1,5 @@
+import { validarPassword } from './password.logic';
+
 export type Digest = (input: string) => Promise<string>;
 
 export type ByteDigest = (input: Uint8Array) => Promise<Uint8Array>;
@@ -23,10 +25,25 @@ export type RegisterError =
   | 'username_short'
   | 'username_invalid'
   | 'password_short'
+  | 'password_weak'
   | 'password_mismatch';
 
 export function normalizeUsername(raw: string): string {
   return raw.trim().toLowerCase();
+}
+
+export function validateUsername(raw: string): Extract<RegisterError, 'username_empty' | 'username_short' | 'username_invalid'> | null {
+  const username = normalizeUsername(raw);
+  if (username.length === 0) {
+    return 'username_empty';
+  }
+  if (username.length < 3) {
+    return 'username_short';
+  }
+  if (!USERNAME_PATTERN.test(username)) {
+    return 'username_invalid';
+  }
+  return null;
 }
 
 export function initials(displayName: string): string {
@@ -44,18 +61,16 @@ export function validateRegistration(input: RegistrationInput): RegisterError | 
   if (input.displayName.trim().length === 0) {
     return 'name_empty';
   }
-  const username = normalizeUsername(input.username);
-  if (username.length === 0) {
-    return 'username_empty';
+  const usernameError = validateUsername(input.username);
+  if (usernameError) {
+    return usernameError;
   }
-  if (username.length < 3) {
-    return 'username_short';
-  }
-  if (!USERNAME_PATTERN.test(username)) {
-    return 'username_invalid';
-  }
-  if (input.password.length < 6) {
+  const password = validarPassword(input.password);
+  if (!password.resultados.find(result => result.id === 'minLength')?.cumple) {
     return 'password_short';
+  }
+  if (!password.valida) {
+    return 'password_weak';
   }
   if (input.password !== input.confirm) {
     return 'password_mismatch';

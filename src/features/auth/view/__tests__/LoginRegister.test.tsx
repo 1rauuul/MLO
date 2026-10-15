@@ -84,7 +84,11 @@ describe('RegisterScreen', () => {
   it('muestra el error de almacenamiento', async () => {
     mockRegister.mockResolvedValue({ ok: false, error: 'storage_error' });
 
-    const { getByText } = render(<RegisterScreen />);
+    const { getByLabelText, getByText } = render(<RegisterScreen />);
+    fireEvent.changeText(getByLabelText('Nombre'), 'Ana');
+    fireEvent.changeText(getByLabelText('Usuario'), 'ana');
+    fireEvent.changeText(getByLabelText('Contraseña'), 'secreto1');
+    fireEvent.changeText(getByLabelText('Confirmar contraseña'), 'secreto1');
     await act(async () => {
       fireEvent.press(getByText('Crear cuenta'));
     });
@@ -98,7 +102,11 @@ describe('RegisterScreen', () => {
     const pending = deferred<{ ok: boolean }>();
     mockRegister.mockReturnValue(pending.promise);
 
-    const { getByText } = render(<RegisterScreen />);
+    const { getByLabelText, getByText } = render(<RegisterScreen />);
+    fireEvent.changeText(getByLabelText('Nombre'), 'Ana');
+    fireEvent.changeText(getByLabelText('Usuario'), 'ana');
+    fireEvent.changeText(getByLabelText('Contraseña'), 'secreto1');
+    fireEvent.changeText(getByLabelText('Confirmar contraseña'), 'secreto1');
     fireEvent.press(getByText('Crear cuenta'));
     fireEvent.press(getByText('Crear cuenta'));
 
