@@ -14,6 +14,7 @@ import { useAuth } from '@/features/auth/viewmodel/useAuth';
 import { useCatalog } from '@/features/modules/viewmodel/useCatalog';
 import { useLearnerProfile } from '@/features/profile/viewmodel/useLearnerProfile';
 import { useRecentResults } from '@/features/profile/viewmodel/useRecentResults';
+import { useProgressBackup } from '@/features/profile/viewmodel/useProgressBackup';
 import { useSession } from '@/features/auth/viewmodel/useSession';
 
 const LEARNING_STYLES: LearningStyle[] = ['Activo', 'Reflexivo', 'Teórico', 'Pragmático'];
@@ -26,6 +27,8 @@ export default function ProfileScreen() {
   const { clear: clearLocation } = useSession();
   const { lessonsByUnit, progressMap, refresh } = useCatalog();
   const { averageScore, refresh: refreshResults } = useRecentResults();
+  const { exportProgress, importProgress, isBusy: backupBusy, error: backupError, message: backupMessage } =
+    useProgressBackup();
 
   useFocusEffect(
     useCallback(() => {
@@ -52,6 +55,26 @@ export default function ProfileScreen() {
             void resetProgress().then(() => {
               clearLocation();
               return Promise.all([refresh(), refreshResults()]);
+            });
+          },
+        },
+      ],
+    );
+
+  const onImportProgress = () =>
+    Alert.alert(
+      'Importar progreso',
+      'Se reemplazarán tus ejercicios, evaluaciones y lecciones completadas por los del archivo seleccionado.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Importar',
+          onPress: () => {
+            void importProgress().then(imported => {
+              if (imported) {
+                return Promise.all([refresh(), refreshResults()]);
+              }
+              return undefined;
             });
           },
         },
@@ -145,6 +168,23 @@ export default function ProfileScreen() {
       <View style={styles.list}>
         <SettingRow title={learnerName} subtitle={`@${accountUsername}`} control={null} />
       </View>
+      <SectionHeading eyebrow="Respaldo local" title="Tu progreso" />
+      <AppText variant="small">
+        Exporta tus avances para conservarlos antes de cambiar de teléfono o borrar los datos de la app.
+      </AppText>
+      <View style={[styles.backupActions, { marginTop: spacing.md }]}>
+        <SecondaryButton label="Exportar progreso" onPress={() => void exportProgress()} loading={backupBusy} />
+        <SecondaryButton label="Importar progreso" onPress={onImportProgress} loading={backupBusy} />
+      </View>
+      {backupError ? (
+        <AppText variant="small" color={colors.danger} accessibilityLiveRegion="polite">
+          {backupError}
+        </AppText>
+      ) : backupMessage ? (
+        <AppText variant="small" color={colors.success} accessibilityLiveRegion="polite">
+          {backupMessage}
+        </AppText>
+      ) : null}
       <View style={[styles.sessionActions, { marginTop: spacing.md }]}>
         <PrimaryButton label="Cerrar sesión" onPress={() => void logout()} />
         <SecondaryButton label="Reiniciar mi progreso" onPress={onResetProgress} />
@@ -226,4 +266,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   sessionActions: { gap: 8 },
+  backupActions: { gap: 8 },
 });

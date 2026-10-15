@@ -46,6 +46,15 @@ jest.mock('@/features/profile/viewmodel/useLearnerProfile', () => ({
 jest.mock('@/features/profile/viewmodel/useRecentResults', () => ({
   useRecentResults: () => ({ averageScore: 75, refresh: mockRefreshResults }),
 }));
+jest.mock('@/features/profile/viewmodel/useProgressBackup', () => ({
+  useProgressBackup: () => ({
+    exportProgress: jest.fn(),
+    importProgress: jest.fn(async () => false),
+    isBusy: false,
+    error: null,
+    message: null,
+  }),
+}));
 jest.mock('@/shared/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }));
 jest.mock('@/shared/theme/ThemeProvider', () => ({
   useTheme: () => ({
