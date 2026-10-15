@@ -11,6 +11,11 @@ import {
 
 export const DATABASE_NAME = 'mlo.db';
 
+async function hasColumn(db: SQLiteDatabase, table: string, column: string): Promise<boolean> {
+  const columns = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
+  return columns.some(item => item.name === column);
+}
+
 export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
   await db.execAsync('PRAGMA journal_mode = WAL;');
   await db.execAsync('PRAGMA foreign_keys = ON;');
@@ -47,8 +52,11 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
   }
 
   if (version < 3) {
+    const hasContent = await hasColumn(db, 'lessons', 'content');
     await db.withTransactionAsync(async () => {
-      await db.execAsync(`ALTER TABLE lessons ADD COLUMN content TEXT NOT NULL DEFAULT '[]'`);
+      if (!hasContent) {
+        await db.execAsync(`ALTER TABLE lessons ADD COLUMN content TEXT NOT NULL DEFAULT '[]'`);
+      }
       await db.execAsync('PRAGMA user_version = 3');
     });
     await applyContentMigration(db);
@@ -56,14 +64,20 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
   }
 
   if (version < 4) {
+    const hasConfig = await hasColumn(db, 'exercises', 'config');
     await db.withTransactionAsync(async () => {
-      await db.execAsync(`ALTER TABLE exercises ADD COLUMN config TEXT NOT NULL DEFAULT '{}'`);
+      if (!hasConfig) {
+        await db.execAsync(`ALTER TABLE exercises ADD COLUMN config TEXT NOT NULL DEFAULT '{}'`);
+      }
       await db.execAsync('PRAGMA user_version = 4');
     });
     version = 4;
   }
 
   if (version < 5) {
+    const hasQuestionType = await hasColumn(db, 'questions', 'type');
+    const hasQuestionConfig = await hasColumn(db, 'questions', 'config');
+    const hasExerciseExplanation = await hasColumn(db, 'exercises', 'explanation');
     await db.withTransactionAsync(async () => {
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS attempts (
@@ -90,10 +104,16 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
           hints TEXT NOT NULL DEFAULT '[]',
           explanation TEXT NOT NULL DEFAULT ''
         );
-        ALTER TABLE questions ADD COLUMN type TEXT NOT NULL DEFAULT 'mcq';
-        ALTER TABLE questions ADD COLUMN config TEXT NOT NULL DEFAULT '{}';
-        ALTER TABLE exercises ADD COLUMN explanation TEXT NOT NULL DEFAULT '';
       `);
+      if (!hasQuestionType) {
+        await db.execAsync(`ALTER TABLE questions ADD COLUMN type TEXT NOT NULL DEFAULT 'mcq'`);
+      }
+      if (!hasQuestionConfig) {
+        await db.execAsync(`ALTER TABLE questions ADD COLUMN config TEXT NOT NULL DEFAULT '{}'`);
+      }
+      if (!hasExerciseExplanation) {
+        await db.execAsync(`ALTER TABLE exercises ADD COLUMN explanation TEXT NOT NULL DEFAULT ''`);
+      }
       await db.execAsync('PRAGMA user_version = 5');
     });
     await applyUnit1Content(db, false);
@@ -140,5 +160,11 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     await applyUnit12ExerciseBank(db);
     await db.execAsync('PRAGMA user_version = 10');
     version = 10;
+  }
+
+  if (version < 11) {
+    await applyUnit12ExerciseBank(db);
+    await db.execAsync('PRAGMA user_version = 11');
+    version = 11;
   }
 }

@@ -37,11 +37,9 @@ import {
 
 const sha256Hex: Digest = input => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, input);
 const sha256Bytes: ByteDigest = async input => {
-  const buffer = input.buffer.slice(
-    input.byteOffset,
-    input.byteOffset + input.byteLength,
-  ) as ArrayBuffer;
-  return new Uint8Array(await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, buffer));
+  const data = new Uint8Array(new ArrayBuffer(input.byteLength));
+  data.set(input);
+  return new Uint8Array(await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, data));
 };
 
 export type AuthOutcome = { ok: true } | { ok: false; error: string };
@@ -126,7 +124,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await saveSession(db, id);
         setAccount({ id, username, displayName, createdAt: new Date().toISOString() });
         return { ok: true };
-      } catch {
+      } catch (error) {
+        if (__DEV__) {
+          console.error('[auth] register failed', error);
+        }
         return { ok: false, error: 'storage_error' };
       }
     },

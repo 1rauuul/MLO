@@ -205,6 +205,31 @@ async function insertExerciseRow(db: SQLiteDatabase, exercise: ExerciseSeed): Pr
   );
 }
 
+function exampleFromExercise(exercise: ExerciseSeed): ExampleSeed | null {
+  if (!exercise.example) {
+    return null;
+  }
+  return {
+    id: exercise.id,
+    lessonId: exercise.lessonId,
+    type: exercise.type,
+    title: exercise.example.title,
+    prompt: exercise.prompt,
+    config: exercise.config ?? {},
+    steps: exercise.example.steps,
+    hints: exercise.example.hints,
+    explanation: exercise.explanation ?? '',
+  };
+}
+
+async function insertExerciseWithExample(db: SQLiteDatabase, exercise: ExerciseSeed): Promise<void> {
+  await insertExerciseRow(db, exercise);
+  const example = exampleFromExercise(exercise);
+  if (example) {
+    await insertExampleRow(db, example);
+  }
+}
+
 async function insertQuestionRow(
   db: SQLiteDatabase,
   id: string,
@@ -266,7 +291,7 @@ export async function applyUnit1Content(db: SQLiteDatabase, clearAttempts = true
       await insertExampleRow(db, example);
     }
     for (const exercise of unit1Exercises) {
-      await insertExerciseRow(db, exercise);
+      await insertExerciseWithExample(db, exercise);
     }
     for (const evaluation of unit1Evaluations) {
       await insertEvaluationRows(db, evaluation);
@@ -277,7 +302,7 @@ export async function applyUnit1Content(db: SQLiteDatabase, clearAttempts = true
 export async function applyExerciseBank(db: SQLiteDatabase, bank: ExerciseSeed[]): Promise<void> {
   await db.withTransactionAsync(async () => {
     for (const exercise of bank) {
-      await insertExerciseRow(db, exercise);
+      await insertExerciseWithExample(db, exercise);
     }
   });
 }
@@ -323,7 +348,7 @@ export async function seedDatabase(db: SQLiteDatabase): Promise<void> {
       await insertExampleRow(db, example);
     }
     for (const exercise of unit1Exercises) {
-      await insertExerciseRow(db, exercise);
+      await insertExerciseWithExample(db, exercise);
     }
     for (const evaluation of unit1Evaluations) {
       await insertEvaluationRows(db, evaluation);
