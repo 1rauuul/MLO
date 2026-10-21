@@ -2,10 +2,9 @@ import { fireEvent, render } from '@testing-library/react-native';
 import { useState, type ReactNode } from 'react';
 import { View as MockAnimatedView, type ViewProps } from 'react-native';
 import type { Exercise, Question } from '@/shared/model/entities';
-import type { AttemptSummary } from '@/features/evaluations/viewmodel/analytics.logic';
 import type { EvaluationAnswer } from '@/features/evaluations/viewmodel/evaluation.logic';
 import type { EvaluationEngine } from '@/features/evaluations/viewmodel/useQuizEngine';
-import type { PracticeEngine } from '@/features/exercises/viewmodel/usePracticeEngine';
+import type { PracticeEngine, PracticeSummary } from '@/features/exercises/viewmodel/usePracticeEngine';
 import type { ExamplesEngine } from '@/features/examples/viewmodel/useExamplesEngine';
 import type { CrosswordEngine, ExerciseEngine, FillEngine, MatchEngine } from '@/features/exercises/viewmodel/useExerciseEngine';
 
@@ -33,7 +32,7 @@ const mockNavigate = jest.fn();
 const mockPush = jest.fn();
 const mockMarkCompleted = jest.fn();
 const mockRecord = jest.fn(async () => {});
-const noneSummary: AttemptSummary = { total: 0, correct: 0, accuracy: 1, byType: {} };
+const noneSummary: PracticeSummary = { total: 0, correct: 0, accuracy: 1, byType: {}, byQuestion: [] };
 const fillExercise: Exercise = {
   id: 'fill-1',
   lessonId: 'lesson-2',

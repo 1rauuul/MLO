@@ -1,9 +1,9 @@
-import { fireEvent, render } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 
 import type { EvaluationEngine } from '@/features/evaluations/viewmodel/useQuizEngine';
 
 import EvaluationFlow from '@/features/evaluations/view/EvaluationFlow';
+import { runOrGuardExit } from '@/shared/services/navigation/exitGuard';
 
 const mockBack = jest.fn();
 const mockGoPrev = jest.fn();
@@ -46,11 +46,14 @@ function makeEngine(overrides: Partial<EvaluationEngine> = {}): EvaluationEngine
 
 let mockEngine = makeEngine();
 
-jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => ({ lesson: 'lesson-2' }),
-  useRouter: () => ({ back: mockBack, push: jest.fn(), navigate: jest.fn() }),
-  useFocusEffect: jest.fn(),
-}));
+jest.mock('expo-router', () => {
+  const { useEffect } = require('react');
+  return {
+    useLocalSearchParams: () => ({ lesson: 'lesson-2' }),
+    useRouter: () => ({ back: mockBack, push: jest.fn(), navigate: jest.fn() }),
+    useFocusEffect: (callback: () => void | (() => void)) => useEffect(callback, [callback]),
+  };
+});
 jest.mock('@/shared/theme/ThemeProvider', () => ({
   useTheme: () => ({
     colors: {
@@ -128,11 +131,26 @@ it('usa Calificar en el último reactivo', () => {
   expect(mockSend).toHaveBeenCalledTimes(1);
 });
 
-it('advierte al salir durante la evaluación', () => {
-  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-  const { getByRole } = render(<EvaluationFlow />);
+it('advierte al salir durante la evaluación con un modal', () => {
+  const { getByRole, getByText, queryByText } = render(<EvaluationFlow />);
+
+  expect(queryByText('Salir de la evaluación')).toBeNull();
 
   fireEvent.press(getByRole('button', { name: 'Volver' }));
-  expect(alert).toHaveBeenCalled();
-  alert.mockRestore();
+  expect(getByText('Salir de la evaluación')).toBeTruthy();
+
+  fireEvent.press(getByRole('button', { name: 'Salir' }));
+  expect(mockBack).toHaveBeenCalledTimes(1);
+});
+
+it('pide confirmación al cambiar de pestaña desde la evaluación', () => {
+  const next = jest.fn();
+  const { getByRole, getByText } = render(<EvaluationFlow />);
+
+  act(() => runOrGuardExit(next));
+  expect(next).not.toHaveBeenCalled();
+  expect(getByText('Salir de la evaluación')).toBeTruthy();
+
+  fireEvent.press(getByRole('button', { name: 'Salir' }));
+  expect(next).toHaveBeenCalledTimes(1);
 });

@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '@/shared/theme/ThemeProvider';
-import { normalizeAnswer, type FillSegment } from '@/features/exercises/viewmodel/exercise.logic';
+import { normalizeAnswer, fillScore, type ExerciseScore, type FillSegment } from '@/features/exercises/viewmodel/exercise.logic';
 import type { FillEngine } from '@/features/exercises/viewmodel/useExerciseEngine';
 
 import { AppText } from '@/shared/components/AppText';
@@ -10,7 +10,7 @@ import { Icon } from '@/shared/components/Icon';
 
 interface FillExerciseProps {
   engine: FillEngine;
-  onSubmit: (answer: string, correct: boolean) => void;
+  onSubmit: (answer: string, correct: boolean, score: ExerciseScore) => void;
   showReset?: boolean;
   locked?: boolean;
   variant?: 'default' | 'example';
@@ -37,7 +37,7 @@ export function FillExercise({
 
   const check = () => {
     const correct = engine.submit();
-    onSubmit(JSON.stringify(engine.assignment), correct);
+    onSubmit(JSON.stringify(engine.assignment), correct, fillScore(engine.ordered, engine.assignment));
   };
 
   const renderBlank = (blankIndex: number) => {

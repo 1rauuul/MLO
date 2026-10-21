@@ -4,6 +4,7 @@ import type { Complexity, UnitColor } from '@/shared/model/entities';
 
 import { richContent } from '@/shared/services/content/richContent';
 import { l12ExerciseBank } from '@/shared/services/content/banks/lesson1.2.bank';
+import { l12QuestionBank } from '@/shared/services/content/banks/lesson1.2.questions';
 import type { ExerciseSeed } from '@/shared/services/content/banks/types';
 import {
   unit1Evaluations,
@@ -311,6 +312,24 @@ export async function applyUnit12ExerciseBank(db: SQLiteDatabase): Promise<void>
   return applyExerciseBank(db, l12ExerciseBank);
 }
 
+export async function applyQuestionBank(
+  db: SQLiteDatabase,
+  evaluationId: string,
+  bank: QuestionSeed[],
+): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    let index = 0;
+    for (const question of bank) {
+      await insertQuestionRow(db, `${evaluationId}-bank-q${index + 1}`, evaluationId, 1000 + index, question);
+      index += 1;
+    }
+  });
+}
+
+export async function applyL12QuestionBank(db: SQLiteDatabase): Promise<void> {
+  return applyQuestionBank(db, 'ev1.2', l12QuestionBank);
+}
+
 export async function seedDatabase(db: SQLiteDatabase): Promise<void> {
   await db.withTransactionAsync(async () => {
     for (const unit of units) {
@@ -353,6 +372,7 @@ export async function seedDatabase(db: SQLiteDatabase): Promise<void> {
     for (const evaluation of unit1Evaluations) {
       await insertEvaluationRows(db, evaluation);
     }
+    await applyL12QuestionBank(db);
   });
 }
 

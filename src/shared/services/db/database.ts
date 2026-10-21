@@ -4,6 +4,7 @@ import { DATABASE_VERSION, DROP_ALL_DDL, SCHEMA_DDL } from '@/shared/services/db
 
 import {
   applyContentMigration,
+  applyL12QuestionBank,
   applyUnit1Content,
   applyUnit12ExerciseBank,
   seedDatabase,
@@ -166,5 +167,33 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     await applyUnit12ExerciseBank(db);
     await db.execAsync('PRAGMA user_version = 11');
     version = 11;
+  }
+
+  if (version < 12) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS example_state (
+          account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+          lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+          payload TEXT NOT NULL DEFAULT '{}',
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (account_id, lesson_id)
+        );
+      `);
+      await db.execAsync('PRAGMA user_version = 12');
+    });
+    version = 12;
+  }
+
+  if (version < 13) {
+    await applyL12QuestionBank(db);
+    await db.execAsync('PRAGMA user_version = 13');
+    version = 13;
+  }
+
+  if (version < 14) {
+    await applyL12QuestionBank(db);
+    await db.execAsync('PRAGMA user_version = 14');
+    version = 14;
   }
 }

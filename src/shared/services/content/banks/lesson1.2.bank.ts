@@ -116,30 +116,6 @@ export const l12ExerciseBank: ExerciseSeed[] = [
     },
   },
 {
-    id: 'ordp',
-    lessonId: 'l1.2',
-    type: 'order',
-    prompt: 'Ordena la historia de la ingeniería de software',
-    instructions: 'Usa las flechas para ordenar los hechos cronológicamente.',
-    correctOrder: [
-      'Se propone el concepto en una conferencia de 1968 sobre la crisis del software',
-      'En las décadas de 1970 y 1980 surgen la programación estructurada y el desarrollo orientado a objetos',
-      'Herramientas y notaciones estándar se perfeccionan y se usan de manera extensa',
-    ],
-    config: {},
-    explanation:
-      'El término nació en 1968 ante la crisis del software; después se desarrollaron nuevas técnicas y finalmente se estandarizaron herramientas y notaciones.',
-    example: {
-      title: 'Línea del tiempo de la disciplina',
-      steps: [
-        { text: 'Empezar por 1968', why: 'Es el año en que se propuso el concepto.' },
-        { text: 'Seguir con las décadas de 1970 y 1980', why: 'En ellas surgieron nuevas técnicas y métodos.' },
-        { text: 'Terminar con la estandarización', why: 'Las herramientas y notaciones se usan hoy de manera extensa.' },
-      ],
-      hints: ['Fíjate en las fechas: 1968, luego 1970-1980.'],
-    },
-  },
-{
     id: 'ordq',
     lessonId: 'l1.2',
     type: 'order',
@@ -162,81 +138,6 @@ export const l12ExerciseBank: ExerciseSeed[] = [
         { text: 'Integrar las partes y obtener el sistema terminado', why: 'La integración produce el resultado final.' },
       ],
       hints: ['Primero se define el todo, después se unen las partes.'],
-    },
-  },
-{
-    id: 'ordr',
-    lessonId: 'l1.2',
-    type: 'order',
-    prompt: 'Ordena los temas de la parte 1 del libro',
-    instructions: 'Usa las flechas para ordenar los temas según el capítulo en que aparecen.',
-    correctOrder: [
-      'Ingeniería de requerimientos',
-      'Modelado de sistemas con UML',
-      'Diseño arquitectónico',
-      'Diseño orientado a objetos',
-      'Pruebas del software',
-      'Evolución del software',
-    ],
-    config: {},
-    explanation:
-      'Los capítulos 4 a 9 tratan requerimientos, modelado UML, diseño arquitectónico, diseño orientado a objetos, pruebas y evolución.',
-    example: {
-      title: 'Recorrido por los capítulos 4 a 9',
-      steps: [
-        { text: 'Empezar por requerimientos', why: 'Primero se define qué debe hacer el sistema.' },
-        { text: 'Seguir con modelado y diseño', why: 'UML, arquitectura y diseño orientado a objetos dan forma al sistema.' },
-        { text: 'Terminar con pruebas y evolución', why: 'Se comprueba el software y luego se mantiene.' },
-      ],
-      hints: ['El orden de los capítulos sigue las actividades del proceso de software.'],
-    },
-  },
-{
-    id: 'ords',
-    lessonId: 'l1.2',
-    type: 'order',
-    prompt: 'Ordena el flujo de una solicitud de gastos de viaje',
-    instructions: 'Usa las flechas para ordenar los pasos del ejemplo.',
-    correctOrder: [
-      'La solicitud se envía mediante una aplicación Web',
-      'Se procesa en una aplicación batch',
-      'Se realiza el pago mensual',
-    ],
-    config: {},
-    explanation:
-      'El ejemplo muestra que los sistemas por lotes se combinan con sistemas basados en la Web: la Web recibe la solicitud y el proceso batch paga mensualmente.',
-    example: {
-      title: 'Web y lotes trabajando juntos',
-      steps: [
-        { text: 'Identificar la entrada: la aplicación Web', why: 'La solicitud se envía por la Web.' },
-        { text: 'Ubicar el procesamiento batch', why: 'Las solicitudes se procesan por lotes.' },
-        { text: 'Cerrar con el pago mensual', why: 'Es el resultado del proceso batch.' },
-      ],
-      hints: ['Primero se recibe la solicitud, luego se procesa y al final se paga.'],
-    },
-  },
-{
-    id: 'ordt',
-    lessonId: 'l1.2',
-    type: 'order',
-    prompt: 'Ordena el alcance de la ingeniería de software',
-    instructions: 'Usa las flechas para ordenar las etapas, de la primera a la última.',
-    correctOrder: [
-      'Primeras etapas de la especificación del sistema',
-      'Puesta en operación del sistema',
-      'Mantenimiento del sistema',
-    ],
-    config: {},
-    explanation:
-      'La ingeniería de software abarca desde la especificación inicial hasta el mantenimiento del sistema después de ponerlo en operación.',
-    example: {
-      title: 'Alcance de la ingeniería de software',
-      steps: [
-        { text: 'Iniciar en la especificación del sistema', why: 'La definición dice que abarca desde las primeras etapas.' },
-        { text: 'Pasar por la puesta en operación', why: 'Marca el momento en que el sistema empieza a usarse.' },
-        { text: 'Terminar en el mantenimiento', why: 'Continúa después de que el sistema opera.' },
-      ],
-      hints: ['La definición dice "desde... hasta el mantenimiento".'],
     },
   },
 {

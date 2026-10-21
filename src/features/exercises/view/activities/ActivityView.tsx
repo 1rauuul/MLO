@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import type { Exercise } from '@/shared/model/entities';
 import type { EvaluationAnswer } from '@/features/evaluations/viewmodel/evaluation.logic';
+import type { ExerciseScore } from '@/features/exercises/viewmodel/exercise.logic';
 import {
   useCrosswordEngine,
   useExerciseEngine,
@@ -18,7 +19,7 @@ export type ActivityVariant = 'default' | 'example';
 
 interface ActivityViewProps {
   exercise: Exercise;
-  onSubmit: (answer: string, correct: boolean) => void;
+  onSubmit: (answer: string, correct: boolean, score: ExerciseScore) => void;
   allowReset?: boolean;
   locked?: boolean;
   variant?: ActivityVariant;

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Esquema físico — identidad y personalización (accounts)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Serif:ital@0;1&family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --color-paper:#f5f5f5; --color-ink:#2d3142; --color-muted:#4f5d75; --color-accent:#bf4520;
+      --font-sans:'Geist',system-ui,sans-serif; --font-serif:'Instrument Serif','Noto Serif','Noto Serif KR',serif;
+      --font-mono:'Geist Mono',ui-monospace,monospace; }
+    body { font-family: var(--font-sans); background: var(--color-paper); color: var(--color-ink);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 1400px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+    .eyebrow { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--color-muted); margin-bottom: 0.5rem; }
+    h1 { font-family: var(--font-serif); font-size: clamp(1.6rem, 2.4vw + 0.8rem, 2.2rem); font-weight: 400;
+      letter-spacing: -0.02em; line-height: 1.15; color: var(--color-ink); margin-bottom: 0.5rem; }
+    .caption { font-family: var(--font-sans); font-size: 0.82rem; color: var(--color-muted); margin-bottom: 1.5rem; max-width: 92ch; }
+    .diagram-container svg { width: 100%; min-width: 1280px; display: block; }
+    @media print { .diagram-container { overflow-x: visible; } .diagram-container svg { min-width: 0; } }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Base de datos · MLO · Subsistema 2 de 3 — identidad</p>
+    <h1>Esquema físico — cuenta, sesión y personalización</h1>
+    <p class="caption">4 de 13 tablas. Tres relaciones 1:1 desde <em>accounts</em>: la sesión activa, el perfil de aprendizaje y la última ubicación. Las tres foráneas comparten la PK de <em>accounts</em> y borran en cascada.</p>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="esquema-bd-cuenta-mlo-title esquema-bd-cuenta-mlo-desc">
+        <title id="esquema-bd-cuenta-mlo-title">Esquema físico de identidad: accounts y sus tablas 1:1</title>
+        <desc id="esquema-bd-cuenta-mlo-desc">Tabla accounts con auth_session, learner_profile y last_location; las tres foráneas apuntan a accounts.id con borrado en cascada.</desc>
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker>
+          <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+        <!-- FK EDGES -->
+        <path d="M 460,100 H 532 Q 540,100 540,108 V 376 Q 540,384 548,384 H 680" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <path d="M 460,112 H 562 Q 570,112 570,120 V 240 Q 570,248 578,248 H 680" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <path d="M 460,120 H 592 Q 600,120 600,128 Q 600,136 608,136 H 680" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- FK LABELS -->
+        <rect x="546" y="290" width="52" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="572" y="299" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CASCADE</text>
+        <rect x="576" y="160" width="52" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="602" y="169" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CASCADE</text>
+        <rect x="620" y="118" width="52" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="646" y="127" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">CASCADE</text>
+
+        <!-- TABLE accounts (focal: cascade target) -->
+        <rect x="140" y="56" width="320" height="188" rx="6" fill="#f5f5f5"/>
+        <rect x="140" y="56" width="320" height="188" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <rect x="140" y="56" width="320" height="44" rx="6" fill="rgba(191,69,32,0.08)"/>
+        <line x1="140" y1="100" x2="460" y2="100" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+        <rect x="150" y="64" width="36" height="12" rx="2" fill="transparent" stroke="rgba(191,69,32,0.50)" stroke-width="0.8"/>
+        <text x="168" y="73" fill="rgba(191,69,32,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">TABLA</text>
+        <text x="200" y="75" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif">accounts</text>
+        <text x="152" y="116" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">id</text><rect x="386" y="106" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/><text x="399" y="115" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">PK</text><text x="448" y="116" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">INTEGER</text>
+        <text x="152" y="140" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">username</text><rect x="386" y="130" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/><text x="399" y="139" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">UQ</text><text x="448" y="140" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">TEXT</text>
+        <text x="152" y="164" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">display_name</text><text x="448" y="164" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">TEXT</text>
+        <text x="152" y="188" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">password_hash</text><text x="448" y="188" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">TEXT</text>
+        <text x="152" y="212" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">salt</text><text x="448" y="212" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">TEXT</text>
+        <text x="152" y="236" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">created_at</text><text x="448" y="236" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">TEXT</text>
+
+        <!-- TABLE auth_session -->
+        <rect x="680" y="56" width="380" height="92" rx="6" fill="#f5f5f5"/>
+        <rect x="680" y="56" width="380" height="92" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <line x1="680" y1="100" x2="1060" y2="100" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+        <rect x="690" y="64" width="36" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+        <text x="708" y="73" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">TABLA</text>
+        <text x="740" y="75" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif">auth_session</text>
+        <text x="692" y="116" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">id</text><rect x="1000" y="106" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/><text x="1013" y="115" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">PK</text><text x="1048" y="116" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">INTEGER</text>
+        <text x="692" y="140" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">account_id</text><rect x="1000" y="130" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/><text x="1013" y="139" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">FK</text><text x="1048" y="140" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">INTEGER</text>
+
+        <!-- TABLE learner_profile -->
+        <rect x="680" y="168" width="380" height="140" rx="6" fill="#f5f5f5"/>
+        <rect x="680" y="168" width="380" height="140" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <line x1="680" y1="212" x2="1060" y2="212" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+        <rect x="690" y="176" width="36" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+        <text x="708" y="185" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">TABLA</text>
+        <text x="740" y="187" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif">learner_profile</text>
+        <text x="692" y="228" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">id</text><rect x="1000" y="218" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/><text x="1013" y="227" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">PK</text><text x="1048" y="228" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">INTEGER</text>
+        <text x="692" y="252" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">account_id</text><rect x="1000" y="242" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/><text x="1013" y="251" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">FK</text><rect x="966" y="242" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/><text x="979" y="251" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">UQ</text><text x="1048" y="252" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">INTEGER</text>
+        <text x="692" y="276" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">learning_style</text><text x="1048" y="276" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">TEXT</text>
+        <text x="692" y="300" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">dark_mode · large_text</text><text x="1048" y="300" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">INTEGER</text>
+
+        <!-- TABLE last_location -->
+        <rect x="680" y="328" width="380" height="188" rx="6" fill="#f5f5f5"/>
+        <rect x="680" y="328" width="380" height="188" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <line x1="680" y1="372" x2="1060" y2="372" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+        <rect x="690" y="336" width="36" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+        <text x="708" y="345" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">TABLA</text>
+        <text x="740" y="347" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif">last_location</text>
+        <text x="692" y="388" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">account_id</text><rect x="1000" y="378" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/><text x="1013" y="387" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">FK</text><rect x="966" y="378" width="26" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/><text x="979" y="387" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">PK</text><text x="1048" y="388" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">INTEGER</text>
+        <text x="692" y="412" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">unit_id</text><text x="1048" y="412" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">TEXT</text>
+        <text x="692" y="436" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">lesson_id</text><text x="1048" y="436" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">TEXT</text>
+        <text x="692" y="460" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">lesson_code</text><text x="1048" y="460" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">TEXT</text>
+        <text x="692" y="484" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">section</text><text x="1048" y="484" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">TEXT</text>
+        <text x="692" y="508" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif">updated_at</text><text x="1048" y="508" fill="#4f5d75" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="end">TEXT</text>
+
+        <!-- NOTE -->
+        <text x="140" y="292" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">3 FK → accounts.id · borrado en cascada · re-hash PBKDF2 al iniciar sesión</text>
+
+        <!-- LEGEND -->
+        <line x1="80" y1="650" x2="1200" y2="650" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+        <text x="80" y="666" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">LEYENDA</text>
+        <line x1="170" y1="666" x2="198" y2="666" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <text x="208" y="670" fill="#4f5d75" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">FK CASCADE</text>
+        <rect x="330" y="658" width="24" height="16" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+        <text x="342" y="669" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">PK</text>
+        <text x="364" y="670" fill="#4f5d75" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">Llave primaria</text>
+        <rect x="500" y="658" width="24" height="16" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+        <text x="512" y="669" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">UQ</text>
+        <text x="534" y="670" fill="#4f5d75" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">Único</text>
+      </svg>
+    </div>
+  </div>
+</body>
+</html>

@@ -13,6 +13,7 @@ import { AppText } from '@/shared/components/AppText';
 import { IconButton, PrimaryButton } from '@/shared/components/Buttons';
 import { Icon } from '@/shared/components/Icon';
 import { useTheme } from '@/shared/theme/ThemeProvider';
+import { orderScore, type ExerciseScore } from '@/features/exercises/viewmodel/exercise.logic';
 import type { ExerciseEngine } from '@/features/exercises/viewmodel/useExerciseEngine';
 
 import { accentForText } from '@/features/exercises/view/activities/accents';
@@ -94,7 +95,7 @@ function DraggableRow({ index, accent, state, onDrop, onMeasure, step, children 
 
 interface OrderExerciseProps {
   engine: ExerciseEngine;
-  onSubmit: (answer: string, correct: boolean) => void;
+  onSubmit: (answer: string, correct: boolean, score: ExerciseScore) => void;
   locked?: boolean;
   variant?: 'default' | 'example';
   hideCheck?: boolean;
@@ -148,7 +149,7 @@ export function OrderExercise({
 
   const check = () => {
     const correct = engine.submit();
-    onSubmit(JSON.stringify(engine.steps), correct);
+    onSubmit(JSON.stringify(engine.steps), correct, orderScore(engine.steps, engine.correctOrder));
   };
 
   return (

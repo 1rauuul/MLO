@@ -1,6 +1,6 @@
 import type { Attempt } from '@/shared/model/entities';
 
-import { recommendReview, summarizeAttempts, weakTypes } from '@/features/evaluations/viewmodel/analytics.logic';
+import { recommendReview, summarizeAttempts, weakTypes, weakTopics } from '@/features/evaluations/viewmodel/analytics.logic';
 
 const attempt = (itemType: Attempt['itemType'], correct: boolean, id: number): Attempt => ({
   id,
@@ -62,5 +62,20 @@ describe('analyticsLogic', () => {
     const summary = summarizeAttempts([legacy, attempt('fill', true, 2)]);
     expect(summary.total).toBe(1);
     expect(summary.byType.justify).toBeUndefined();
+  });
+
+  it('agrupa por tema y detecta temas débiles', () => {
+    const topicById = { a: 'atributos', b: 'productos' };
+    const summary = summarizeAttempts(
+      [
+        { ...attempt('match', false, 1), itemId: 'a' },
+        { ...attempt('match', false, 2), itemId: 'a' },
+        { ...attempt('fill', true, 3), itemId: 'b' },
+      ],
+      topicById,
+    );
+    expect(summary.byTopic?.atributos).toEqual({ total: 2, correct: 0 });
+    expect(summary.byTopic?.productos).toEqual({ total: 1, correct: 1 });
+    expect(weakTopics(summary)).toEqual(['atributos']);
   });
 });

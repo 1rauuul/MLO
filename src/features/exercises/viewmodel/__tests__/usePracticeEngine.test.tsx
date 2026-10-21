@@ -13,12 +13,18 @@ jest.mock('expo-sqlite', () => ({ useSQLiteContext: () => mockDb }));
 jest.mock('@/features/auth/viewmodel/useAuth', () => ({ useAuth: () => ({ account: mockAccountState }) }));
 jest.mock('@/features/exercises/model/attemptRepository');
 jest.mock('@/features/exercises/model/exerciseRepository');
+jest.mock('@/features/exercises/model/exampleStateRepository', () => ({
+  selectExampleState: jest.fn(async () => ({
+    drawExampleIds: [],
+    drawExerciseIds: [],
+    seenExampleIds: [],
+    exampleIndex: 0,
+  })),
+  saveExampleState: jest.fn(async () => {}),
+}));
 
 const insertAttempt = attemptRepository.insertAttempt as jest.MockedFunction<
   typeof attemptRepository.insertAttempt
->;
-const selectAttemptsByLesson = attemptRepository.selectAttemptsByLesson as jest.MockedFunction<
-  typeof attemptRepository.selectAttemptsByLesson
 >;
 const selectExercisesByLesson = exerciseRepository.selectExercisesByLesson as jest.MockedFunction<
   typeof exerciseRepository.selectExercisesByLesson
@@ -49,7 +55,6 @@ const orderExercise: Exercise = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockAccountState = { id: 7 };
-  selectAttemptsByLesson.mockResolvedValue([]);
   selectExercisesByLesson.mockResolvedValue([fillExercise]);
 });
 
@@ -101,14 +106,21 @@ it('no escribe intentos cuando no hay cuenta', async () => {
   expect(insertAttempt).not.toHaveBeenCalled();
 });
 
-it('marca fase summary y refresca el resumen al terminar la lista', async () => {
+it('califica solo las preguntas de la sesión con puntaje parcial', async () => {
+  selectExercisesByLesson.mockResolvedValue([fillExercise, orderExercise]);
+
   const { result } = renderHook(() => usePracticeEngine('lesson-2'));
 
   await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-  act(() => result.current.submit('respuesta', true));
+  act(() => result.current.submit('respuesta', false, { correct: 1, total: 4 }));
+  act(() => result.current.next());
+  act(() => result.current.submit('otra', true, { correct: 2, total: 2 }));
   act(() => result.current.next());
 
   expect(result.current.phase).toBe('summary');
-  await waitFor(() => expect(selectAttemptsByLesson).toHaveBeenCalled());
+  expect(result.current.summary.total).toBe(2);
+  expect(result.current.summary.correct).toBeCloseTo(1.25);
+  expect(result.current.summary.accuracy).toBeCloseTo(0.625);
+  expect(result.current.summary.byQuestion.map(question => question.correct)).toEqual([1, 2]);
 });

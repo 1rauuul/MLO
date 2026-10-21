@@ -1,4 +1,4 @@
-export const DATABASE_VERSION = 11;
+export const DATABASE_VERSION = 14;
 
 export const SCHEMA_DDL = `
 CREATE TABLE IF NOT EXISTS accounts (
@@ -127,6 +127,14 @@ CREATE TABLE IF NOT EXISTS last_location (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS example_state (
+  account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+  payload TEXT NOT NULL DEFAULT '{}',
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (account_id, lesson_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_lessons_unit ON lessons(unit_id);
 CREATE INDEX IF NOT EXISTS idx_examples_lesson ON examples(lesson_id);
 CREATE INDEX IF NOT EXISTS idx_exercises_lesson ON exercises(lesson_id);
@@ -144,6 +152,7 @@ DROP TABLE IF EXISTS auth_session;
 DROP TABLE IF EXISTS evaluation_results;
 DROP TABLE IF EXISTS module_progress;
 DROP TABLE IF EXISTS last_location;
+DROP TABLE IF EXISTS example_state;
 DROP TABLE IF EXISTS learner_profile;
 DROP TABLE IF EXISTS questions;
 DROP TABLE IF EXISTS evaluations;

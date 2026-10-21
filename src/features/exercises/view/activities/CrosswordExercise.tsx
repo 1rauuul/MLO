@@ -5,12 +5,12 @@ import { AppText } from '@/shared/components/AppText';
 import { PrimaryButton } from '@/shared/components/Buttons';
 import { Icon } from '@/shared/components/Icon';
 import { useTheme } from '@/shared/theme/ThemeProvider';
-import { shuffleItems } from '@/features/exercises/viewmodel/exercise.logic';
+import { shuffleItems, crosswordScore, type ExerciseScore } from '@/features/exercises/viewmodel/exercise.logic';
 import type { CrosswordEngine } from '@/features/exercises/viewmodel/useExerciseEngine';
 
 interface CrosswordExerciseProps {
   engine: CrosswordEngine;
-  onSubmit: (answer: string, correct: boolean) => void;
+  onSubmit: (answer: string, correct: boolean, score: ExerciseScore) => void;
   locked?: boolean;
   variant?: 'default' | 'example';
   hideCheck?: boolean;
@@ -63,7 +63,7 @@ export function CrosswordExercise({
 
   const check = () => {
     const correct = engine.submit();
-    onSubmit(JSON.stringify(engine.letters), correct);
+    onSubmit(JSON.stringify(engine.letters), correct, crosswordScore(engine.cells, engine.letters));
   };
 
   const entryValue = (index: number): string => {
@@ -144,6 +144,8 @@ export function CrosswordExercise({
                 }
                 const active = selected !== null && cell.entryIndexes.includes(selected);
                 const start = startLabels.get(`${row}-${col}`);
+                const typed = (engine.letters[`${row}-${col}`] ?? '').toUpperCase();
+                const cellCorrect = typed === cell.solution;
                 return (
                   <Pressable
                     key={`cell-${row}-${col}`}
@@ -156,8 +158,14 @@ export function CrosswordExercise({
                     style={[
                       styles.cell,
                       {
-                        borderColor: active ? colors.primary : colors.line,
-                        backgroundColor: active ? colors.soft : colors.card,
+                        borderColor: engine.checked
+                          ? cellCorrect
+                            ? colors.success
+                            : colors.danger
+                          : active
+                            ? colors.primary
+                            : colors.line,
+                        backgroundColor: active && !engine.checked ? colors.soft : colors.card,
                       },
                     ]}>
                     {start ? (

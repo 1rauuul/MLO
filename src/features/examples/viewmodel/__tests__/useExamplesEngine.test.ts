@@ -15,6 +15,18 @@ jest.mock('@/features/exercises/model/exerciseRepository', () => ({
   selectExercisesByLesson: jest.fn(),
 }));
 
+jest.mock('@/features/auth/viewmodel/useAuth', () => ({ useAuth: () => ({ account: null }) }));
+
+jest.mock('@/features/exercises/model/exampleStateRepository', () => ({
+  selectExampleState: jest.fn(async () => ({
+    drawExampleIds: [],
+    drawExerciseIds: [],
+    seenExampleIds: [],
+    exampleIndex: 0,
+  })),
+  saveExampleState: jest.fn(async () => {}),
+}));
+
 const mockSelect = jest.mocked(selectExercisesByLesson);
 
 function buildExercise(id: string, type: ExerciseType, lessonId = 'lesson-1'): Exercise {

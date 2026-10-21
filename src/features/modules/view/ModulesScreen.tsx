@@ -188,6 +188,13 @@ export default function ModulesScreen() {
           );
         })}
       </View>
+
+      <View style={[styles.source, { borderTopColor: colors.line }]}>
+        <AppText variant="eyebrow">Fuente</AppText>
+        <AppText variant="small">
+          Sommerville, I. (2011). Ingeniería de software (9.ª ed.). Pearson Educación.
+        </AppText>
+      </View>
     </Screen>
   );
 }
@@ -229,4 +236,5 @@ const styles = StyleSheet.create({
   subtopics: { marginTop: 6 },
   divider: { height: 1 },
   explore: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
+  source: { marginTop: 28, paddingTop: 14, borderTopWidth: 1, gap: 4 },
 });

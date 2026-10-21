@@ -161,3 +161,55 @@ export function isCrosswordCorrect(config: ExerciseConfig, letters: Record<strin
     cells.every(cell => (letters[`${cell.row}-${cell.col}`] ?? '').toUpperCase() === cell.solution)
   );
 }
+
+export interface ExerciseScore {
+  correct: number;
+  total: number;
+}
+
+// Puntaje parcial por reactivo interno: 3 de 4 pares bien valen 75% de la pregunta.
+export function orderScore(steps: string[], correctOrder: string[]): ExerciseScore {
+  return {
+    correct: steps.filter((step, index) => step === correctOrder[index]).length,
+    total: correctOrder.length,
+  };
+}
+
+export function fillScore(ordered: string[], assignment: (string | null)[]): ExerciseScore {
+  const answers = extractFillAnswers(ordered);
+  return {
+    correct: answers.filter((answer, index) => {
+      const chosen = assignment[index];
+      return (
+        chosen !== null && chosen !== undefined && normalizeAnswer(chosen) === normalizeAnswer(answer)
+      );
+    }).length,
+    total: answers.length,
+  };
+}
+
+export function matchScore(
+  pairs: MatchPair[],
+  rights: string[],
+  assignment: (number | null)[],
+): ExerciseScore {
+  return {
+    correct: pairs.filter((pair, index) => {
+      const position = assignment[index];
+      return position !== null && position !== undefined && rights[position] === pair.right;
+    }).length,
+    total: pairs.length,
+  };
+}
+
+export function crosswordScore(
+  cells: CrosswordCell[],
+  letters: Record<string, string>,
+): ExerciseScore {
+  return {
+    correct: cells.filter(
+      cell => (letters[`${cell.row}-${cell.col}`] ?? '').toUpperCase() === cell.solution,
+    ).length,
+    total: cells.length,
+  };
+}

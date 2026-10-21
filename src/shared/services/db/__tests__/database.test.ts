@@ -27,7 +27,7 @@ describe('migrateAndSeed', () => {
     expect(insertedExerciseIds).toEqual(expect.arrayContaining(['cross1.2a', 'fill1.2c', 'ord1.2a']));
     expect(statements.some(statement => statement.sql.startsWith('DELETE FROM attempts'))).toBe(false);
     expect(statements.some(statement => statement.sql.includes('CREATE TABLE IF NOT EXISTS last_location'))).toBe(true);
-    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 11')).toBe(true);
+    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 14')).toBe(true);
   });
 
   test('instalación nueva siembra directo en la última versión sin ALTERs duplicados', async () => {
@@ -47,7 +47,7 @@ describe('migrateAndSeed', () => {
     await migrateAndSeed(db);
 
     expect(statements.some(statement => statement.includes('ALTER TABLE lessons ADD COLUMN content'))).toBe(false);
-    expect(statements.some(statement => statement === 'PRAGMA user_version = 11')).toBe(true);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 14')).toBe(true);
     expect(statements.some(statement => statement.startsWith('INSERT INTO units'))).toBe(true);
   });
 
@@ -70,7 +70,7 @@ describe('migrateAndSeed', () => {
 
     expect(statements.some(statement => statement.startsWith('DELETE FROM attempts'))).toBe(false);
     expect(statements.some(statement => statement.startsWith('DELETE FROM exercises'))).toBe(true);
-    expect(statements.some(statement => statement === 'PRAGMA user_version = 11')).toBe(true);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 14')).toBe(true);
   });
 
   test('no repite ALTERs si una base v2 ya tiene las columnas actuales', async () => {
@@ -97,7 +97,7 @@ describe('migrateAndSeed', () => {
     await migrateAndSeed(db);
 
     expect(statements.some(statement => statement.startsWith('ALTER TABLE'))).toBe(false);
-    expect(statements.some(statement => statement === 'PRAGMA user_version = 11')).toBe(true);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 14')).toBe(true);
   });
 
   test('incluye la versión objetivo dentro de cada paso de migración', async () => {
@@ -120,6 +120,9 @@ describe('migrateAndSeed', () => {
       'PRAGMA user_version = 9',
       'PRAGMA user_version = 10',
       'PRAGMA user_version = 11',
+      'PRAGMA user_version = 12',
+      'PRAGMA user_version = 13',
+      'PRAGMA user_version = 14',
     ]);
   });
 
@@ -129,7 +132,7 @@ describe('migrateAndSeed', () => {
       execAsync: async (sql: string) => {
         statements.push(sql);
       },
-      getFirstAsync: async () => ({ user_version: 11 }),
+      getFirstAsync: async () => ({ user_version: 14 }),
     } as unknown as SQLiteDatabase;
 
     await migrateAndSeed(db);

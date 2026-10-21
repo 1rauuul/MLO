@@ -2,16 +2,18 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { insertAttempt, selectAttemptsByLesson } from '@/features/exercises/model/attemptRepository';
+import { selectExercisesByLesson } from '@/features/exercises/model/exerciseRepository';
 import {
   insertEvaluationResult,
   selectEvaluationByLesson,
   selectQuestions,
 } from '@/features/evaluations/model/evaluationRepository';
-import type { Evaluation, Question } from '@/shared/model/entities';
-import { ACTIVITY_TYPES } from '@/shared/model/entities';
+import type { Evaluation, Exercise, Question } from '@/shared/model/entities';
+import { ACTIVITY_TYPES, EXERCISE_TYPES } from '@/shared/model/entities';
 
 import { summarizeAttempts, type AttemptSummary } from '@/features/evaluations/viewmodel/analytics.logic';
 import {
+  buildEvaluationPool,
   isAnswerComplete,
   isAnswerCorrect,
   type EvaluationAnswer,
@@ -22,6 +24,20 @@ interface UseEvaluationForLessonResult {
   evaluation: Evaluation | null;
   questions: Question[];
   isLoading: boolean;
+}
+
+function questionFromExercise(exercise: Exercise, evaluationId: string): Question {
+  return {
+    id: exercise.id,
+    evaluationId,
+    orderIndex: 0,
+    type: exercise.type,
+    config: exercise.config,
+    prompt: exercise.prompt,
+    options: exercise.type === 'order' ? exercise.correctOrder : [],
+    answer: 0,
+    explanation: exercise.explanation,
+  };
 }
 
 export function useEvaluationForLesson(lessonId: string | null): UseEvaluationForLessonResult {
@@ -41,12 +57,21 @@ export function useEvaluationForLesson(lessonId: string | null): UseEvaluationFo
     setIsLoading(true);
     (async () => {
       const loadedEvaluation = await selectEvaluationByLesson(db, lessonId);
-      const loadedQuestions = loadedEvaluation ? await selectQuestions(db, loadedEvaluation.id) : [];
+      const [exercises, bankQuestions] = await Promise.all([
+        selectExercisesByLesson(db, lessonId),
+        loadedEvaluation ? selectQuestions(db, loadedEvaluation.id) : Promise.resolve([] as Question[]),
+      ]);
+      const evaluationId = loadedEvaluation?.id ?? `bank-${lessonId}`;
+      const questionPool = bankQuestions.filter(question => ACTIVITY_TYPES.includes(question.type));
+      const exercisePool = exercises
+        .filter(exercise => EXERCISE_TYPES.includes(exercise.type))
+        .map(exercise => questionFromExercise(exercise, evaluationId));
+      const { mixed } = buildEvaluationPool(questionPool, exercisePool, Math.random);
       if (!active) {
         return;
       }
       setEvaluation(loadedEvaluation);
-      setQuestions(loadedQuestions);
+      setQuestions(mixed);
       setIsLoading(false);
     })();
     return () => {

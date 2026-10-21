@@ -1,10 +1,11 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { ActivityView } from '@/features/exercises/view/activities/ActivityView';
 import { AppText } from '@/shared/components/AppText';
 import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
+import { ConfirmExitModal } from '@/shared/components/ConfirmExitModal';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Icon } from '@/shared/components/Icon';
 import { QuizOption } from '@/features/exercises/view/QuizOption';
@@ -22,6 +23,7 @@ import {
 } from '@/features/evaluations/viewmodel/useQuizEngine';
 import { useLessonContent } from '@/features/modules/viewmodel/useLessonContent';
 import { useSession } from '@/features/auth/viewmodel/useSession';
+import { setExitGuard } from '@/shared/services/navigation/exitGuard';
 
 function asExercise(question: Question, lessonId: string): Exercise {
   return {
@@ -67,12 +69,20 @@ export default function EvaluationFlow() {
   const { evaluation, questions, isLoading } = useEvaluationForLesson(lessonParam ?? null);
   const { lesson } = useLessonContent(lessonParam ?? null);
   const engine = useEvaluationEngine(questions, lessonParam ?? null);
+  const question = engine.question;
+  // Stable reference: engines reset on the exercise identity, so a new object per render loops.
+  const exercise = useMemo(
+    () => (question ? asExercise(question, lessonParam ?? '') : null),
+    [question, lessonParam],
+  );
   const record = useRecordEvaluationResult();
   const { markCompleted } = useModuleProgress();
   const { record: recordLocation } = useSession();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
   const recordedEvaluationRef = useRef<string | null>(null);
+  const [exitVisible, setExitVisible] = useState(false);
+  const [pendingExit, setPendingExit] = useState<(() => void) | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -85,6 +95,25 @@ export default function EvaluationFlow() {
         });
       }
     }, [lesson, recordLocation]),
+  );
+
+  const requestExit = useCallback(
+    (next: () => void) => {
+      if (engine.phase === 'running') {
+        setPendingExit(() => next);
+        setExitVisible(true);
+      } else {
+        next();
+      }
+    },
+    [engine.phase],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      setExitGuard(requestExit);
+      return () => setExitGuard(null);
+    }, [requestExit]),
   );
 
   useEffect(() => {
@@ -233,8 +262,7 @@ export default function EvaluationFlow() {
     );
   }
 
-  const question = engine.question;
-  if (!question) {
+  if (!question || !exercise) {
     return (
       <Screen>
         <ScreenHeader onBack={() => router.back()} eyebrow="Evaluación" title="Sin reactivos" />
@@ -247,14 +275,7 @@ export default function EvaluationFlow() {
   }
 
   const handleExit = () => {
-    Alert.alert(
-      'Salir de la evaluación',
-      'Si sales ahora perderás el progreso de esta evaluación.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', style: 'destructive', onPress: () => router.back() },
-      ],
-    );
+    requestExit(() => router.back());
   };
 
   return (
@@ -294,7 +315,7 @@ export default function EvaluationFlow() {
         ) : (
           <ActivityView
             key={question.id}
-            exercise={asExercise(question, lessonParam ?? '')}
+            exercise={exercise}
             allowReset={false}
             hideCheck
             initialAnswer={engine.answer}
@@ -318,6 +339,18 @@ export default function EvaluationFlow() {
           style={styles.navButton}
         />
       </View>
+
+      <ConfirmExitModal
+        visible={exitVisible}
+        title="Salir de la evaluación"
+        message="Si sales ahora perderás el progreso de esta evaluación y la próxima vez empezarás de cero."
+        onCancel={() => setExitVisible(false)}
+        onConfirm={() => {
+          setExitVisible(false);
+          pendingExit?.();
+          setPendingExit(null);
+        }}
+      />
     </Screen>
   );
 }

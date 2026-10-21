@@ -6,6 +6,7 @@ import {
   isFillCorrect,
   isMatchCorrect,
   isOrderCorrect,
+  shuffleItems,
 } from '@/features/exercises/viewmodel/exercise.logic';
 
 export type EvaluationAnswer =
@@ -50,4 +51,46 @@ export function isAnswerCorrect(question: Question, answer: EvaluationAnswer): b
     case 'crossword':
       return isCrosswordCorrect(question.config, answer.letters);
   }
+}
+
+// Baraja las opciones de una pregunta mcq y reajusta el índice correcto,
+// para que el alumno no memorice la posición de la respuesta.
+export function shuffleQuestionOptions(
+  question: Question,
+  random: () => number = Math.random,
+): Question {
+  if (question.type !== 'mcq' || question.options.length < 2) {
+    return question;
+  }
+  const indexed = question.options.map((option, index) => ({ option, index }));
+  const shuffled = shuffleItems(indexed, random);
+  return {
+    ...question,
+    options: shuffled.map(item => item.option),
+    answer: shuffled.findIndex(item => item.index === question.answer),
+  };
+}
+
+export const EVALUATION_QUESTIONS_COUNT = 10;
+export const EVALUATION_EXERCISES_COUNT = 5;
+
+export interface EvaluationPool {
+  questions: Question[];
+  exercises: Question[];
+  mixed: Question[];
+}
+
+// Arma el pool de la evaluación: 10 preguntas + 5 ejercicios, mezclados y
+// con las opciones de cada mcq barajadas.
+export function buildEvaluationPool(
+  questionPool: Question[],
+  exercisePool: Question[],
+  random: () => number = Math.random,
+): EvaluationPool {
+  const questions = shuffleItems(questionPool, random).slice(0, EVALUATION_QUESTIONS_COUNT);
+  const exercises = shuffleItems(exercisePool, random).slice(0, EVALUATION_EXERCISES_COUNT);
+  const mixed = shuffleItems([...questions, ...exercises], random).map(question =>
+    shuffleQuestionOptions(question, random),
+  );
+  return { questions, exercises, mixed };
 }

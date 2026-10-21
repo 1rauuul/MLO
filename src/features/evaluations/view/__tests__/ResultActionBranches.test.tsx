@@ -1,6 +1,8 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import type { AttemptSummary } from '@/features/evaluations/viewmodel/analytics.logic';
 
+import type { PracticeSummary } from '@/features/exercises/viewmodel/usePracticeEngine';
+
 import PracticeScreen from '@/features/exercises/view/ExercisesScreen';
 import EvaluationFlow from '@/features/evaluations/view/EvaluationFlow';
 
@@ -8,11 +10,12 @@ const mockBack = jest.fn();
 const mockPush = jest.fn();
 const mockRecord = jest.fn(async () => {});
 const mockMarkCompleted = jest.fn(async () => {});
-const lessonSummary: AttemptSummary = {
+const lessonSummary: PracticeSummary = {
   total: 5,
   correct: 1,
   accuracy: 0.2,
   byType: { order: { total: 5, correct: 1 } },
+  byQuestion: [{ exerciseId: 'order-1', index: 0, type: 'order', correct: 1, total: 4 }],
 };
 const noneSummary: AttemptSummary = { total: 0, correct: 0, accuracy: 1, byType: {} };
 const practiceSummary: AttemptSummary = {
@@ -91,6 +94,20 @@ it('keeps the lesson recommendation and shows no exit button in the exercise sum
   expect(getByRole('button', { name: 'Repasar la lección' })).toBeTruthy();
   expect(queryByRole('button', { name: 'Regresar al tema' })).toBeNull();
   expect(queryByRole('button', { name: 'Volver a módulos' })).toBeNull();
+});
+
+it('muestra el desglose por pregunta y por tipo, y permite colapsarlo', () => {
+  const { getByRole, getByText, queryByText } = render(<PracticeScreen />);
+
+  expect(getByText('Desglose por pregunta')).toBeTruthy();
+  expect(getByText('Desglose por tipo de ejercicio')).toBeTruthy();
+  expect(getByText('Ordena · 1/4 reactivos')).toBeTruthy();
+  expect(getByText('25%')).toBeTruthy();
+
+  fireEvent.press(getByRole('button', { name: 'Ocultar desglose' }));
+
+  expect(queryByText('Desglose por pregunta')).toBeNull();
+  expect(queryByText('Desglose por tipo de ejercicio')).toBeNull();
 });
 
 it('shows no review action for an evaluation result with no recommendation', () => {

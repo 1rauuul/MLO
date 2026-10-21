@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/shared/theme/ThemeProvider';
+import { matchScore, type ExerciseScore } from '@/features/exercises/viewmodel/exercise.logic';
 import type { MatchEngine } from '@/features/exercises/viewmodel/useExerciseEngine';
 
 import { AppText } from '@/shared/components/AppText';
@@ -10,7 +11,7 @@ import { accentForIndex } from '@/features/exercises/view/activities/accents';
 
 interface MatchExerciseProps {
   engine: MatchEngine;
-  onSubmit: (answer: string, correct: boolean) => void;
+  onSubmit: (answer: string, correct: boolean, score: ExerciseScore) => void;
   showReset?: boolean;
   locked?: boolean;
   variant?: 'default' | 'example';
@@ -31,7 +32,11 @@ export function MatchExercise({
 
   const check = () => {
     const correct = engine.submit();
-    onSubmit(JSON.stringify(engine.assignment), correct);
+    onSubmit(
+      JSON.stringify(engine.assignment),
+      correct,
+      matchScore(engine.pairs, engine.rights, engine.assignment),
+    );
   };
 
   const leftCorrect = (index: number): boolean => {

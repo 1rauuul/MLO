@@ -4,11 +4,15 @@ import { unit1Evaluations, unit1Exercises } from '@/shared/services/content/unit
 import {
   buildFillBank,
   crosswordCells,
+  crosswordScore,
   extractFillAnswers,
+  fillScore,
   isCrosswordCorrect,
   isFillCorrect,
   isMatchCorrect,
+  matchScore,
   moveItem,
+  orderScore,
   scrambleOrder,
   shuffleItems,
   splitFillSentences,
@@ -23,6 +27,11 @@ describe('exerciseLogic', () => {
     expect(isOrderCorrect(['a', 'b', 'c', 'd'], correct)).toBe(true);
     expect(isOrderCorrect(['b', 'a', 'c', 'd'], correct)).toBe(false);
     expect(isOrderCorrect(['a', 'b', 'c'], correct)).toBe(false);
+  });
+
+  it('puntúa el orden por cada paso en su posición', () => {
+    expect(orderScore(['a', 'b', 'c', 'd'], correct)).toEqual({ correct: 4, total: 4 });
+    expect(orderScore(['a', 'c', 'b', 'd'], correct)).toEqual({ correct: 2, total: 4 });
   });
 
   it('intercambia elementos adyacentes', () => {
@@ -80,6 +89,10 @@ describe('fill (completar conceptos)', () => {
     expect(isFillCorrect(sentences, ['confiable', 'personalizados'])).toBe(false);
   });
 
+  it('puntúa cada espacio correcto por separado', () => {
+    expect(fillScore(sentences, ['Confiable', null])).toEqual({ correct: 1, total: 2 });
+  });
+
   it('construye un banco con las mismas palabras', () => {
     const bank = buildFillBank(sentences, () => 0.5);
     expect([...bank].sort()).toEqual(['confiable', 'genéricos']);
@@ -105,6 +118,10 @@ describe('match (enlazar conceptos)', () => {
   it('rechaza enlaces incompletos o cruzados', () => {
     expect(isMatchCorrect(pairs, rights, [1, null])).toBe(false);
     expect(isMatchCorrect(pairs, rights, [0, 1])).toBe(false);
+  });
+
+  it('puntúa cada par enlazado por separado', () => {
+    expect(matchScore(pairs, rights, [1, 1])).toEqual({ correct: 1, total: 2 });
   });
 });
 
@@ -133,6 +150,10 @@ describe('crossword', () => {
     const letters = { '0-0': 'S', '0-1': 'O', '0-2': 'L', '1-0': 'A', '2-0': 'L' };
     expect(isCrosswordCorrect(config, letters)).toBe(true);
     expect(isCrosswordCorrect(config, { '0-0': 'X' })).toBe(false);
+  });
+
+  it('puntúa cada celda correcta por separado', () => {
+    expect(crosswordScore(crosswordCells(config), { '0-0': 'S' })).toEqual({ correct: 1, total: 5 });
   });
 });
 

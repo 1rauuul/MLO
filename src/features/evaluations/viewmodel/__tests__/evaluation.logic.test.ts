@@ -1,6 +1,11 @@
 import type { Question } from '@/shared/model/entities';
 
-import { isAnswerComplete, isAnswerCorrect } from '@/features/evaluations/viewmodel/evaluation.logic';
+import {
+  buildEvaluationPool,
+  isAnswerComplete,
+  isAnswerCorrect,
+  shuffleQuestionOptions,
+} from '@/features/evaluations/viewmodel/evaluation.logic';
 
 const base = { evaluationId: 'ev', orderIndex: 0, prompt: '', explanation: '' };
 
@@ -142,5 +147,56 @@ describe('isAnswerCorrect', () => {
         letters: { '0-0': 'A', '0-1': 'X' },
       }),
     ).toBe(false);
+  });
+});
+
+describe('shuffleQuestionOptions', () => {
+  it('reordena las opciones pero conserva la correcta', () => {
+    const question: Question = {
+      ...base,
+      id: 'm',
+      type: 'mcq',
+      config: {},
+      options: ['a', 'b', 'c', 'd'],
+      answer: 2,
+    };
+    const shuffled = shuffleQuestionOptions(question, () => 0.9);
+    expect([...shuffled.options].sort()).toEqual(['a', 'b', 'c', 'd']);
+    expect(shuffled.options[shuffled.answer]).toBe('c');
+    expect(isAnswerCorrect(shuffled, { type: 'mcq', chosen: shuffled.answer })).toBe(true);
+  });
+
+  it('no modifica preguntas que no son mcq', () => {
+    expect(shuffleQuestionOptions(orderQuestion, () => 0.5)).toBe(orderQuestion);
+  });
+});
+
+describe('buildEvaluationPool', () => {
+  const many = (prefix: string, type: Question['type'], count: number): Question[] =>
+    Array.from({ length: count }, (_, index) => ({
+      ...base,
+      id: `${prefix}${index}`,
+      type,
+      config: {},
+      options: type === 'mcq' ? ['a', 'b'] : [],
+      answer: 0,
+    }));
+
+  it('toma 10 preguntas y 5 ejercicios, y los mezcla en 15', () => {
+    const pool = buildEvaluationPool(
+      many('q', 'mcq', 20),
+      many('e', 'order', 20),
+      () => 0.5,
+    );
+    expect(pool.questions).toHaveLength(10);
+    expect(pool.exercises).toHaveLength(5);
+    expect(pool.mixed).toHaveLength(15);
+  });
+
+  it('funciona con menos elementos de los solicitados', () => {
+    const pool = buildEvaluationPool(many('q', 'mcq', 3), many('e', 'order', 2), () => 0.2);
+    expect(pool.questions).toHaveLength(3);
+    expect(pool.exercises).toHaveLength(2);
+    expect(pool.mixed).toHaveLength(5);
   });
 });

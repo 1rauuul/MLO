@@ -1,5 +1,6 @@
 import { usePathname, useRouter } from 'expo-router';
 
+import { runOrGuardExit } from '@/shared/services/navigation/exitGuard';
 import { isSubtopicPath, topicHref } from '@/shared/utils/navigation/locationRoutes';
 import { homeTabForRoute, type HomeTab } from '@/shared/utils/navigation/tabRoutes';
 import { useSession } from '@/features/auth/viewmodel/useSession';
@@ -23,8 +24,8 @@ export function AppTabBar({ routeName, onNavigateTab, bottomInset }: AppTabBarPr
     return (
       <SubtopicTabBar
         active={pathname.startsWith('/tema') ? 'tema' : null}
-        onInicio={() => router.navigate('/')}
-        onTema={tema ? () => router.navigate(tema) : undefined}
+        onInicio={() => runOrGuardExit(() => router.navigate('/'))}
+        onTema={tema ? () => runOrGuardExit(() => router.navigate(tema)) : undefined}
         bottomInset={bottomInset}
       />
     );
