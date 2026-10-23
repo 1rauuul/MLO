@@ -52,7 +52,7 @@ export default function TopicHubScreen() {
   if (!lesson || lesson.code === '1.1') {
     return (
       <Screen>
-        <EmptyState title="Cargando" message="Preparando el tema." />
+        <EmptyState loading title="Cargando" message="Preparando el tema." />
       </Screen>
     );
   }

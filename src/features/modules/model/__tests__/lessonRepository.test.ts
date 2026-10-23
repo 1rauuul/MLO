@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { selectLesson, selectLessonsByUnit, selectUnits } from '@/features/modules/model/lessonRepository';
+import { selectLesson, selectLessons, selectUnits } from '@/features/modules/model/lessonRepository';
 
 function makeDb(overrides: Record<string, jest.Mock> = {}) {
   const calls = {
@@ -52,26 +52,39 @@ describe('lessonRepository', () => {
     expect(calls.getAllAsync).toHaveBeenCalledWith(expect.stringContaining('ORDER BY number'));
   });
 
-  it('selectLessonsByUnit parsea synthesis y content', async () => {
-    const { db } = makeDb({ getAllAsync: jest.fn(async () => [lessonRow]) });
-
-    const lessons = await selectLessonsByUnit(db, 'u1');
-
-    expect(lessons[0]!.synthesis).toEqual(['a', 'b']);
-    expect(lessons[0]!.content).toEqual([{ type: 'p', text: 'hola' }]);
-  });
-
-  it('selectLessonsByUnit tolera JSON inválido', async () => {
-    const { db } = makeDb({
-      getAllAsync: jest.fn(async () => [
-        { ...lessonRow, synthesis: 'no-json', content: 'no-json' },
-      ]),
+  it('selectLessons parsea synthesis sin cargar content', async () => {
+    const { db, calls } = makeDb({
+      getAllAsync: jest.fn(async (_sql: string) => {
+        const { content: _content, ...summary } = lessonRow;
+        return [summary];
+      }),
     });
 
-    const lessons = await selectLessonsByUnit(db, 'u1');
+    const lessons = await selectLessons(db);
+
+    expect(lessons[0]!.synthesis).toEqual(['a', 'b']);
+    expect(lessons[0]!.content).toEqual([]);
+    const firstCall = calls.getAllAsync.mock.calls[0] as unknown as [string];
+    expect(firstCall[0]).not.toContain('content');
+  });
+
+  it('selectLessons tolera JSON inválido', async () => {
+    const { db } = makeDb({
+      getAllAsync: jest.fn(async () => [{ ...lessonRow, synthesis: 'no-json', content: undefined }]),
+    });
+
+    const lessons = await selectLessons(db);
 
     expect(lessons[0]!.synthesis).toEqual([]);
     expect(lessons[0]!.content).toEqual([]);
+  });
+
+  it('selectLesson sí carga el content completo', async () => {
+    const { db } = makeDb({ getFirstAsync: jest.fn(async () => lessonRow) });
+
+    const lesson = await selectLesson(db, 'l1.2');
+
+    expect(lesson!.content).toEqual([{ type: 'p', text: 'hola' }]);
   });
 
   it('selectLesson devuelve null sin fila', async () => {

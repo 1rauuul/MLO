@@ -61,7 +61,7 @@ export default function LessonDetailScreen() {
   if (!lesson) {
     return (
       <Screen>
-        <EmptyState title="Cargando" message="Preparando el contenido de la lección." />
+        <EmptyState loading title="Cargando" message="Preparando el contenido de la lección." />
       </Screen>
     );
   }

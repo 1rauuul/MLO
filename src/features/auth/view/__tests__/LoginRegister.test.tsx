@@ -86,6 +86,7 @@ describe('RegisterScreen', () => {
 
     const { getByLabelText, getByText } = render(<RegisterScreen />);
     fireEvent.changeText(getByLabelText('Nombre'), 'Ana');
+    fireEvent.changeText(getByLabelText('Apellidos'), 'Pérez');
     fireEvent.changeText(getByLabelText('Usuario'), 'ana');
     fireEvent.changeText(getByLabelText('Contraseña'), 'secreto1');
     fireEvent.changeText(getByLabelText('Confirmar contraseña'), 'secreto1');
@@ -104,6 +105,7 @@ describe('RegisterScreen', () => {
 
     const { getByLabelText, getByText } = render(<RegisterScreen />);
     fireEvent.changeText(getByLabelText('Nombre'), 'Ana');
+    fireEvent.changeText(getByLabelText('Apellidos'), 'Pérez');
     fireEvent.changeText(getByLabelText('Usuario'), 'ana');
     fireEvent.changeText(getByLabelText('Contraseña'), 'secreto1');
     fireEvent.changeText(getByLabelText('Confirmar contraseña'), 'secreto1');

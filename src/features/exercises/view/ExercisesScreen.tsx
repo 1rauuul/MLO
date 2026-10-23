@@ -231,7 +231,7 @@ export default function PracticeScreen() {
     return (
       <Screen>
         <ScreenHeader onBack={goBack} eyebrow={lesson ? `Tema ${lesson.code}` : 'Ejercicios'} title="Ejercicios" />
-        <EmptyState title="Cargando" message="Preparando los ejercicios del tema." />
+        <EmptyState loading title="Cargando" message="Preparando los ejercicios del tema." />
       </Screen>
     );
   }

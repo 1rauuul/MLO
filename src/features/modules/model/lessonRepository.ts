@@ -22,7 +22,7 @@ interface LessonRow {
   context_title: string;
   context_body: string;
   synthesis: string;
-  content: string;
+  content?: string;
   position: number;
 }
 
@@ -77,10 +77,13 @@ export async function selectUnits(db: SQLiteDatabase): Promise<Unit[]> {
   return rows.map(mapUnit);
 }
 
-export async function selectLessonsByUnit(db: SQLiteDatabase, unitId: string): Promise<Lesson[]> {
+// The catalog only needs metadata; full richContent is loaded by selectLesson.
+export async function selectLessons(db: SQLiteDatabase): Promise<Lesson[]> {
   const rows = await db.getAllAsync<LessonRow>(
-    'SELECT * FROM lessons WHERE unit_id = ? ORDER BY position',
-    unitId,
+    `SELECT id, unit_id, code, title, eyebrow, body, code_sample, context_title,
+            context_body, synthesis, position
+     FROM lessons
+     ORDER BY unit_id, position`,
   );
   return rows.map(mapLesson);
 }

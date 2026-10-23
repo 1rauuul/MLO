@@ -41,7 +41,7 @@ export default function ExamplesScreen() {
     return (
       <Screen>
         {header}
-        <EmptyState title="Cargando" message="Preparando el ejemplo guiado." />
+        <EmptyState loading title="Cargando" message="Preparando el ejemplo guiado." />
       </Screen>
     );
   }

@@ -10,7 +10,8 @@ describe('migrateAndSeed', () => {
       execAsync: async (sql: string) => {
         statements.push({ sql, params: [] });
       },
-      getFirstAsync: async () => ({ user_version: 6 }),
+      getFirstAsync: async (sql: string) =>
+        sql.includes('COUNT(*)') ? { units: 5, lessons: 24 } : { user_version: 6 },
       runAsync: async (sql: string, ...params: unknown[]) => {
         statements.push({ sql, params });
         return { changes: 1, lastInsertRowId: 0 };
@@ -36,7 +37,8 @@ describe('migrateAndSeed', () => {
       execAsync: async (sql: string) => {
         statements.push(sql);
       },
-      getFirstAsync: async () => ({ user_version: 0 }),
+      getFirstAsync: async (sql: string) =>
+        sql.includes('COUNT(*)') ? { units: 0, lessons: 0 } : { user_version: 0 },
       runAsync: async (sql: string) => {
         statements.push(sql);
         return { changes: 1, lastInsertRowId: 0 };
@@ -49,6 +51,51 @@ describe('migrateAndSeed', () => {
     expect(statements.some(statement => statement.includes('ALTER TABLE lessons ADD COLUMN content'))).toBe(false);
     expect(statements.some(statement => statement === 'PRAGMA user_version = 14')).toBe(true);
     expect(statements.some(statement => statement.startsWith('INSERT INTO units'))).toBe(true);
+    expect(statements.findIndex(statement => statement.startsWith('INSERT INTO units'))).toBeLessThan(
+      statements.indexOf('PRAGMA user_version = 14'),
+    );
+  });
+
+  test('repara un catálogo vacío aunque la versión ya sea la última', async () => {
+    const statements: string[] = [];
+    const db = {
+      execAsync: async (sql: string) => {
+        statements.push(sql);
+      },
+      getFirstAsync: async (sql: string) =>
+        sql.includes('COUNT(*)') ? { units: 0, lessons: 0 } : { user_version: 14 },
+      runAsync: async (sql: string) => {
+        statements.push(sql);
+        return { changes: 1, lastInsertRowId: 0 };
+      },
+      withTransactionAsync: async (task: () => Promise<void>) => task(),
+    } as unknown as SQLiteDatabase;
+
+    await migrateAndSeed(db);
+
+    expect(statements.some(statement => statement.startsWith('INSERT INTO units'))).toBe(true);
+    expect(statements.some(statement => statement.startsWith('INSERT INTO questions'))).toBe(true);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 14')).toBe(false);
+  });
+
+  test('seedDatabase abre una sola transacción', async () => {
+    let depth = 0;
+    const db = {
+      runAsync: async () => ({ changes: 1, lastInsertRowId: 0 }),
+      withTransactionAsync: async (task: () => Promise<void>) => {
+        if (depth > 0) {
+          throw new Error('nested transaction');
+        }
+        depth += 1;
+        try {
+          await task();
+        } finally {
+          depth -= 1;
+        }
+      },
+    } as unknown as SQLiteDatabase;
+
+    await expect(seedDatabase(db)).resolves.toBeUndefined();
   });
 
   test('migra desde user_version=4 sin borrar attempts', async () => {
@@ -57,7 +104,8 @@ describe('migrateAndSeed', () => {
       execAsync: async (sql: string) => {
         statements.push(sql);
       },
-      getFirstAsync: async () => ({ user_version: 4 }),
+      getFirstAsync: async (sql: string) =>
+        sql.includes('COUNT(*)') ? { units: 5, lessons: 24 } : { user_version: 4 },
       getAllAsync: async () => [],
       runAsync: async (sql: string) => {
         statements.push(sql);
@@ -85,7 +133,8 @@ describe('migrateAndSeed', () => {
       execAsync: async (sql: string) => {
         statements.push(sql);
       },
-      getFirstAsync: async () => ({ user_version: 2 }),
+      getFirstAsync: async (sql: string) =>
+        sql.includes('COUNT(*)') ? { units: 5, lessons: 24 } : { user_version: 2 },
       getAllAsync: async () => currentColumns,
       runAsync: async (sql: string) => {
         statements.push(sql);
@@ -106,7 +155,8 @@ describe('migrateAndSeed', () => {
       execAsync: async (sql: string) => {
         statements.push(sql);
       },
-      getFirstAsync: async () => ({ user_version: 8 }),
+      getFirstAsync: async (sql: string) =>
+        sql.includes('COUNT(*)') ? { units: 5, lessons: 24 } : { user_version: 8 },
       runAsync: async (sql: string) => {
         statements.push(sql);
         return { changes: 1, lastInsertRowId: 0 };
@@ -132,7 +182,8 @@ describe('migrateAndSeed', () => {
       execAsync: async (sql: string) => {
         statements.push(sql);
       },
-      getFirstAsync: async () => ({ user_version: 14 }),
+      getFirstAsync: async (sql: string) =>
+        sql.includes('COUNT(*)') ? { units: 5, lessons: 24 } : { user_version: 14 },
     } as unknown as SQLiteDatabase;
 
     await migrateAndSeed(db);

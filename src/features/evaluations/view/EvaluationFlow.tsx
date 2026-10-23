@@ -142,7 +142,7 @@ export default function EvaluationFlow() {
   if (!evaluation) {
     return (
       <Screen>
-        <EmptyState title="Cargando" message="Preparando la evaluación." />
+        <EmptyState loading title="Cargando" message="Preparando la evaluación." />
       </Screen>
     );
   }

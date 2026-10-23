@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/shared/components/AppText';
+import { SecondaryButton } from '@/shared/components/Buttons';
 import { Chevron } from '@/shared/components/Chevron';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Screen } from '@/shared/components/Screen';
@@ -28,7 +29,7 @@ function greetingDate(): string {
 export default function ModulesScreen() {
   const { colors, radius } = useTheme();
   const { account } = useAuth();
-  const { units, lessonsByUnit, progressMap, error, refresh } = useCatalog();
+  const { units, lessonsByUnit, progressMap, isLoading, error, refresh } = useCatalog();
   const { location, resumeHref } = useSession();
   const router = useRouter();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -52,9 +53,22 @@ export default function ModulesScreen() {
     return (
       <Screen contentStyle={styles.content}>
         <EmptyState
-          title={error ? 'No se pudo cargar' : 'Cargando catálogo'}
-          message={error ?? 'Preparando las unidades del curso.'}
+          loading={isLoading && !error}
+          title={error ? 'No se pudo cargar' : isLoading ? 'Cargando catálogo' : 'Sin contenido'}
+          message={
+            error ??
+            (isLoading
+              ? 'Preparando las unidades del curso.'
+              : 'No hay unidades disponibles en este dispositivo.')
+          }
         />
+        {!isLoading ? (
+          <SecondaryButton
+            label="Reintentar"
+            onPress={() => void refresh()}
+            style={styles.retry}
+          />
+        ) : null}
       </Screen>
     );
   }
@@ -232,6 +246,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  retry: { marginTop: 12 },
   list: { gap: 12 },
   subtopics: { marginTop: 6 },
   divider: { height: 1 },

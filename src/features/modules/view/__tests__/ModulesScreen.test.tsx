@@ -87,6 +87,7 @@ const baseCatalog = {
   ],
   lessonsByUnit: { u1: lessons },
   progressMap: { 'l1.1': true },
+  isLoading: false,
   error: null,
   refresh: mockRefreshCatalog,
 };
@@ -123,5 +124,24 @@ describe('ModulesScreen', () => {
 
     expect(getByText('No se pudo cargar')).toBeTruthy();
     expect(getByText('No se pudo cargar el catálogo de unidades.')).toBeTruthy();
+  });
+
+  it('muestra un indicador mientras carga el catálogo', () => {
+    makeCatalog({ units: [], isLoading: true });
+
+    const { getByLabelText, getByText } = render(<ModulesScreen />);
+
+    expect(getByText('Cargando catálogo')).toBeTruthy();
+    expect(getByLabelText('Cargando')).toBeTruthy();
+  });
+
+  it('permite reintentar cuando el catálogo termina vacío', () => {
+    makeCatalog({ units: [], isLoading: false });
+
+    const { getByText } = render(<ModulesScreen />);
+
+    expect(getByText('Sin contenido')).toBeTruthy();
+    fireEvent.press(getByText('Reintentar'));
+    expect(mockRefreshCatalog).toHaveBeenCalled();
   });
 });

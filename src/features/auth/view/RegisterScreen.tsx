@@ -17,12 +17,14 @@ export default function RegisterScreen() {
   const { register } = useAuth();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
-  const displayNameRef = useRef<TextInput>(null);
+  const firstNameRef = useRef<TextInput>(null);
+  const lastNameRef = useRef<TextInput>(null);
   const usernameRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
   const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [displayName, setDisplayName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -40,7 +42,10 @@ export default function RegisterScreen() {
 
   const passwordValidation = validarPassword(password);
   const usernameValidation = username.length > 0 ? validateUsername(username) : null;
-  const displayNameError = errorKey === 'name_empty' ? AUTH_MESSAGES.name_empty : null;
+  const firstNameError =
+    errorKey === 'first_name_empty' ? AUTH_MESSAGES.first_name_empty : null;
+  const lastNameError =
+    errorKey === 'last_name_empty' ? AUTH_MESSAGES.last_name_empty : null;
   const usernameError =
     errorKey === 'username_taken' || errorKey === 'username_empty' || errorKey === 'username_short' || errorKey === 'username_invalid'
       ? AUTH_MESSAGES[errorKey]
@@ -66,7 +71,7 @@ export default function RegisterScreen() {
     setErrorKey(null);
     setSubmitting(true);
     try {
-      const result = await register({ displayName, username, password, confirm });
+      const result = await register({ firstName, lastName, username, password, confirm });
       if (result.ok) {
         setSuccessMessage('Cuenta creada. Entrando a tu ruta de aprendizaje...');
         redirectTimer.current = setTimeout(() => router.replace('/'), 900);
@@ -99,19 +104,34 @@ export default function RegisterScreen() {
           { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card },
         ]}>
         <TextField
-          ref={displayNameRef}
+          ref={firstNameRef}
           label="Nombre"
-          value={displayName}
-          error={displayNameError ?? undefined}
+          value={firstName}
+          error={firstNameError ?? undefined}
           onChangeText={value => {
-            setDisplayName(value);
+            setFirstName(value);
             clearError();
           }}
-          autoComplete="name"
-          textContentType="name"
+          autoComplete="given-name"
+          textContentType="givenName"
+          returnKeyType="next"
+          onSubmitEditing={() => lastNameRef.current?.focus()}
+          placeholder="Valentina"
+        />
+        <TextField
+          ref={lastNameRef}
+          label="Apellidos"
+          value={lastName}
+          error={lastNameError ?? undefined}
+          onChangeText={value => {
+            setLastName(value);
+            clearError();
+          }}
+          autoComplete="family-name"
+          textContentType="familyName"
           returnKeyType="next"
           onSubmitEditing={() => usernameRef.current?.focus()}
-          placeholder="Valentina Ríos"
+          placeholder="Ríos"
         />
         <TextField
           ref={usernameRef}

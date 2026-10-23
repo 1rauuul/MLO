@@ -1,7 +1,7 @@
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
 
-import { selectLessonsByUnit, selectUnits } from '@/features/modules/model/lessonRepository';
+import { selectLessons, selectUnits } from '@/features/modules/model/lessonRepository';
 import { selectProgressMap } from '@/features/modules/model/progressRepository';
 import type { Lesson, Unit } from '@/shared/model/entities';
 
@@ -26,11 +26,13 @@ export function useCatalog(): CatalogResult {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    setIsLoading(true);
     try {
       const loadedUnits = await selectUnits(db);
+      const lessons = await selectLessons(db);
       const grouped: Record<string, Lesson[]> = {};
-      for (const unit of loadedUnits) {
-        grouped[unit.id] = await selectLessonsByUnit(db, unit.id);
+      for (const lesson of lessons) {
+        (grouped[lesson.unitId] ??= []).push(lesson);
       }
       const progress = account ? await selectProgressMap(db, account.id) : {};
       setUnits(loadedUnits);

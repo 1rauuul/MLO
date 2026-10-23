@@ -17,6 +17,15 @@ async function hasColumn(db: SQLiteDatabase, table: string, column: string): Pro
   return columns.some(item => item.name === column);
 }
 
+async function seedIfEmpty(db: SQLiteDatabase): Promise<void> {
+  const row = await db.getFirstAsync<{ units: number; lessons: number }>(
+    'SELECT (SELECT COUNT(*) FROM units) AS units, (SELECT COUNT(*) FROM lessons) AS lessons',
+  );
+  if (!row || row.units === 0 || row.lessons === 0) {
+    await seedDatabase(db);
+  }
+}
+
 export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
   await db.execAsync('PRAGMA journal_mode = WAL;');
   await db.execAsync('PRAGMA foreign_keys = ON;');
@@ -29,14 +38,17 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
   if (currentVersion === 0) {
     await db.withTransactionAsync(async () => {
       await db.execAsync(SCHEMA_DDL);
-      await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
     });
+    // Only mark the schema as current once the seed has committed; otherwise the
+    // next launch would skip seeding and leave an empty catalog.
     await seedDatabase(db);
+    await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
     return;
   }
 
   if (currentVersion >= DATABASE_VERSION) {
     await db.execAsync(SCHEMA_DDL);
+    await seedIfEmpty(db);
     return;
   }
 
@@ -46,9 +58,9 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     await db.withTransactionAsync(async () => {
       await db.execAsync(DROP_ALL_DDL);
       await db.execAsync(SCHEMA_DDL);
-      await db.execAsync('PRAGMA user_version = 2');
     });
     await seedDatabase(db);
+    await db.execAsync('PRAGMA user_version = 2');
     version = 2;
   }
 
@@ -196,4 +208,6 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     await db.execAsync('PRAGMA user_version = 14');
     version = 14;
   }
+
+  await seedIfEmpty(db);
 }

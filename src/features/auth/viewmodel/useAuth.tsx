@@ -31,16 +31,10 @@ import {
   validateLogin,
   validateRegistration,
   verifyPasswordHash,
-  type ByteDigest,
   type Digest,
 } from '@/features/auth/viewmodel/auth.logic';
 
 const sha256Hex: Digest = input => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, input);
-const sha256Bytes: ByteDigest = async input => {
-  const data = new Uint8Array(new ArrayBuffer(input.byteLength));
-  data.set(input);
-  return new Uint8Array(await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, data));
-};
 
 export type AuthOutcome = { ok: true } | { ok: false; error: string };
 
@@ -48,7 +42,8 @@ interface AuthContextValue {
   account: Account | null;
   isLoading: boolean;
   register: (input: {
-    displayName: string;
+    firstName: string;
+    lastName: string;
     username: string;
     password: string;
     confirm: string;
@@ -116,9 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           input.password,
           salt,
           PBKDF2_DEFAULT_ITERATIONS,
-          sha256Bytes,
         );
-        const displayName = input.displayName.trim();
+        const displayName = `${input.firstName.trim()} ${input.lastName.trim()}`;
         const id = await insertAccount(db, { username, displayName, passwordHash, salt });
         await createDefaultProfile(db, id);
         await saveSession(db, id);
@@ -149,7 +143,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           found.salt,
           found.passwordHash,
           sha256Hex,
-          sha256Bytes,
         );
         if (!valid) {
           return { ok: false, error: 'invalid_credentials' };
@@ -159,7 +152,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             password,
             found.salt,
             PBKDF2_DEFAULT_ITERATIONS,
-            sha256Bytes,
           );
           await updatePasswordHash(db, found.id, upgraded, found.salt);
         }

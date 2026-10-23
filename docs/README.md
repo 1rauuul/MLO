@@ -5,7 +5,10 @@
 - [`arquitectura/`](arquitectura/) — diagramas (ER, esquema BD, navegación) y análisis de arquitectura.
 - [`contenido/`](contenido/) — contenido teórico de la Unidad 1, tablas de ingeniería, crucigramas y plantillas.
 - [`estado/`](estado/) — estado del proyecto, decisiones de alcance y siguientes pasos.
+  Incluye la [`línea de tiempo de cambios`](estado/linea-de-tiempo.md) por sesión.
 - [`reviews/`](reviews/) — auditorías y análisis guiados del repositorio.
+- [`reporte/`](reporte/) — capítulos redactados del reporte (desarrollo).
 - [`diseno/`](diseno/) — guías visuales (guidelines).
 - [`planes/`](planes/) — planes de implementación por sesión.
 - [`especificaciones/`](especificaciones/) — especificaciones de diseño por sesión.
+- [`informe-cambios-demo-apk.md`](informe-cambios-demo-apk.md) — cambios y configuración del APK de demo.

@@ -41,7 +41,7 @@ export default function EvaluationsScreen() {
         trailing={String(summaries.length).padStart(2, '0')}
       />
       {isLoading ? (
-        <EmptyState title="Cargando" message="Preparando tus evaluaciones." />
+        <EmptyState loading title="Cargando" message="Preparando tus evaluaciones." />
       ) : error ? (
         <EmptyState title="No se pudo cargar" message={error} />
       ) : summaries.length === 0 ? (
@@ -80,7 +80,7 @@ export default function EvaluationsScreen() {
 
       <SectionHeading eyebrow="Resultados recientes" title="Tu historial" />
       {resultsLoading ? (
-        <EmptyState title="Cargando" message="Preparando tu historial." />
+        <EmptyState loading title="Cargando" message="Preparando tu historial." />
       ) : resultsError ? (
         <EmptyState title="No se pudo cargar" message={resultsError} />
       ) : results.length === 0 ? (
