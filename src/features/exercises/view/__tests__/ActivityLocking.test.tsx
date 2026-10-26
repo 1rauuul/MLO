@@ -69,6 +69,11 @@ jest.mock('expo-sqlite', () => ({ useSQLiteContext: () => ({}) }));
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
   useRouter: () => ({ back: mockBack, navigate: mockNavigate, push: mockPush }),
+  useNavigation: () => ({
+    addListener: jest.fn(() => () => {}),
+    setOptions: jest.fn(),
+    dispatch: jest.fn(),
+  }),
   useFocusEffect: jest.fn(),
 }));
 jest.mock('@/features/auth/viewmodel/useSession', () => ({
@@ -253,9 +258,11 @@ const makeExamplesEngine = (): ExamplesEngine => ({
   index: 0,
   total: 1,
   current: exampleExercise,
+  currentExample: null,
   isLast: true,
   isLoading: false,
   next: jest.fn(),
+  redraw: jest.fn(),
 });
 
 const makeEvaluationEngine = (answered: boolean): EvaluationEngine => ({

@@ -4,7 +4,9 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { DATABASE_NAME, migrateAndSeed } from '@/shared/services/db/database';
+import { DataProvider } from '@/shared/services/data/DataProvider';
 import { AppThemeProvider } from '@/shared/theme/ThemeProvider';
 import { AuthProvider, useAuth } from '@/features/auth/viewmodel/useAuth';
 import { LearnerProfileProvider } from '@/features/profile/viewmodel/useLearnerProfile';
@@ -17,16 +19,20 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateAndSeed}>
-          <AuthProvider>
-            <SessionProvider>
-              <LearnerProfileProvider>
-                <AppThemeProvider>
-                  <StatusBar style="auto" />
-                  <RootNavigator />
-                </AppThemeProvider>
-              </LearnerProfileProvider>
-            </SessionProvider>
-          </AuthProvider>
+          <DataProvider>
+            <AuthProvider>
+              <SessionProvider>
+                <LearnerProfileProvider>
+                  <AppThemeProvider>
+                    <StatusBar style="auto" />
+                    <ErrorBoundary>
+                      <RootNavigator />
+                    </ErrorBoundary>
+                  </AppThemeProvider>
+                </LearnerProfileProvider>
+              </SessionProvider>
+            </AuthProvider>
+          </DataProvider>
         </SQLiteProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

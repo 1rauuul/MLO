@@ -10,6 +10,8 @@ const attempt = (itemType: Attempt['itemType'], correct: boolean, id: number): A
   itemType,
   lessonId: 'l1.2',
   correct,
+  scoreCorrect: correct ? 1 : 0,
+  scoreTotal: 1,
   createdAt: '2026-01-01T00:00:00.000Z',
 });
 

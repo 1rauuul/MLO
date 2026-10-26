@@ -6,6 +6,7 @@ import {
   initials,
   normalizeUsername,
   passwordMaterial,
+  timingSafeEqual,
   validateLogin,
   validateRegistration,
   verifyPasswordHash,
@@ -106,6 +107,15 @@ describe('validateLogin', () => {
   });
   it('acepta credenciales presentes', () => {
     expect(validateLogin('ana', 'secreto')).toBeNull();
+  });
+});
+
+describe('timingSafeEqual', () => {
+  it('acepta hashes iguales y rechaza distintos o de otra longitud', () => {
+    expect(timingSafeEqual('abc123', 'abc123')).toBe(true);
+    expect(timingSafeEqual('abc123', 'abc124')).toBe(false);
+    expect(timingSafeEqual('abc', 'abc123')).toBe(false);
+    expect(timingSafeEqual('', '')).toBe(true);
   });
 });
 

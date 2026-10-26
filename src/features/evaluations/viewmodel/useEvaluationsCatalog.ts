@@ -1,10 +1,6 @@
-import { useSQLiteContext } from 'expo-sqlite';
-import { useEffect, useState } from 'react';
-
-import {
-  selectEvaluationSummaries,
-  type EvaluationSummary,
-} from '@/features/evaluations/model/evaluationRepository';
+import type { EvaluationSummary } from '@/features/evaluations/model/evaluationRepository';
+import { useAsyncResource } from '@/shared/hooks/useAsyncResource';
+import { useRepositories } from '@/shared/services/data/DataProvider';
 
 interface EvaluationsCatalogResult {
   summaries: EvaluationSummary[];
@@ -13,34 +9,17 @@ interface EvaluationsCatalogResult {
 }
 
 export function useEvaluationsCatalog(): EvaluationsCatalogResult {
-  const db = useSQLiteContext();
-  const [summaries, setSummaries] = useState<EvaluationSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { evaluations } = useRepositories();
+  const resource = useAsyncResource(
+    () => evaluations.selectEvaluationSummaries(),
+    'evaluations',
+    null,
+    'No se pudo cargar las evaluaciones.',
+  );
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const loaded = await selectEvaluationSummaries(db);
-        if (!active) {
-          return;
-        }
-        setSummaries(loaded);
-      } catch {
-        if (active) {
-          setError('No se pudo cargar las evaluaciones.');
-        }
-      } finally {
-        if (active) {
-          setIsLoading(false);
-        }
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [db]);
-
-  return { summaries, isLoading, error };
+  return {
+    summaries: resource.data ?? [],
+    isLoading: resource.status === 'loading' || resource.status === 'idle',
+    error: resource.error,
+  };
 }

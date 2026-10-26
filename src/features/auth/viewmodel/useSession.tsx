@@ -1,5 +1,4 @@
 import type { Href } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
 import {
   createContext,
   useCallback,
@@ -10,12 +9,8 @@ import {
   type ReactNode,
 } from 'react';
 
-import {
-  clearLocation,
-  saveLocation,
-  selectLocation,
-} from '@/features/modules/model/locationRepository';
 import type { LocationSection } from '@/shared/model/entities';
+import { useRepositories } from '@/shared/services/data/DataProvider';
 import { hrefForLocation } from '@/shared/utils/navigation/locationRoutes';
 
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
@@ -53,7 +48,7 @@ const EMPTY_LOCATION: SessionLocation = {
 const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const db = useSQLiteContext();
+  const { locations } = useRepositories();
   const { account } = useAuth();
   const [location, setLocation] = useState<SessionLocation>(EMPTY_LOCATION);
 
@@ -67,7 +62,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
     (async () => {
       try {
-        const loaded = await selectLocation(db, account.id);
+        const loaded = await locations.selectLocation(account.id);
         if (!active) {
           return;
         }
@@ -81,7 +76,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [db, account]);
+  }, [locations, account]);
 
   const record = useCallback(
     (input: RecordLocationInput) => {
@@ -92,18 +87,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         section: input.section,
       });
       if (account) {
-        void saveLocation(db, account.id, input);
+        void locations.saveLocation(account.id, input);
       }
     },
-    [db, account],
+    [locations, account],
   );
 
   const clear = useCallback(() => {
     setLocation(EMPTY_LOCATION);
     if (account) {
-      void clearLocation(db, account.id);
+      void locations.clearLocation(account.id);
     }
-  }, [db, account]);
+  }, [locations, account]);
 
   const resumeHref = useMemo(() => hrefForLocation(location), [location]);
 

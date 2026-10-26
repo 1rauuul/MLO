@@ -4,7 +4,7 @@ Este documento explica **qué muestra cada diagrama, cómo leerlo y de dónde sa
 
 - Proyecto: **MLO — Introducción a la Ingeniería de Software**
 - Stack: Expo SDK 57 + Expo Router + `expo-sqlite` + TypeScript estricto
-- Base de datos: SQLite local `mlo.db` (offline-first, **cero red**)
+- Base de datos: SQLite local `mlo.db` (offline-first; **sin red con `DATA_MODE='local'`**, contenido remoto opcional con `hybrid`)
 - Skin de los diagramas: por defecto del skill *diagram-design* (papel `#f5f5f5`, tinta `#2d3142`, acento `#bf4520`)
 
 ---

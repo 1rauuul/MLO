@@ -16,6 +16,8 @@ export interface ExampleSeed {
 }
 
 export interface QuestionSeed {
+  /** Stable id; bank questions set it so reordering the bank does not remap content. */
+  id?: string;
   type: ActivityType;
   config?: ExerciseConfig;
   prompt: string;
@@ -135,6 +137,20 @@ export const unit1Exercises: ExerciseSeed[] = [
     instructions: ORDER_HINT,
     correctOrder: ['Especificación del software', 'Desarrollo del software', 'Validación del software', 'Evolución del software'],
     explanation: 'Las actividades del proceso son especificación, desarrollo, validación y evolución; en la práctica se solapan e iteran.',
+    example: {
+      title: 'Las cuatro actividades del proceso',
+      steps: [
+        { text: 'Especificar qué debe hacer el sistema', why: 'La especificación fija el problema y sus restricciones antes de construir.' },
+        { text: 'Diseñar e implementar el software', why: 'El desarrollo convierte los requisitos en un sistema ejecutable.' },
+        { text: 'Validar contra lo acordado', why: 'La validación confirma que el sistema es lo que el cliente pidió.' },
+        { text: 'Evolucionar el sistema entregado', why: 'El mantenimiento continúa mientras cambien las necesidades.' },
+      ],
+      hints: [
+        'Piensa qué ocurre antes de escribir código.',
+        'La validación siempre va después de construir.',
+        'Lo que se hace tras la entrega se llama evolución.',
+      ],
+    },
   },
   {
     id: 'fill1.2',
@@ -144,6 +160,18 @@ export const unit1Exercises: ExerciseSeed[] = [
     instructions: 'Toca un espacio y después una palabra del banco.',
     correctOrder: [],
     explanation: 'El buen software debe ser funcional, genérico o personalizado según su mercado; cerca del 60% de los costos son de desarrollo.',
+    example: {
+      title: 'Funcionalidad, productos y costos',
+      steps: [
+        { text: 'El software entrega la funcionalidad y el desempeño requeridos', why: 'Cumplir lo acordado es el primer criterio de calidad.' },
+        { text: 'Genérico se vende en el mercado; personalizado se hace para un cliente', why: 'La diferencia está en quién controla la especificación.' },
+        { text: 'Cerca del 60% de los costos son de desarrollo y 40% de prueba', why: 'La prueba consume una parte importante, aunque menor que el desarrollo.' },
+      ],
+      hints: [
+        'Distingue quién compra el producto.',
+        'Compara cuál de las dos actividades ocupa más presupuesto.',
+      ],
+    },
     config: {
       sentences: [
         'El buen software debe entregar la {{funcionalidad}} y el desempeño requeridos.',
@@ -162,6 +190,20 @@ export const unit1Exercises: ExerciseSeed[] = [
     instructions: 'Toca un atributo y después su descripción.',
     correctOrder: [],
     explanation: 'Cada atributo describe una propiedad distinta: evolución, seguridad, uso de recursos y aceptación por el usuario.',
+    example: {
+      title: 'Atributos de calidad del software',
+      steps: [
+        { text: 'Mantenimiento: puede evolucionar ante necesidades cambiantes', why: 'El cambio del software es inevitable en un entorno empresarial variable.' },
+        { text: 'Confiabilidad y seguridad: no causa daño y resiste ataques', why: 'Un fallo no debe provocar pérdidas físicas ni económicas.' },
+        { text: 'Eficiencia: no desperdicia memoria ni ciclos del procesador', why: 'El buen uso de los recursos mantiene la capacidad de respuesta.' },
+        { text: 'Aceptabilidad: comprensible, utilizable y compatible', why: 'El software se juzga desde el usuario que debe usarlo.' },
+      ],
+      hints: [
+        'Concéntrate en la consecuencia de cada atributo, no en su nombre.',
+        'Confiabilidad habla de daño y ataques; eficiencia, de recursos.',
+        'Aceptabilidad se juzga desde el usuario del sistema.',
+      ],
+    },
     config: {
       pairs: [
         { left: 'Mantenimiento', right: 'Puede evolucionar ante necesidades cambiantes' },
@@ -179,6 +221,18 @@ export const unit1Exercises: ExerciseSeed[] = [
     instructions: 'Toca un tipo y después su ejemplo.',
     correctOrder: [],
     explanation: 'El sistema de contabilidad es genérico; el control de tráfico aéreo es personalizado; el ERP es un genérico adaptado.',
+    example: {
+      title: 'Genérico, personalizado y adaptado',
+      steps: [
+        { text: 'Producto genérico: contabilidad que se vende a cualquier cliente', why: 'Se comercializa en el mercado abierto.' },
+        { text: 'Producto personalizado: control de tráfico aéreo para un cliente', why: 'La especificación la controla quien compra el software.' },
+        { text: 'Producto genérico adaptado: ERP configurado con reglas de la empresa', why: 'La frontera entre ambos tipos es cada vez más difusa.' },
+      ],
+      hints: [
+        'Piensa quién decide qué debe hacer el sistema.',
+        'Un ERP parte de un producto y se configura para el cliente.',
+      ],
+    },
     config: {
       pairs: [
         { left: 'Producto genérico', right: 'Sistema de contabilidad que se vende a cualquier cliente' },
@@ -195,6 +249,18 @@ export const unit1Exercises: ExerciseSeed[] = [
     instructions: 'Toca una celda y escribe la palabra que corresponde a la pista.',
     correctOrder: [],
     explanation: 'Aceptabilidad, confiabilidad y eficiencia son atributos de calidad que van más allá de lo que el sistema hace. La ingeniería de software es la disciplina que busca lograrlos a lo largo de todo el proceso.',
+    example: {
+      title: 'Crucigrama: atributos y disciplina',
+      steps: [
+        { text: 'Empezar por ACEPTABILIDAD', why: 'Es la palabra horizontal más larga y da letras a tres verticales.' },
+        { text: 'Completar CONFIABILIDAD y EFICIENCIA', why: 'Ambas cuelgan de letras de ACEPTABILIDAD y describen cualidades distintas.' },
+        { text: 'Cerrar con INGENIERIA', why: 'Es la disciplina que persigue esos atributos a lo largo del proceso.' },
+      ],
+      hints: [
+        'ACEPTABILIDAD es la entrada horizontal.',
+        'Las tres verticales empiezan en letras de ACEPTABILIDAD.',
+      ],
+    },
     config: {
       crossword: {
         rows: 16,
@@ -217,6 +283,19 @@ export const unit1Exercises: ExerciseSeed[] = [
     instructions: 'Toca un espacio y después una palabra del banco.',
     correctOrder: [],
     explanation: 'El ERP es un producto genérico adaptado; la calidad incluye atributos no funcionales.',
+    example: {
+      title: 'Producto profesional y atributos de calidad',
+      steps: [
+        { text: 'Un sistema profesional incluye archivos de configuración', why: 'Además de programas, necesita documentación y configuración.' },
+        { text: 'Los ERP son productos genéricos adaptados al cliente', why: 'Parte de un producto y se ajusta a las reglas de la empresa.' },
+        { text: 'En los productos personalizados el cliente controla la especificación', why: 'Quien encarga decide qué debe hacer el sistema.' },
+        { text: 'La calidad incluye atributos no funcionales', why: 'No basta con que funcione: importa cómo lo hace.' },
+      ],
+      hints: [
+        'Configuración no es lo mismo que manual de usuario.',
+        'Lo no funcional describe propiedades, no funciones.',
+      ],
+    },
     config: {
       sentences: [
         'Un sistema profesional incluye programas separados y archivos de {{configuración}}.',

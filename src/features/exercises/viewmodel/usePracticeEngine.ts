@@ -1,9 +1,5 @@
-import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { insertAttempt } from '@/features/exercises/model/attemptRepository';
-import { selectExercisesByLesson } from '@/features/exercises/model/exerciseRepository';
-import { selectExampleState } from '@/features/exercises/model/exampleStateRepository';
 import type { Exercise, ExerciseType } from '@/shared/model/entities';
 import { EXERCISE_TYPES } from '@/shared/model/entities';
 import { L12_TOPIC_BY_ID } from '@/shared/services/content/topics';
@@ -11,7 +7,10 @@ import { L12_TOPIC_BY_ID } from '@/shared/services/content/topics';
 import type { AttemptSummary } from '@/features/evaluations/viewmodel/analytics.logic';
 import type { ExerciseScore } from '@/features/exercises/viewmodel/exercise.logic';
 import { drawGroups } from '@/features/exercises/viewmodel/draw.logic';
+import { shuffleItems } from '@/features/exercises/viewmodel/exercise.logic';
+import { ensureLessonDraw } from '@/features/exercises/viewmodel/lessonDraw';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
+import { useRepositories } from '@/shared/services/data/DataProvider';
 
 export const PRACTICE_DRAW_COUNT = 10;
 
@@ -42,14 +41,6 @@ export interface PracticeEngine {
   submit: (answer: string, correct: boolean, score?: ExerciseScore) => void;
   next: () => void;
 }
-
-const EMPTY_SUMMARY: PracticeSummary = {
-  total: 0,
-  correct: 0,
-  accuracy: 1,
-  byType: {},
-  byQuestion: [],
-};
 
 function fractionOf(question: PracticeQuestion): number {
   return question.total === 0 ? 0 : question.correct / question.total;
@@ -91,7 +82,7 @@ function summarizeSession(order: Exercise[], results: Record<string, ExerciseSco
 }
 
 export function usePracticeEngine(lessonId: string | null): PracticeEngine {
-  const db = useSQLiteContext();
+  const { exercises: exerciseRepository, attempts, exampleState } = useRepositories();
   const { account } = useAuth();
   const [items, setItems] = useState<Exercise[]>([]);
   const [order, setOrder] = useState<Exercise[]>([]);
@@ -113,38 +104,57 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
     setIsLoading(true);
     answeredRef.current = false;
     (async () => {
-      const loaded = (await selectExercisesByLesson(db, lessonId)).filter(exercise =>
-        EXERCISE_TYPES.includes(exercise.type),
-      );
-      let exampleIds: string[] = [];
-      if (account) {
-        const state = await selectExampleState(db, account.id, lessonId);
-        exampleIds = state.drawExampleIds;
+      try {
+        const loaded = (await exerciseRepository.selectExercisesByLesson(lessonId)).filter(exercise =>
+          EXERCISE_TYPES.includes(exercise.type),
+        );
+        let drawnIds: string[];
+        if (account) {
+          const state = await ensureLessonDraw(
+            { exercises: exerciseRepository, exampleState },
+            account.id,
+            lessonId,
+          );
+          drawnIds = shuffleItems(state.drawExerciseIds, Math.random);
+        } else {
+          drawnIds = [];
+        }
+        if (drawnIds.length === 0) {
+          const pool = loaded.map(exercise => exercise.id);
+          drawnIds = drawGroups([], pool, PRACTICE_DRAW_COUNT, Math.random).exerciseIds;
+        }
+        const byId = new Map(loaded.map(exercise => [exercise.id, exercise]));
+        const orderItems = drawnIds
+          .map(id => byId.get(id))
+          .filter((item): item is Exercise => Boolean(item));
+        if (!active) {
+          return;
+        }
+        setItems(loaded);
+        setOrder(orderItems);
+        setIndex(0);
+        setAnswered(false);
+        setLastCorrect(null);
+        setResults({});
+        setPhase('running');
+      } catch (caught) {
+        if (__DEV__) {
+          console.error('[practice] carga fallida', caught);
+        }
+        if (active) {
+          setItems([]);
+          setOrder([]);
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
       }
-      const pool = loaded
-        .filter(exercise => !exampleIds.includes(exercise.id))
-        .map(exercise => exercise.id);
-      const drawnIds = drawGroups([], pool, PRACTICE_DRAW_COUNT, Math.random).exerciseIds;
-      const byId = new Map(loaded.map(exercise => [exercise.id, exercise]));
-      const orderItems = drawnIds
-        .map(id => byId.get(id))
-        .filter((item): item is Exercise => Boolean(item));
-      if (!active) {
-        return;
-      }
-      setItems(loaded);
-      setOrder(orderItems);
-      setIndex(0);
-      setAnswered(false);
-      setLastCorrect(null);
-      setResults({});
-      setPhase('running');
-      setIsLoading(false);
     })();
     return () => {
       active = false;
     };
-  }, [db, lessonId, account]);
+  }, [exerciseRepository, exampleState, lessonId, account]);
 
   const summary = useMemo(() => summarizeSession(order, results), [order, results]);
 
@@ -162,18 +172,18 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
         [itemId]: score ?? { correct: correct ? 1 : 0, total: 1 },
       }));
       if (account && lessonId) {
-        void insertAttempt(
-          db,
+        void attempts.insertAttempt(
           account.id,
           'practice',
           itemId,
           typeAt(order, index),
           lessonId,
           correct,
+          score ?? { correct: correct ? 1 : 0, total: 1 },
         );
       }
     },
-    [db, account, lessonId, order, index],
+    [attempts, account, lessonId, order, index],
   );
 
   const next = useCallback(() => {

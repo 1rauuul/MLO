@@ -1,8 +1,6 @@
-import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
 
-import { selectLessons, selectUnits } from '@/features/modules/model/lessonRepository';
-import { selectProgressMap } from '@/features/modules/model/progressRepository';
+import { useRepositories } from '@/shared/services/data/DataProvider';
 import type { Lesson, Unit } from '@/shared/model/entities';
 
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
@@ -17,7 +15,7 @@ interface CatalogResult {
 }
 
 export function useCatalog(): CatalogResult {
-  const db = useSQLiteContext();
+  const { lessons, progress } = useRepositories();
   const { account } = useAuth();
   const [units, setUnits] = useState<Unit[]>([]);
   const [lessonsByUnit, setLessonsByUnit] = useState<Record<string, Lesson[]>>({});
@@ -28,23 +26,23 @@ export function useCatalog(): CatalogResult {
   const refresh = useCallback(async () => {
     setIsLoading(true);
     try {
-      const loadedUnits = await selectUnits(db);
-      const lessons = await selectLessons(db);
+      const loadedUnits = await lessons.selectUnits();
+      const loadedLessons = await lessons.selectLessons();
       const grouped: Record<string, Lesson[]> = {};
-      for (const lesson of lessons) {
+      for (const lesson of loadedLessons) {
         (grouped[lesson.unitId] ??= []).push(lesson);
       }
-      const progress = account ? await selectProgressMap(db, account.id) : {};
+      const loadedProgress = account ? await progress.selectProgressMap(account.id) : {};
       setUnits(loadedUnits);
       setLessonsByUnit(grouped);
-      setProgressMap(progress);
+      setProgressMap(loadedProgress);
       setError(null);
     } catch {
       setError('No se pudo cargar el catálogo de unidades.');
     } finally {
       setIsLoading(false);
     }
-  }, [db, account]);
+  }, [lessons, progress, account]);
 
   useEffect(() => {
     void refresh();

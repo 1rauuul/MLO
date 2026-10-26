@@ -1,11 +1,6 @@
-import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
 
-import {
-  countCompletedByUnit,
-  markLessonCompleted,
-  selectProgressMap,
-} from '@/features/modules/model/progressRepository';
+import { useRepositories } from '@/shared/services/data/DataProvider';
 
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
 
@@ -19,7 +14,7 @@ interface ModuleProgressResult {
 }
 
 export function useModuleProgress(unitId?: string): ModuleProgressResult {
-  const db = useSQLiteContext();
+  const { progress } = useRepositories();
   const { account } = useAuth();
   const [progressMap, setProgressMap] = useState<Record<string, boolean>>({});
   const [completed, setCompleted] = useState(0);
@@ -34,9 +29,9 @@ export function useModuleProgress(unitId?: string): ModuleProgressResult {
       return;
     }
     try {
-      setProgressMap(await selectProgressMap(db, account.id));
+      setProgressMap(await progress.selectProgressMap(account.id));
       if (unitId) {
-        const stats = await countCompletedByUnit(db, account.id, unitId);
+        const stats = await progress.countCompletedByUnit(account.id, unitId);
         setCompleted(stats.completed);
         setTotal(stats.total);
       }
@@ -44,7 +39,7 @@ export function useModuleProgress(unitId?: string): ModuleProgressResult {
     } catch {
       setError('No se pudo cargar el progreso.');
     }
-  }, [db, account, unitId]);
+  }, [progress, account, unitId]);
 
   useEffect(() => {
     void refresh();
@@ -56,13 +51,13 @@ export function useModuleProgress(unitId?: string): ModuleProgressResult {
         return;
       }
       try {
-        await markLessonCompleted(db, account.id, lessonId);
+        await progress.markLessonCompleted(account.id, lessonId);
         await refresh();
       } catch {
         setError('No se pudo guardar el progreso.');
       }
     },
-    [db, account, refresh],
+    [progress, account, refresh],
   );
 
   return { progressMap, completed, total, error, markCompleted, refresh };

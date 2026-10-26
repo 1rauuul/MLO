@@ -22,6 +22,14 @@ jest.mock('@/features/exercises/model/exampleStateRepository', () => ({
   })),
   saveExampleState: jest.fn(async () => {}),
 }));
+jest.mock('@/features/exercises/viewmodel/lessonDraw', () => ({
+  ensureLessonDraw: jest.fn(async () => ({
+    drawExampleIds: [],
+    drawExerciseIds: [],
+    seenExampleIds: [],
+    exampleIndex: 0,
+  })),
+}));
 
 const insertAttempt = attemptRepository.insertAttempt as jest.MockedFunction<
   typeof attemptRepository.insertAttempt
@@ -91,6 +99,7 @@ it('permite registrar un nuevo intento al avanzar al siguiente ejercicio', async
     expect.any(String),
     'lesson-2',
     true,
+    { correct: 1, total: 1 },
   );
 });
 

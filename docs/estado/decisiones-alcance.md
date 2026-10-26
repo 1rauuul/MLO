@@ -81,3 +81,19 @@
   desempeño); metadatos LOM parciales.
 - **No afirmar sin verificar:** adaptación automática de contenido por estilo; empaquetado SCORM;
   cumplimiento completo LOM; portabilidad iOS probada en dispositivo.
+
+---
+
+## C9. Servicios y contenido remoto — **Offline-first con servicios opcionales** (2026-10-23)
+
+- **Cambio de alcance:** MLO deja de declararse "sin red ni backend". Se añade una capa de
+  servicios **desactivada por defecto** (`DATA_MODE = 'local'`), pensada para consumir solo
+  **contenido publicado** por el sistema del maestro.
+- **Qué no se hace:** no se sincroniza progreso, no hay cuentas remotas, no existen `sync/*`
+  ni `auth/*`. SQLite sigue siendo la fuente de verdad local.
+- **Cómo se integra:** los ViewModels consumen `useRepositories()`; un adaptador HTTP
+  (`shared/services/http`) y `remoteContent.ts` validan el contenido con `parse*Seed` antes de
+  aplicarlo. Si falla la red o el contenido es inválido, se conserva el contenido local.
+- **Requisito para el reporte:** describir la app como **offline-first** con servicios
+  opcionales, no como una app conectada. La prueba de modo avión sigue siendo válida y
+  obligatoria para el comportamiento por defecto.

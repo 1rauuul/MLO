@@ -17,7 +17,7 @@ import { TOPIC_LABELS } from '@/shared/services/content/topics';
 import { useLessonContent } from '@/features/modules/viewmodel/useLessonContent';
 import { usePracticeEngine } from '@/features/exercises/viewmodel/usePracticeEngine';
 import { useSession } from '@/features/auth/viewmodel/useSession';
-import { setExitGuard } from '@/shared/services/navigation/exitGuard';
+import { useExitGuard } from '@/shared/hooks/useExitGuard';
 
 function formatPoints(value: number): string {
   return Number(value.toFixed(1)).toString();
@@ -30,8 +30,7 @@ export default function PracticeScreen() {
   const { record } = useSession();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
-  const [exitVisible, setExitVisible] = useState(false);
-  const [pendingExit, setPendingExit] = useState<(() => void) | null>(null);
+  const exitGuard = useExitGuard(engine.phase === 'running' && !engine.isLoading);
   const [showBreakdown, setShowBreakdown] = useState(true);
 
   useFocusEffect(
@@ -45,25 +44,6 @@ export default function PracticeScreen() {
         });
       }
     }, [lesson, record]),
-  );
-
-  const requestExit = useCallback(
-    (next: () => void) => {
-      if (engine.phase === 'running' && !engine.isLoading) {
-        setPendingExit(() => next);
-        setExitVisible(true);
-      } else {
-        next();
-      }
-    },
-    [engine.phase, engine.isLoading],
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      setExitGuard(requestExit);
-      return () => setExitGuard(null);
-    }, [requestExit]),
   );
 
   const goBack = () => router.back();
@@ -248,7 +228,7 @@ export default function PracticeScreen() {
   const exercise = engine.current;
   const isLast = engine.index >= engine.total - 1;
 
-  const handleBack = () => requestExit(goBack);
+  const handleBack = () => exitGuard.request(goBack);
 
   return (
     <Screen>
@@ -297,15 +277,11 @@ export default function PracticeScreen() {
       ) : null}
 
       <ConfirmExitModal
-        visible={exitVisible}
+        visible={exitGuard.visible}
         title="Salir de los ejercicios"
         message="Si sales ahora, la próxima vez empezarás de cero con ejercicios diferentes."
-        onCancel={() => setExitVisible(false)}
-        onConfirm={() => {
-          setExitVisible(false);
-          pendingExit?.();
-          setPendingExit(null);
-        }}
+        onCancel={exitGuard.cancel}
+        onConfirm={exitGuard.confirm}
       />
     </Screen>
   );

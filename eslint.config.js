@@ -11,4 +11,20 @@ module.exports = defineConfig([
       'react-hooks/set-state-in-effect': 'off',
     },
   },
+  {
+    files: ['src/features/**/viewmodel/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'expo-sqlite',
+              message: 'Usa useRepositories() de shared/services/data en los ViewModels.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);

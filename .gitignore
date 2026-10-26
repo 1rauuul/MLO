@@ -3,6 +3,12 @@
 # dependencies
 node_modules/
 
+# generated / local tooling
+coverage/
+repomix-output.xml
+.opencode/
+refactor/
+
 # Expo
 .expo/
 dist/

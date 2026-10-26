@@ -2,6 +2,7 @@
 
 Índice de la documentación del proyecto.
 
+- [`api/`](api/) — contrato del contenido publicado (borrador OpenAPI).
 - [`arquitectura/`](arquitectura/) — diagramas (ER, esquema BD, navegación) y análisis de arquitectura.
 - [`contenido/`](contenido/) — contenido teórico de la Unidad 1, tablas de ingeniería, crucigramas y plantillas.
 - [`estado/`](estado/) — estado del proyecto, decisiones de alcance y siguientes pasos.

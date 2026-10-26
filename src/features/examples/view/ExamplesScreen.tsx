@@ -60,10 +60,12 @@ export default function ExamplesScreen() {
       <ExampleRunner
         key={engine.current.id}
         exercise={engine.current}
+        example={engine.currentExample}
         index={engine.index}
         total={engine.total}
         isLast={engine.isLast}
         onNext={engine.next}
+        onRedraw={engine.redraw}
         onGoExercises={() => {
           router.push({ pathname: '/ejercicios', params: { lesson: lessonParam } });
         }}

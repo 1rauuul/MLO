@@ -1,5 +1,8 @@
 # Plan de implementación: lección `l1.2` (MLO) — adaptado al estado actual
 
+> **Implementado.** El banco remoto de `l1.2` quedó integrado en la migración v14
+> (ids estables desde v15). Documento conservado como registro; no confundir con v12.
+>
 > Adaptado el 2026-10-15 al estado real del repo (refactor MVVM por features).
 
 Arquitectura vigente: `src/features/<feature>/{model,viewmodel,view}` y

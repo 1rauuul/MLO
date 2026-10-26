@@ -3,7 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import type { Complexity, UnitColor } from '@/shared/model/entities';
 
 import { richContent } from '@/shared/services/content/richContent';
-import { l12ExerciseBank } from '@/shared/services/content/banks/lesson1.2.bank';
+import type { RemoteLessonContent } from '@/shared/services/content/remoteContent';
 import { l12QuestionBank } from '@/shared/services/content/banks/lesson1.2.questions';
 import type { ExerciseSeed } from '@/shared/services/content/banks/types';
 import {
@@ -177,9 +177,45 @@ function buildSimpleLessons(): LessonSeed[] {
   return result;
 }
 
+const LESSONS = [...unitOneLessons, ...buildSimpleLessons()];
+
+function hashString(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+// Cualquier cambio en el contenido empaquetado cambia el hash y dispara una
+// re-sincronización sin subir DATABASE_VERSION.
+export const CONTENT_HASH = hashString(
+  JSON.stringify({
+    units,
+    lessons: LESSONS,
+    unit1Exercises,
+    unit1Examples,
+    unit1Evaluations,
+    l12QuestionBank,
+    richContent,
+  }),
+);
+
+const CONTENT_HASH_KEY = 'content_hash';
+
+function placeholders(values: string[]): string {
+  return values.map(() => '?').join(', ');
+}
+
 async function insertExampleRow(db: SQLiteDatabase, example: ExampleSeed): Promise<void> {
   await db.runAsync(
-    'INSERT INTO examples (id, lesson_id, type, title, prompt, config, steps, hints, explanation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING',
+    `INSERT INTO examples (id, lesson_id, type, title, prompt, config, steps, hints, explanation)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       lesson_id = excluded.lesson_id, type = excluded.type, title = excluded.title,
+       prompt = excluded.prompt, config = excluded.config, steps = excluded.steps,
+       hints = excluded.hints, explanation = excluded.explanation`,
     example.id,
     example.lessonId,
     example.type,
@@ -194,7 +230,12 @@ async function insertExampleRow(db: SQLiteDatabase, example: ExampleSeed): Promi
 
 async function insertExerciseRow(db: SQLiteDatabase, exercise: ExerciseSeed): Promise<void> {
   await db.runAsync(
-    'INSERT INTO exercises (id, lesson_id, type, prompt, instructions, correct_order, config, explanation) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING',
+    `INSERT INTO exercises (id, lesson_id, type, prompt, instructions, correct_order, config, explanation)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       lesson_id = excluded.lesson_id, type = excluded.type, prompt = excluded.prompt,
+       instructions = excluded.instructions, correct_order = excluded.correct_order,
+       config = excluded.config, explanation = excluded.explanation`,
     exercise.id,
     exercise.lessonId,
     exercise.type,
@@ -231,6 +272,23 @@ async function insertExerciseWithExample(db: SQLiteDatabase, exercise: ExerciseS
   }
 }
 
+function evaluationQuestionId(evaluationId: string, index: number, question: QuestionSeed): string {
+  return question.id ?? `${evaluationId}-q${index + 1}`;
+}
+
+function bankQuestionId(evaluationId: string, index: number, question: QuestionSeed): string {
+  return question.id ?? `${evaluationId}-bank-q${index + 1}`;
+}
+
+// El banco manda sobre la copia embebida: se omite al sembrar sin desplazar
+// los ids posicionales del resto, para no romper attempts.
+function isBankDuplicate(evaluationId: string, question: QuestionSeed): boolean {
+  return (
+    evaluationId === 'ev1.2' &&
+    l12QuestionBank.some(bankQuestion => bankQuestion.prompt === question.prompt)
+  );
+}
+
 async function insertQuestionRow(
   db: SQLiteDatabase,
   id: string,
@@ -239,7 +297,12 @@ async function insertQuestionRow(
   question: QuestionSeed,
 ): Promise<void> {
   await db.runAsync(
-    'INSERT INTO questions (id, evaluation_id, order_index, type, config, prompt, options, answer, explanation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING',
+    `INSERT INTO questions (id, evaluation_id, order_index, type, config, prompt, options, answer, explanation)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       evaluation_id = excluded.evaluation_id, order_index = excluded.order_index,
+       type = excluded.type, config = excluded.config, prompt = excluded.prompt,
+       options = excluded.options, answer = excluded.answer, explanation = excluded.explanation`,
     id,
     evaluationId,
     orderIndex,
@@ -254,50 +317,154 @@ async function insertQuestionRow(
 
 async function insertEvaluationRows(db: SQLiteDatabase, evaluation: EvaluationSeed): Promise<void> {
   await db.runAsync(
-    'INSERT INTO evaluations (id, lesson_id, title, description) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO NOTHING',
+    `INSERT INTO evaluations (id, lesson_id, title, description) VALUES (?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       lesson_id = excluded.lesson_id, title = excluded.title, description = excluded.description`,
     evaluation.id,
     evaluation.lessonId,
     evaluation.title,
     evaluation.description,
   );
-  let index = 0;
-  for (const question of evaluation.questions) {
-    await insertQuestionRow(db, `${evaluation.id}-q${index + 1}`, evaluation.id, index, question);
-    index += 1;
+  for (const [index, question] of evaluation.questions.entries()) {
+    if (isBankDuplicate(evaluation.id, question)) {
+      continue;
+    }
+    await insertQuestionRow(
+      db,
+      evaluationQuestionId(evaluation.id, index, question),
+      evaluation.id,
+      index,
+      question,
+    );
+  }
+}
+
+async function insertQuestionBankRows(
+  db: SQLiteDatabase,
+  evaluationId: string,
+  bank: QuestionSeed[],
+): Promise<void> {
+  for (const [index, question] of bank.entries()) {
+    await insertQuestionRow(
+      db,
+      bankQuestionId(evaluationId, index, question),
+      evaluationId,
+      1000 + index,
+      question,
+    );
   }
 }
 
 const UNIT1_LESSONS = ['l1.1', 'l1.2', 'l1.3', 'l1.4'];
 const UNIT1_EVALUATIONS = ['ev1.1', 'ev1.2', 'ev1.3', 'ev1.4'];
 
-export async function applyUnit1Content(db: SQLiteDatabase, clearAttempts = true): Promise<void> {
-  await db.withTransactionAsync(async () => {
-    if (clearAttempts) {
-      await db.runAsync(
-        `DELETE FROM attempts WHERE lesson_id IN (${UNIT1_LESSONS.map(() => '?').join(', ')})`,
-        ...UNIT1_LESSONS,
-      );
-    }
-    await db.runAsync(
-      `DELETE FROM exercises WHERE lesson_id IN (${UNIT1_LESSONS.map(() => '?').join(', ')})`,
-      ...UNIT1_LESSONS,
-    );
-    await db.runAsync(
-      `DELETE FROM questions WHERE evaluation_id IN (${UNIT1_EVALUATIONS.map(() => '?').join(', ')})`,
-      ...UNIT1_EVALUATIONS,
-    );
-    await db.runAsync("DELETE FROM evaluations WHERE id = 'ev1.1'");
+function seedExerciseIds(): string[] {
+  return unit1Exercises.map(exercise => exercise.id);
+}
 
-    for (const example of unit1Examples) {
-      await insertExampleRow(db, example);
-    }
-    for (const exercise of unit1Exercises) {
-      await insertExerciseWithExample(db, exercise);
-    }
-    for (const evaluation of unit1Evaluations) {
-      await insertEvaluationRows(db, evaluation);
-    }
-  });
+function seedExampleIds(): string[] {
+  return [
+    ...unit1Examples.map(example => example.id),
+    ...unit1Exercises.filter(exercise => exercise.example).map(exercise => exercise.id),
+  ];
+}
+
+function seedQuestionIds(): string[] {
+  return [
+    ...unit1Evaluations.flatMap(evaluation =>
+      evaluation.questions
+        .map((question, index) => ({ question, index }))
+        .filter(({ question }) => !isBankDuplicate(evaluation.id, question))
+        .map(({ question, index }) => evaluationQuestionId(evaluation.id, index, question)),
+    ),
+    ...l12QuestionBank.map((question, index) => bankQuestionId('ev1.2', index, question)),
+  ];
+}
+
+async function deleteOrphans(
+  db: SQLiteDatabase,
+  table: 'exercises' | 'examples' | 'questions',
+  column: 'lesson_id' | 'evaluation_id',
+  owned: string[],
+  keepIds: string[],
+): Promise<void> {
+  const keep = keepIds.length > 0 ? ` AND id NOT IN (${placeholders(keepIds)})` : '';
+  await db.runAsync(
+    `DELETE FROM ${table} WHERE ${column} IN (${placeholders(owned)})${keep}`,
+    ...owned,
+    ...keepIds,
+  );
+}
+
+// Solo borra huérfanos de las lecciones/evaluaciones gestionadas; attempts no se toca.
+async function deleteContentOrphans(db: SQLiteDatabase): Promise<void> {
+  await deleteOrphans(db, 'exercises', 'lesson_id', UNIT1_LESSONS, seedExerciseIds());
+  await deleteOrphans(db, 'examples', 'lesson_id', UNIT1_LESSONS, seedExampleIds());
+  await deleteOrphans(db, 'questions', 'evaluation_id', UNIT1_EVALUATIONS, seedQuestionIds());
+}
+
+/**
+ * Upsert + limpieza del contenido empaquetado. No abre transacción: los
+ * llamadores deciden el límite atómico (expo-sqlite falla con anidamiento).
+ */
+async function writeUnitsAndLessons(db: SQLiteDatabase): Promise<void> {
+  for (const unit of units) {
+    await db.runAsync(
+      `INSERT INTO units (id, number, title, description, difficulty, color) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         number = excluded.number, title = excluded.title, description = excluded.description,
+         difficulty = excluded.difficulty, color = excluded.color`,
+      unit.id,
+      unit.number,
+      unit.title,
+      unit.description,
+      unit.difficulty,
+      unit.color,
+    );
+  }
+  for (const lesson of LESSONS) {
+    await db.runAsync(
+      `INSERT INTO lessons (id, unit_id, code, title, eyebrow, body, code_sample, context_title, context_body, synthesis, content, position)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         unit_id = excluded.unit_id, code = excluded.code, title = excluded.title,
+         eyebrow = excluded.eyebrow, body = excluded.body, code_sample = excluded.code_sample,
+         context_title = excluded.context_title, context_body = excluded.context_body,
+         synthesis = excluded.synthesis, content = excluded.content, position = excluded.position`,
+      lesson.id,
+      lesson.unitId,
+      lesson.code,
+      lesson.title,
+      lesson.eyebrow,
+      lesson.body,
+      lesson.codeSample ?? '',
+      lesson.contextTitle ?? '',
+      lesson.contextBody ?? '',
+      JSON.stringify(lesson.synthesis ?? []),
+      JSON.stringify(richContent[lesson.id] ?? []),
+      lesson.position,
+    );
+  }
+}
+
+export async function writeContentSync(db: SQLiteDatabase): Promise<void> {
+  await writeUnitsAndLessons(db);
+  for (const example of unit1Examples) {
+    await insertExampleRow(db, example);
+  }
+  for (const exercise of unit1Exercises) {
+    // unit1Exercises ya incluye l12ExerciseBank, así que el banco no se inserta aparte.
+    await insertExerciseWithExample(db, exercise);
+  }
+  for (const evaluation of unit1Evaluations) {
+    await insertEvaluationRows(db, evaluation);
+  }
+  await insertQuestionBankRows(db, 'ev1.2', l12QuestionBank);
+  await deleteContentOrphans(db);
+}
+
+export async function applyContentSync(db: SQLiteDatabase): Promise<void> {
+  await db.withTransactionAsync(() => writeContentSync(db));
 }
 
 export async function applyExerciseBank(db: SQLiteDatabase, bank: ExerciseSeed[]): Promise<void> {
@@ -308,20 +475,10 @@ export async function applyExerciseBank(db: SQLiteDatabase, bank: ExerciseSeed[]
   });
 }
 
+// El banco de l1.2 entra por unit1Exercises; se conserva el nombre para las
+// llamadas históricas y ahora re-sincroniza todo el contenido.
 export async function applyUnit12ExerciseBank(db: SQLiteDatabase): Promise<void> {
-  return applyExerciseBank(db, l12ExerciseBank);
-}
-
-async function insertQuestionBankRows(
-  db: SQLiteDatabase,
-  evaluationId: string,
-  bank: QuestionSeed[],
-): Promise<void> {
-  let index = 0;
-  for (const question of bank) {
-    await insertQuestionRow(db, `${evaluationId}-bank-q${index + 1}`, evaluationId, 1000 + index, question);
-    index += 1;
-  }
+  return applyContentSync(db);
 }
 
 export async function applyQuestionBank(
@@ -336,55 +493,94 @@ export async function applyL12QuestionBank(db: SQLiteDatabase): Promise<void> {
   return applyQuestionBank(db, 'ev1.2', l12QuestionBank);
 }
 
+export async function writeSeedDatabase(db: SQLiteDatabase): Promise<void> {
+  await writeContentSync(db);
+}
+
 export async function seedDatabase(db: SQLiteDatabase): Promise<void> {
+  await db.withTransactionAsync(() => writeSeedDatabase(db));
+}
+
+export async function saveContentHash(db: SQLiteDatabase): Promise<void> {
+  await db.runAsync(
+    `INSERT INTO meta (key, value) VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    CONTENT_HASH_KEY,
+    CONTENT_HASH,
+  );
+}
+
+export async function syncContentIfChanged(db: SQLiteDatabase): Promise<boolean> {
+  const row = await db.getFirstAsync<{ value: string }>(
+    'SELECT value FROM meta WHERE key = ?',
+    CONTENT_HASH_KEY,
+  );
+  if (row?.value === CONTENT_HASH) {
+    return false;
+  }
   await db.withTransactionAsync(async () => {
-    for (const unit of units) {
-      await db.runAsync(
-        'INSERT INTO units (id, number, title, description, difficulty, color) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING',
-        unit.id,
-        unit.number,
-        unit.title,
-        unit.description,
-        unit.difficulty,
-        unit.color,
-      );
-    }
-
-    const lessons = [...unitOneLessons, ...buildSimpleLessons()];
-    for (const lesson of lessons) {
-      await db.runAsync(
-        'INSERT INTO lessons (id, unit_id, code, title, eyebrow, body, code_sample, context_title, context_body, synthesis, content, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING',
-        lesson.id,
-        lesson.unitId,
-        lesson.code,
-        lesson.title,
-        lesson.eyebrow,
-        lesson.body,
-        lesson.codeSample ?? '',
-        lesson.contextTitle ?? '',
-        lesson.contextBody ?? '',
-        JSON.stringify(lesson.synthesis ?? []),
-        JSON.stringify(richContent[lesson.id] ?? []),
-        lesson.position,
-      );
-    }
-
-    for (const example of unit1Examples) {
-      await insertExampleRow(db, example);
-    }
-    for (const exercise of unit1Exercises) {
-      await insertExerciseWithExample(db, exercise);
-    }
-    for (const evaluation of unit1Evaluations) {
-      await insertEvaluationRows(db, evaluation);
-    }
-    // Same transaction: opening a nested one would make SQLite fail the whole seed.
-    await insertQuestionBankRows(db, 'ev1.2', l12QuestionBank);
+    await writeContentSync(db);
+    await saveContentHash(db);
   });
+  return true;
+}
+
+/**
+ * Renombra los ids posicionales del banco (`ev1.2-bank-q1`) a los ids
+ * explícitos actuales y re-mapea attempts.item_id. Debe correr dentro de la
+ * transacción de la migración.
+ */
+export async function migrateQuestionIds(db: SQLiteDatabase): Promise<void> {
+  const rows = await db.getAllAsync<{ id: string; prompt: string }>(
+    "SELECT id, prompt FROM questions WHERE evaluation_id = 'ev1.2'",
+  );
+  const idByPrompt = new Map(
+    l12QuestionBank.map((question, index) => [
+      question.prompt,
+      bankQuestionId('ev1.2', index, question),
+    ]),
+  );
+  for (const row of rows) {
+    const newId = idByPrompt.get(row.prompt);
+    if (!newId || newId === row.id) {
+      continue;
+    }
+    await db.runAsync('UPDATE attempts SET item_id = ? WHERE item_id = ?', newId, row.id);
+    await db.runAsync('DELETE FROM questions WHERE id = ?', row.id);
+  }
 }
 
 export async function applyContentMigration(db: SQLiteDatabase): Promise<void> {
   for (const [lessonId, blocks] of Object.entries(richContent)) {
     await db.runAsync('UPDATE lessons SET content = ? WHERE id = ?', JSON.stringify(blocks), lessonId);
   }
+}
+
+/**
+ * Aplica contenido remoto ya validado. No borra huérfanos: el contenido
+ * empaquetado sigue siendo la fuente local y decide qué se elimina.
+ */
+export async function applyRemoteContent(
+  db: SQLiteDatabase,
+  content: RemoteLessonContent[],
+): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    for (const lesson of content) {
+      for (const exercise of lesson.exercises) {
+        await insertExerciseWithExample(db, exercise);
+      }
+      for (const example of lesson.examples) {
+        await insertExampleRow(db, example);
+      }
+      for (const [index, entry] of lesson.questions.entries()) {
+        await insertQuestionRow(
+          db,
+          entry.question.id ?? `${entry.evaluationId}-${lesson.lessonId}-remote-q${index + 1}`,
+          entry.evaluationId,
+          2000 + index,
+          entry.question,
+        );
+      }
+    }
+  });
 }

@@ -1,5 +1,4 @@
 import * as Crypto from 'expo-crypto';
-import { useSQLiteContext } from 'expo-sqlite';
 import {
   createContext,
   useCallback,
@@ -10,17 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 
-import {
-  clearSession,
-  insertAccount,
-  saveSession,
-  selectAccountById,
-  selectAccountByUsername,
-  selectSessionAccountId,
-  updatePasswordHash,
-} from '@/features/auth/model/accountRepository';
-import { createDefaultProfile } from '@/features/profile/model/profileRepository';
-import { resetAccountProgress } from '@/features/modules/model/progressRepository';
+import { useRepositories } from '@/shared/services/data/DataProvider';
 import type { Account } from '@/shared/model/entities';
 
 import {
@@ -56,7 +45,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const db = useSQLiteContext();
+  const { accounts, profile: profileRepository, progress } = useRepositories();
   const [account, setAccount] = useState<Account | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -64,8 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true;
     (async () => {
       try {
-        const accountId = await selectSessionAccountId(db);
-        const loaded = accountId ? await selectAccountById(db, accountId) : null;
+        const accountId = await accounts.selectSessionAccountId();
+        const loaded = accountId ? await accounts.selectAccountById(accountId) : null;
         if (!active) {
           return;
         }
@@ -92,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [db]);
+  }, [accounts]);
 
   const register = useCallback<AuthContextValue['register']>(
     async input => {
@@ -102,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       try {
         const username = normalizeUsername(input.username);
-        const existing = await selectAccountByUsername(db, username);
+        const existing = await accounts.selectAccountByUsername(username);
         if (existing) {
           return { ok: false, error: 'username_taken' };
         }
@@ -113,9 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           PBKDF2_DEFAULT_ITERATIONS,
         );
         const displayName = `${input.firstName.trim()} ${input.lastName.trim()}`;
-        const id = await insertAccount(db, { username, displayName, passwordHash, salt });
-        await createDefaultProfile(db, id);
-        await saveSession(db, id);
+        const id = await accounts.insertAccount({ username, displayName, passwordHash, salt });
+        await profileRepository.createDefaultProfile(id);
+        await accounts.saveSession(id);
         setAccount({ id, username, displayName, createdAt: new Date().toISOString() });
         return { ok: true };
       } catch (error) {
@@ -125,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: false, error: 'storage_error' };
       }
     },
-    [db],
+    [accounts, profileRepository],
   );
 
   const login = useCallback<AuthContextValue['login']>(
@@ -134,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: false, error: 'missing' };
       }
       try {
-        const found = await selectAccountByUsername(db, normalizeUsername(username));
+        const found = await accounts.selectAccountByUsername(normalizeUsername(username));
         if (!found) {
           return { ok: false, error: 'invalid_credentials' };
         }
@@ -153,9 +142,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             found.salt,
             PBKDF2_DEFAULT_ITERATIONS,
           );
-          await updatePasswordHash(db, found.id, upgraded, found.salt);
+          await accounts.updatePasswordHash(found.id, upgraded, found.salt);
         }
-        await saveSession(db, found.id);
+        await accounts.saveSession(found.id);
         setAccount({
           id: found.id,
           username: found.username,
@@ -167,20 +156,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: false, error: 'storage_error' };
       }
     },
-    [db],
+    [accounts],
   );
 
   const logout = useCallback(async () => {
-    await clearSession(db);
+    await accounts.clearSession();
     setAccount(null);
-  }, [db]);
+  }, [accounts]);
 
   const resetProgress = useCallback(async () => {
     if (!account) {
       return;
     }
-    await resetAccountProgress(db, account.id);
-  }, [account, db]);
+    await progress.resetAccountProgress(account.id);
+  }, [account, progress]);
 
   const value = useMemo<AuthContextValue>(
     () => ({ account, isLoading, register, login, logout, resetProgress }),

@@ -1,14 +1,7 @@
-import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { insertAttempt, selectAttemptsByLesson } from '@/features/exercises/model/attemptRepository';
-import { selectExercisesByLesson } from '@/features/exercises/model/exerciseRepository';
-import {
-  insertEvaluationResult,
-  selectEvaluationByLesson,
-  selectQuestions,
-} from '@/features/evaluations/model/evaluationRepository';
 import type { Evaluation, Exercise, Question } from '@/shared/model/entities';
+import { useRepositories } from '@/shared/services/data/DataProvider';
 import { ACTIVITY_TYPES, EXERCISE_TYPES } from '@/shared/model/entities';
 
 import { summarizeAttempts, type AttemptSummary } from '@/features/evaluations/viewmodel/analytics.logic';
@@ -41,7 +34,7 @@ function questionFromExercise(exercise: Exercise, evaluationId: string): Questio
 }
 
 export function useEvaluationForLesson(lessonId: string | null): UseEvaluationForLessonResult {
-  const db = useSQLiteContext();
+  const { evaluations, exercises: exerciseRepository } = useRepositories();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,28 +49,43 @@ export function useEvaluationForLesson(lessonId: string | null): UseEvaluationFo
     let active = true;
     setIsLoading(true);
     (async () => {
-      const loadedEvaluation = await selectEvaluationByLesson(db, lessonId);
-      const [exercises, bankQuestions] = await Promise.all([
-        selectExercisesByLesson(db, lessonId),
-        loadedEvaluation ? selectQuestions(db, loadedEvaluation.id) : Promise.resolve([] as Question[]),
-      ]);
-      const evaluationId = loadedEvaluation?.id ?? `bank-${lessonId}`;
-      const questionPool = bankQuestions.filter(question => ACTIVITY_TYPES.includes(question.type));
-      const exercisePool = exercises
-        .filter(exercise => EXERCISE_TYPES.includes(exercise.type))
-        .map(exercise => questionFromExercise(exercise, evaluationId));
-      const { mixed } = buildEvaluationPool(questionPool, exercisePool, Math.random);
-      if (!active) {
-        return;
+      try {
+        const loadedEvaluation = await evaluations.selectEvaluationByLesson(lessonId);
+        const [exercises, bankQuestions] = await Promise.all([
+          exerciseRepository.selectExercisesByLesson(lessonId),
+          loadedEvaluation
+            ? evaluations.selectQuestions(loadedEvaluation.id)
+            : Promise.resolve([] as Question[]),
+        ]);
+        const evaluationId = loadedEvaluation?.id ?? `bank-${lessonId}`;
+        const questionPool = bankQuestions.filter(question => ACTIVITY_TYPES.includes(question.type));
+        const exercisePool = exercises
+          .filter(exercise => EXERCISE_TYPES.includes(exercise.type))
+          .map(exercise => questionFromExercise(exercise, evaluationId));
+        const { mixed } = buildEvaluationPool(questionPool, exercisePool, Math.random);
+        if (!active) {
+          return;
+        }
+        setEvaluation(loadedEvaluation);
+        setQuestions(mixed);
+      } catch (caught) {
+        if (__DEV__) {
+          console.error('[evaluation] carga fallida', caught);
+        }
+        if (active) {
+          setEvaluation(null);
+          setQuestions([]);
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
       }
-      setEvaluation(loadedEvaluation);
-      setQuestions(mixed);
-      setIsLoading(false);
     })();
     return () => {
       active = false;
     };
-  }, [db, lessonId]);
+  }, [evaluations, exerciseRepository, lessonId]);
 
   return { evaluation, questions, isLoading };
 }
@@ -88,16 +96,22 @@ export function useRecordEvaluationResult(): (
   correctCount: number,
   totalCount: number,
 ) => Promise<void> {
-  const db = useSQLiteContext();
+  const { evaluations } = useRepositories();
   const { account } = useAuth();
   return useCallback(
     async (evaluationId: string, score: number, correctCount: number, totalCount: number) => {
       if (!account) {
         return;
       }
-      await insertEvaluationResult(db, account.id, evaluationId, score, correctCount, totalCount);
+      await evaluations.insertEvaluationResult(
+        account.id,
+        evaluationId,
+        score,
+        correctCount,
+        totalCount,
+      );
     },
-    [db, account],
+    [evaluations, account],
   );
 }
 
@@ -121,7 +135,7 @@ export interface EvaluationEngine {
 }
 
 export function useEvaluationEngine(questions: Question[], lessonId: string | null): EvaluationEngine {
-  const db = useSQLiteContext();
+  const { attempts } = useRepositories();
   const { account } = useAuth();
   const usable = useMemo(
     () => questions.filter(question => ACTIVITY_TYPES.includes(question.type)),
@@ -139,9 +153,9 @@ export function useEvaluationEngine(questions: Question[], lessonId: string | nu
       setSummary(summarizeAttempts([]));
       return;
     }
-    const attempts = await selectAttemptsByLesson(db, account.id, lessonId);
-    setSummary(summarizeAttempts(attempts));
-  }, [db, account, lessonId]);
+    const loaded = await attempts.selectAttemptsByLesson(account.id, lessonId);
+    setSummary(summarizeAttempts(loaded));
+  }, [attempts, account, lessonId]);
 
   const restart = useCallback(() => {
     setIndex(0);
@@ -180,21 +194,21 @@ export function useEvaluationEngine(questions: Question[], lessonId: string | nu
     if (account && lessonId) {
       usable.forEach((question, i) => {
         if (answers[i]) {
-          void insertAttempt(
-            db,
+          void attempts.insertAttempt(
             account.id,
             'evaluation',
             question.id,
             question.type,
             lessonId,
             results[i],
+            { correct: results[i] ? 1 : 0, total: 1 },
           );
         }
       });
     }
     void refreshSummary();
     setPhase('summary');
-  }, [usable, answers, db, account, lessonId, refreshSummary]);
+  }, [usable, answers, attempts, account, lessonId, refreshSummary]);
 
   const send = useCallback(() => {
     const question = usable[index];

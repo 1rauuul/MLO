@@ -1,13 +1,18 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { DATABASE_VERSION, DROP_ALL_DDL, SCHEMA_DDL } from '@/shared/services/db/schema';
+import { syncRemoteContent } from '@/shared/services/content/remoteContent';
+import { isHybrid } from '@/shared/services/data/dataMode';
+import { http } from '@/shared/services/http/client';
 
 import {
   applyContentMigration,
-  applyL12QuestionBank,
-  applyUnit1Content,
-  applyUnit12ExerciseBank,
+  migrateQuestionIds,
+  saveContentHash,
   seedDatabase,
+  syncContentIfChanged,
+  writeContentSync,
+  writeSeedDatabase,
 } from '@/shared/services/db/seed';
 
 export const DATABASE_NAME = 'mlo.db';
@@ -23,6 +28,7 @@ async function seedIfEmpty(db: SQLiteDatabase): Promise<void> {
   );
   if (!row || row.units === 0 || row.lessons === 0) {
     await seedDatabase(db);
+    await saveContentHash(db);
   }
 }
 
@@ -38,17 +44,20 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
   if (currentVersion === 0) {
     await db.withTransactionAsync(async () => {
       await db.execAsync(SCHEMA_DDL);
+      await writeSeedDatabase(db);
+      await saveContentHash(db);
+      await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
     });
-    // Only mark the schema as current once the seed has committed; otherwise the
-    // next launch would skip seeding and leave an empty catalog.
-    await seedDatabase(db);
-    await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
+    if (isHybrid()) {
+      await syncRemoteContent(db, http);
+    }
     return;
   }
 
   if (currentVersion >= DATABASE_VERSION) {
     await db.execAsync(SCHEMA_DDL);
     await seedIfEmpty(db);
+    await syncBundledAndRemote(db);
     return;
   }
 
@@ -58,9 +67,9 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     await db.withTransactionAsync(async () => {
       await db.execAsync(DROP_ALL_DDL);
       await db.execAsync(SCHEMA_DDL);
+      await writeSeedDatabase(db);
+      await db.execAsync('PRAGMA user_version = 2');
     });
-    await seedDatabase(db);
-    await db.execAsync('PRAGMA user_version = 2');
     version = 2;
   }
 
@@ -70,9 +79,9 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
       if (!hasContent) {
         await db.execAsync(`ALTER TABLE lessons ADD COLUMN content TEXT NOT NULL DEFAULT '[]'`);
       }
+      await applyContentMigration(db);
       await db.execAsync('PRAGMA user_version = 3');
     });
-    await applyContentMigration(db);
     version = 3;
   }
 
@@ -127,27 +136,33 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
       if (!hasExerciseExplanation) {
         await db.execAsync(`ALTER TABLE exercises ADD COLUMN explanation TEXT NOT NULL DEFAULT ''`);
       }
+      await writeContentSync(db);
       await db.execAsync('PRAGMA user_version = 5');
     });
-    await applyUnit1Content(db, false);
     version = 5;
   }
 
   if (version < 6) {
-    await applyUnit1Content(db, false);
-    await db.execAsync('PRAGMA user_version = 6');
+    await db.withTransactionAsync(async () => {
+      await writeContentSync(db);
+      await db.execAsync('PRAGMA user_version = 6');
+    });
     version = 6;
   }
 
   if (version < 7) {
-    await applyUnit12ExerciseBank(db);
-    await db.execAsync('PRAGMA user_version = 7');
+    await db.withTransactionAsync(async () => {
+      await writeContentSync(db);
+      await db.execAsync('PRAGMA user_version = 7');
+    });
     version = 7;
   }
 
   if (version < 8) {
-    await applyUnit1Content(db, false);
-    await db.execAsync('PRAGMA user_version = 8');
+    await db.withTransactionAsync(async () => {
+      await writeContentSync(db);
+      await db.execAsync('PRAGMA user_version = 8');
+    });
     version = 8;
   }
 
@@ -169,15 +184,18 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
   }
 
   if (version < 10) {
-    await applyUnit1Content(db, false);
-    await applyUnit12ExerciseBank(db);
-    await db.execAsync('PRAGMA user_version = 10');
+    await db.withTransactionAsync(async () => {
+      await writeContentSync(db);
+      await db.execAsync('PRAGMA user_version = 10');
+    });
     version = 10;
   }
 
   if (version < 11) {
-    await applyUnit12ExerciseBank(db);
-    await db.execAsync('PRAGMA user_version = 11');
+    await db.withTransactionAsync(async () => {
+      await writeContentSync(db);
+      await db.execAsync('PRAGMA user_version = 11');
+    });
     version = 11;
   }
 
@@ -198,16 +216,55 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
   }
 
   if (version < 13) {
-    await applyL12QuestionBank(db);
-    await db.execAsync('PRAGMA user_version = 13');
+    await db.withTransactionAsync(async () => {
+      await writeContentSync(db);
+      await db.execAsync('PRAGMA user_version = 13');
+    });
     version = 13;
   }
 
   if (version < 14) {
-    await applyL12QuestionBank(db);
-    await db.execAsync('PRAGMA user_version = 14');
+    await db.withTransactionAsync(async () => {
+      await writeContentSync(db);
+      await db.execAsync('PRAGMA user_version = 14');
+    });
     version = 14;
   }
 
+  if (version < 15) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS meta (
+          key TEXT PRIMARY KEY NOT NULL,
+          value TEXT NOT NULL
+        );
+      `);
+      if (!(await hasColumn(db, 'attempts', 'score_correct'))) {
+        await db.execAsync(`ALTER TABLE attempts ADD COLUMN score_correct INTEGER NOT NULL DEFAULT 0`);
+      }
+      if (!(await hasColumn(db, 'attempts', 'score_total'))) {
+        await db.execAsync(`ALTER TABLE attempts ADD COLUMN score_total INTEGER NOT NULL DEFAULT 1`);
+      }
+      await migrateQuestionIds(db);
+      await writeContentSync(db);
+      await saveContentHash(db);
+      await db.execAsync('PRAGMA user_version = 15');
+    });
+    version = 15;
+  }
+
   await seedIfEmpty(db);
+  await syncBundledAndRemote(db);
+}
+
+// Si el contenido empaquetado cambió, el remoto debe volver a aplicarse.
+async function syncBundledAndRemote(db: SQLiteDatabase): Promise<void> {
+  const bundledSynced = await syncContentIfChanged(db);
+  if (!isHybrid()) {
+    return;
+  }
+  if (bundledSynced) {
+    await db.runAsync("DELETE FROM meta WHERE key = 'remote_content_hash'");
+  }
+  await syncRemoteContent(db, http);
 }

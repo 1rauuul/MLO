@@ -57,7 +57,8 @@ describe('useExerciseEngine', () => {
     act(() => {
       result.current.reset();
     });
-    expect(result.current.steps).toEqual(before);
+    expect(result.current.steps).not.toEqual(exercise.correctOrder);
+    expect([...result.current.steps].sort()).toEqual([...exercise.correctOrder].sort());
   });
 
   it('solve deja la secuencia correcta y marca el resultado', () => {
@@ -116,6 +117,48 @@ describe('solve de las actividades de ejemplo', () => {
     ]);
     expect(result.current.checked).toBe(true);
     expect(result.current.isCorrect).toBe(true);
+  });
+
+  it('reset tras restaurar el estado inicial deja todo vacío', () => {
+    const fillInitial = { ordered: ['A {{uno}} y {{dos}}.'], assignment: ['uno', null] };
+    const fill = renderHook(() => useFillEngine(fillExercise, fillInitial));
+    expect(fill.result.current.assignment).toEqual(['uno', null]);
+
+    act(() => fill.result.current.reset());
+    expect(fill.result.current.assignment).toEqual([null, null]);
+    expect(fill.result.current.checked).toBe(false);
+  });
+
+  it('reset de enlazar y crucigrama ignora el estado restaurado', () => {
+    const matchExercise: Exercise = {
+      ...fillExercise,
+      id: 'match',
+      type: 'match',
+      config: { pairs: [{ left: 'a', right: '1' }, { left: 'b', right: '2' }] },
+    };
+    const match = renderHook(() =>
+      useMatchEngine(matchExercise, { rights: ['1', '2'], assignment: [0, 1] }),
+    );
+    expect(match.result.current.assignment).toEqual([0, 1]);
+    act(() => match.result.current.reset());
+    expect(match.result.current.assignment).toEqual([null, null]);
+
+    const crosswordExercise: Exercise = {
+      ...fillExercise,
+      id: 'cross',
+      type: 'crossword',
+      config: {
+        crossword: {
+          rows: 1,
+          cols: 2,
+          entries: [{ row: 0, col: 0, direction: 'across', word: 'AB', clue: 'x' }],
+        },
+      },
+    };
+    const cross = renderHook(() => useCrosswordEngine(crosswordExercise, { '0-0': 'A', '0-1': 'B' }));
+    expect(cross.result.current.letters).toEqual({ '0-0': 'A', '0-1': 'B' });
+    act(() => cross.result.current.reset());
+    expect(cross.result.current.letters).toEqual({});
   });
 
   it('crucigrama escribe las letras de cada entrada', () => {

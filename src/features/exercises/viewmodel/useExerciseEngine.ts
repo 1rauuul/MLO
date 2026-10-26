@@ -1,8 +1,7 @@
-import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { selectExercisesByLesson } from '@/features/exercises/model/exerciseRepository';
 import type { CrosswordEntry, Exercise, ExerciseConfig, MatchPair } from '@/shared/model/entities';
+import { useRepositories } from '@/shared/services/data/DataProvider';
 
 import {
   buildFillBank,
@@ -45,7 +44,9 @@ export function useExerciseEngine(exercise: Exercise | null, initialSteps?: stri
       setIsCorrect(false);
       return;
     }
-    setSteps(initialRef.current ? [...initialRef.current] : scrambleOrder(exercise.correctOrder));
+    const seed = initialRef.current;
+    initialRef.current = undefined;
+    setSteps(seed ? [...seed] : scrambleOrder(exercise.correctOrder));
     setChecked(false);
     setIsCorrect(false);
   }, [exercise]);
@@ -111,7 +112,7 @@ interface UseExercisesForLessonResult {
 }
 
 export function useExercisesForLesson(lessonId: string | null): UseExercisesForLessonResult {
-  const db = useSQLiteContext();
+  const { exercises: exerciseRepository } = useRepositories();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -124,17 +125,29 @@ export function useExercisesForLesson(lessonId: string | null): UseExercisesForL
     let active = true;
     setIsLoading(true);
     (async () => {
-      const loaded = await selectExercisesByLesson(db, lessonId);
-      if (!active) {
-        return;
+      try {
+        const loaded = await exerciseRepository.selectExercisesByLesson(lessonId);
+        if (!active) {
+          return;
+        }
+        setExercises(loaded);
+      } catch (caught) {
+        if (__DEV__) {
+          console.error('[exercises] carga fallida', caught);
+        }
+        if (active) {
+          setExercises([]);
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
       }
-      setExercises(loaded);
-      setIsLoading(false);
     })();
     return () => {
       active = false;
     };
-  }, [db, lessonId]);
+  }, [exerciseRepository, lessonId]);
 
   return { exercises, isLoading };
 }
@@ -191,10 +204,20 @@ export function useFillEngine(exercise: Exercise | null, initial?: FillInitial):
   const [isCorrect, setIsCorrect] = useState(false);
 
   const reset = useCallback(() => {
+    // The ordered effect runs first: wait for it before consuming the one-shot seed.
+    if (
+      initialRef.current &&
+      initialRef.current.ordered.length > 0 &&
+      ordered.length === 0 &&
+      sourceSentences.length > 0
+    ) {
+      return;
+    }
+    const seed = initialRef.current;
+    initialRef.current = undefined;
     const expected = extractFillAnswers(ordered);
     const nextBank = buildFillBank(ordered, Math.random, bankExtra);
     setBank(nextBank);
-    const seed = initialRef.current;
     const nextAssignment = seed?.assignment ? [...seed.assignment] : expected.map(() => null);
     const nextUsed = nextBank.map(() => false);
     nextAssignment.forEach(word => {
@@ -211,7 +234,7 @@ export function useFillEngine(exercise: Exercise | null, initial?: FillInitial):
     setActiveBlank(null);
     setChecked(false);
     setIsCorrect(false);
-  }, [ordered, bankExtra]);
+  }, [ordered, bankExtra, sourceSentences.length]);
 
   useEffect(() => {
     reset();
@@ -345,14 +368,12 @@ export function useMatchEngine(exercise: Exercise | null, initial?: MatchInitial
   const [isCorrect, setIsCorrect] = useState(false);
 
   const reset = useCallback(() => {
+    const seed = initialRef.current;
+    initialRef.current = undefined;
     setRights(
-      initialRef.current?.rights
-        ? [...initialRef.current.rights]
-        : shuffleItems(pairs.map(pair => pair.right), Math.random),
+      seed?.rights ? [...seed.rights] : shuffleItems(pairs.map(pair => pair.right), Math.random),
     );
-    setAssignment(
-      initialRef.current?.assignment ? [...initialRef.current.assignment] : pairs.map(() => null),
-    );
+    setAssignment(seed?.assignment ? [...seed.assignment] : pairs.map(() => null));
     setSelectedLeft(null);
     setChecked(false);
     setIsCorrect(false);
@@ -458,7 +479,9 @@ export function useCrosswordEngine(
   const [isCorrect, setIsCorrect] = useState(false);
 
   const reset = useCallback(() => {
-    setLetters(initialRef.current ? { ...initialRef.current } : {});
+    const seed = initialRef.current;
+    initialRef.current = undefined;
+    setLetters(seed ? { ...seed } : {});
     setSelectedEntry(null);
     setChecked(false);
     setIsCorrect(false);

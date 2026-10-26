@@ -1,5 +1,5 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ActivityView } from '@/features/exercises/view/activities/ActivityView';
@@ -23,7 +23,7 @@ import {
 } from '@/features/evaluations/viewmodel/useQuizEngine';
 import { useLessonContent } from '@/features/modules/viewmodel/useLessonContent';
 import { useSession } from '@/features/auth/viewmodel/useSession';
-import { setExitGuard } from '@/shared/services/navigation/exitGuard';
+import { useExitGuard } from '@/shared/hooks/useExitGuard';
 
 function asExercise(question: Question, lessonId: string): Exercise {
   return {
@@ -81,8 +81,7 @@ export default function EvaluationFlow() {
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
   const recordedEvaluationRef = useRef<string | null>(null);
-  const [exitVisible, setExitVisible] = useState(false);
-  const [pendingExit, setPendingExit] = useState<(() => void) | null>(null);
+  const exitGuard = useExitGuard(engine.phase === 'running');
 
   useFocusEffect(
     useCallback(() => {
@@ -95,25 +94,6 @@ export default function EvaluationFlow() {
         });
       }
     }, [lesson, recordLocation]),
-  );
-
-  const requestExit = useCallback(
-    (next: () => void) => {
-      if (engine.phase === 'running') {
-        setPendingExit(() => next);
-        setExitVisible(true);
-      } else {
-        next();
-      }
-    },
-    [engine.phase],
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      setExitGuard(requestExit);
-      return () => setExitGuard(null);
-    }, [requestExit]),
   );
 
   useEffect(() => {
@@ -275,7 +255,7 @@ export default function EvaluationFlow() {
   }
 
   const handleExit = () => {
-    requestExit(() => router.back());
+    exitGuard.request(() => router.back());
   };
 
   return (
@@ -341,15 +321,11 @@ export default function EvaluationFlow() {
       </View>
 
       <ConfirmExitModal
-        visible={exitVisible}
+        visible={exitGuard.visible}
         title="Salir de la evaluación"
         message="Si sales ahora perderás el progreso de esta evaluación y la próxima vez empezarás de cero."
-        onCancel={() => setExitVisible(false)}
-        onConfirm={() => {
-          setExitVisible(false);
-          pendingExit?.();
-          setPendingExit(null);
-        }}
+        onCancel={exitGuard.cancel}
+        onConfirm={exitGuard.confirm}
       />
     </Screen>
   );

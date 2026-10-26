@@ -199,4 +199,21 @@ describe('buildEvaluationPool', () => {
     expect(pool.exercises).toHaveLength(2);
     expect(pool.mixed).toHaveLength(5);
   });
+
+  it('no devuelve dos preguntas con el mismo prompt', () => {
+    const repeated = many('q', 'mcq', 3).map((question, index) => ({
+      ...question,
+      prompt: index < 2 ? 'Repetida' : 'Única',
+    }));
+    const repeatedExercises = many('e', 'order', 2).map(question => ({
+      ...question,
+      prompt: 'Repetida',
+    }));
+
+    const pool = buildEvaluationPool(repeated, repeatedExercises, () => 0.5);
+
+    expect(pool.questions.map(question => question.prompt)).toEqual(['Repetida', 'Única']);
+    expect(pool.exercises).toEqual([]);
+    expect(new Set(pool.mixed.map(question => question.prompt)).size).toBe(pool.mixed.length);
+  });
 });

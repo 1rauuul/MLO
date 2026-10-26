@@ -34,7 +34,7 @@ export function AppTabBar({ routeName, onNavigateTab, bottomInset }: AppTabBarPr
   return (
     <BottomTabBar
       active={homeTabForRoute(routeName)}
-      onChange={onNavigateTab}
+      onChange={tab => runOrGuardExit(() => onNavigateTab(tab))}
       bottomInset={bottomInset}
     />
   );

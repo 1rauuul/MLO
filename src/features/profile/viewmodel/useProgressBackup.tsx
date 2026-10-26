@@ -1,14 +1,13 @@
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
 
-import { replaceProgressFromBackup, selectProgressBackup } from '@/features/profile/model/backupRepository';
 import { parseProgressBackup } from '@/features/profile/model/backup.logic';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
+import { useRepositories } from '@/shared/services/data/DataProvider';
 
 export function useProgressBackup() {
-  const db = useSQLiteContext();
+  const { backup } = useRepositories();
   const { account } = useAuth();
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,13 +21,13 @@ export function useProgressBackup() {
     setError(null);
     setMessage(null);
     try {
-      const backup = await selectProgressBackup(db, account.id);
+      const snapshot = await backup.selectProgressBackup(account.id);
       const file = new File(Paths.cache, `mlo-progreso-${account.id}.json`);
       if (file.exists) {
         file.delete();
       }
       file.create({ overwrite: true });
-      file.write(JSON.stringify(backup, null, 2));
+      file.write(JSON.stringify(snapshot, null, 2));
       if (!(await Sharing.isAvailableAsync())) {
         throw new Error('Compartir archivos no está disponible en este dispositivo.');
       }
@@ -42,7 +41,7 @@ export function useProgressBackup() {
     } finally {
       setIsBusy(false);
     }
-  }, [account, db]);
+  }, [account, backup]);
 
   const importProgress = useCallback(async () => {
     if (!account) {
@@ -56,8 +55,8 @@ export function useProgressBackup() {
       if (picked.canceled) {
         return false;
       }
-      const backup = parseProgressBackup(await picked.result.text());
-      await replaceProgressFromBackup(db, account.id, backup);
+      const parsed = parseProgressBackup(await picked.result.text());
+      await backup.replaceProgressFromBackup(account.id, parsed);
       setMessage('Progreso importado correctamente.');
       return true;
     } catch (caught) {
@@ -66,7 +65,7 @@ export function useProgressBackup() {
     } finally {
       setIsBusy(false);
     }
-  }, [account, db]);
+  }, [account, backup]);
 
   return { exportProgress, importProgress, isBusy, error, message };
 }

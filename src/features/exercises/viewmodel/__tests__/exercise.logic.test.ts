@@ -57,6 +57,12 @@ describe('exerciseLogic', () => {
     expect(scrambled).not.toEqual(correct);
     expect([...scrambled].sort()).toEqual([...correct].sort());
   });
+
+  it('nunca devuelve el orden correcto aunque el azar lo produzca', () => {
+    const identityRandom = () => 0.999999;
+    expect(scrambleOrder(['a', 'b', 'c'], identityRandom)).toEqual(['b', 'c', 'a']);
+    expect(scrambleOrder(['a', 'b', 'c'], identityRandom)).not.toEqual(['a', 'b', 'c']);
+  });
 });
 
 describe('fill (completar conceptos)', () => {
@@ -154,6 +160,22 @@ describe('crossword', () => {
 
   it('puntúa cada celda correcta por separado', () => {
     expect(crosswordScore(crosswordCells(config), { '0-0': 'S' })).toEqual({ correct: 1, total: 5 });
+  });
+});
+
+describe('ejemplos curados de l1.2', () => {
+  it('todo ejercicio de l1.2 trae título, pasos y pistas', () => {
+    const lessonExercises = unit1Exercises.filter(exercise => exercise.lessonId === 'l1.2');
+    expect(lessonExercises.length).toBeGreaterThan(0);
+    for (const exercise of lessonExercises) {
+      expect(exercise.example?.title).toBeTruthy();
+      expect(exercise.example?.steps.length).toBeGreaterThan(0);
+      expect(exercise.example?.hints.length).toBeGreaterThan(0);
+      for (const step of exercise.example?.steps ?? []) {
+        expect(step.text).toBeTruthy();
+        expect(step.why).toBeTruthy();
+      }
+    }
   });
 });
 

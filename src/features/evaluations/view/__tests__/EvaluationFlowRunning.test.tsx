@@ -47,10 +47,15 @@ function makeEngine(overrides: Partial<EvaluationEngine> = {}): EvaluationEngine
 let mockEngine = makeEngine();
 
 jest.mock('expo-router', () => {
-  const { useEffect } = require('react');
+  const { useEffect } = jest.requireActual('react') as typeof import('react');
   return {
     useLocalSearchParams: () => ({ lesson: 'lesson-2' }),
     useRouter: () => ({ back: mockBack, push: jest.fn(), navigate: jest.fn() }),
+    useNavigation: () => ({
+      addListener: jest.fn(() => () => {}),
+      setOptions: jest.fn(),
+      dispatch: jest.fn(),
+    }),
     useFocusEffect: (callback: () => void | (() => void)) => useEffect(callback, [callback]),
   };
 });

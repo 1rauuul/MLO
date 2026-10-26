@@ -54,6 +54,18 @@ export const l12ExerciseBank: ExerciseSeed[] = [
     },
     explanation:
       'Mantenimiento y eficiencia son atributos; genérico y "a la medida" son los dos tipos de producto; la evolución es la actividad que mantiene vivo al sistema después de entregarlo. Ojo con la diferencia: el mantenimiento es una cualidad del software y la evolución es algo que se hace con él.',
+    example: {
+      title: 'Crucigrama: mantenimiento, eficiencia y productos',
+      steps: [
+        { text: 'Resolver MANTENIMIENTO', why: 'Es la entrada horizontal que abre el crucigrama.' },
+        { text: 'Completar EFICIENCIA desde su primera E', why: 'Cruza MANTENIMIENTO y describe el uso de recursos.' },
+        { text: 'Ubicar GENERICO y MEDIDA', why: 'Son los dos tipos de producto: de mercado y "a la medida".' },
+      ],
+      hints: [
+        'MANTENIMIENTO empieza en la casilla (0,0).',
+        'EFICIENCIA cuelga de la E de MANTENIMIENTO en (0,4).',
+      ],
+    },
   },
 {
     id: 'fill1.2c',
@@ -73,6 +85,19 @@ export const l12ExerciseBank: ExerciseSeed[] = [
     },
     explanation:
       'Los atributos esenciales son mantenimiento, confiabilidad y seguridad, eficiencia y aceptabilidad.',
+    example: {
+      title: 'Los cuatro atributos esenciales',
+      steps: [
+        { text: 'Mantenimiento: facilidad para evolucionar', why: 'El software debe poder cambiar cuando cambian las necesidades.' },
+        { text: 'Confiabilidad y seguridad: no causar daño ante fallos', why: 'Un fallo no debe provocar pérdidas ni exponer datos.' },
+        { text: 'Eficiencia: no desperdiciar memoria ni ciclos', why: 'El buen uso de recursos sostiene el desempeño.' },
+        { text: 'Aceptabilidad: comprensible, utilizable y compatible', why: 'El sistema se juzga desde quien lo usa.' },
+      ],
+      hints: [
+        'Cada atributo responde a una consecuencia distinta.',
+        'Aceptabilidad se refiere al usuario, no al programador.',
+      ],
+    },
   },
 {
     id: 'ord1.2a',
@@ -89,6 +114,19 @@ export const l12ExerciseBank: ExerciseSeed[] = [
     config: {},
     explanation:
       'La secuencia representa especificación, desarrollo, validación y evolución. En proyectos reales estas actividades pueden solaparse e iterarse.',
+    example: {
+      title: 'De los requisitos al cambio fiscal',
+      steps: [
+        { text: 'Definir con el cliente qué debe hacer el sistema', why: 'La especificación fija funciones y restricciones del negocio.' },
+        { text: 'Diseñar e implementar facturación y reportes', why: 'El desarrollo materializa lo especificado.' },
+        { text: 'Verificar que las facturas cumplen los requisitos', why: 'La validación comprueba que el sistema es el correcto.' },
+        { text: 'Modificar el sistema cuando cambian las reglas fiscales', why: 'La evolución mantiene útil al software entregado.' },
+      ],
+      hints: [
+        'Primero se acuerda qué debe hacer el sistema.',
+        'El cambio de regulaciones fiscales ocurre después de la entrega.',
+      ],
+    },
   },
 {
     id: 'ordn',

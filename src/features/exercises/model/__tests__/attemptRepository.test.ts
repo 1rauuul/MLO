@@ -25,6 +25,8 @@ describe('attemptRepository', () => {
       'order',
       'l1.2',
       1,
+      1,
+      1,
       expect.any(String),
     );
   });
@@ -42,6 +44,30 @@ describe('attemptRepository', () => {
       'mcq',
       'l1.2',
       0,
+      0,
+      1,
+      expect.any(String),
+    );
+  });
+
+  it('insertAttempt guarda el puntaje parcial', async () => {
+    const { db, calls } = makeDb();
+
+    await insertAttempt(db, 7, 'practice', 'ord1.2', 'order', 'l1.2', false, {
+      correct: 3,
+      total: 4,
+    });
+
+    expect(calls.runAsync).toHaveBeenCalledWith(
+      expect.stringContaining('score_correct'),
+      7,
+      'practice',
+      'ord1.2',
+      'order',
+      'l1.2',
+      0,
+      3,
+      4,
       expect.any(String),
     );
   });
@@ -57,6 +83,8 @@ describe('attemptRepository', () => {
           item_type: 'order',
           lesson_id: 'l1.2',
           correct: 1,
+          score_correct: 1,
+          score_total: 1,
           created_at: '2026-01-01',
         },
         {
@@ -67,6 +95,8 @@ describe('attemptRepository', () => {
           item_type: 'mcq',
           lesson_id: 'l1.2',
           correct: 0,
+          score_correct: 0,
+          score_total: 1,
           created_at: '2026-01-02',
         },
       ]),
@@ -82,6 +112,8 @@ describe('attemptRepository', () => {
       itemType: 'order',
       lessonId: 'l1.2',
       correct: true,
+      scoreCorrect: 1,
+      scoreTotal: 1,
       createdAt: '2026-01-01',
     });
     expect(attempts[1]!.source).toBe('practice');

@@ -120,6 +120,8 @@ export interface Attempt {
   itemType: ActivityType;
   lessonId: string;
   correct: boolean;
+  scoreCorrect: number;
+  scoreTotal: number;
   createdAt: string;
 }
 

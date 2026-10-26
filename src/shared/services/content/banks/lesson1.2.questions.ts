@@ -7,6 +7,7 @@ import type { QuestionSeed } from '@/shared/services/content/unit1.content';
 export const l12QuestionBank: QuestionSeed[] = [
   // 1) Opción múltiple (la más común)
   {
+    id: 'ev1.2-bank-q01',
     type: 'mcq',
     prompt: '¿Cuál es un atributo esencial del buen software?',
     options: [
@@ -19,6 +20,7 @@ export const l12QuestionBank: QuestionSeed[] = [
     explanation: 'Mantenibilidad y confiabilidad son atributos esenciales del software.',
   },
   {
+    id: 'ev1.2-bank-q02',
     type: 'mcq',
     prompt: '¿Qué es software según la ingeniería de software?',
     options: [
@@ -32,6 +34,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'El software incluye los programas y toda la documentación asociada (y datos de configuración) necesaria para que operen correctamente.',
   },
   {
+    id: 'ev1.2-bank-q03',
     type: 'mcq',
     prompt: '¿Cómo se define la ingeniería de software?',
     options: [
@@ -45,6 +48,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Abarca desde la especificación inicial hasta el mantenimiento del sistema después de ponerlo en operación.',
   },
   {
+    id: 'ev1.2-bank-q04',
     type: 'mcq',
     prompt: '¿Cuáles son las cuatro actividades fundamentales comunes a todos los procesos de software?',
     options: [
@@ -58,6 +62,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Todo proceso de software incluye especificar, desarrollar, validar y evolucionar el software.',
   },
   {
+    id: 'ev1.2-bank-q05',
     type: 'mcq',
     prompt: '¿Cuál es la diferencia entre ciencias de la computación e ingeniería de software?',
     options: [
@@ -71,6 +76,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Las ciencias de la computación se interesan por teorías y métodos; la ingeniería de software por los asuntos prácticos de producir software.',
   },
   {
+    id: 'ev1.2-bank-q06',
     type: 'mcq',
     prompt: '¿Qué distingue a la ingeniería de sistemas de la ingeniería de software?',
     options: [
@@ -84,6 +90,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'La ingeniería de sistemas se interesa por hardware, software e ingeniería de procesos; la ingeniería de software es parte de ese proceso más general.',
   },
   {
+    id: 'ev1.2-bank-q07',
     type: 'mcq',
     prompt: '¿Cuáles son los principales retos que enfrenta la ingeniería de software?',
     options: [
@@ -97,6 +104,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Heterogeneidad, cambio empresarial y social, y seguridad y confianza son retos generales que afectan a muchos tipos de software.',
   },
   {
+    id: 'ev1.2-bank-q08',
     type: 'mcq',
     prompt: '¿Cómo se distribuyen aproximadamente los costos del software elaborado de forma genérica?',
     options: [
@@ -110,6 +118,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Alrededor del 60% de los costos es de desarrollo y 40% de prueba.',
   },
   {
+    id: 'ev1.2-bank-q09',
     type: 'mcq',
     prompt: 'En el software elaborado específicamente para un cliente, ¿qué ocurre con frecuencia con los costos?',
     options: [
@@ -123,6 +132,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Para muchos sistemas, la mayor parte del costo se genera al cambiar el software después de ponerlo en operación.',
   },
   {
+    id: 'ev1.2-bank-q10',
     type: 'mcq',
     prompt: '¿Existe un método o técnica de ingeniería de software mejor que todos los demás?',
     options: [
@@ -136,6 +146,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Los juegos se diseñan con prototipos, mientras que los sistemas críticos de seguridad requieren una especificación completa y analizable. No puede decirse que un método sea mejor que otro.',
   },
   {
+    id: 'ev1.2-bank-q11',
     type: 'mcq',
     prompt: '¿Qué aportó la Web a la ingeniería de software?',
     options: [
@@ -149,6 +160,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'El desarrollo de sistemas basados en Web condujo a avances en lenguajes de programación y reutilización de software.',
   },
   {
+    id: 'ev1.2-bank-q12',
     type: 'mcq',
     prompt: '¿Por qué los sistemas de software pueden volverse rápidamente complejos y costosos de cambiar?',
     options: [
@@ -162,6 +174,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Al no estar restringido por leyes físicas ni procesos de fabricación, el software no tiene límites naturales de potencial, pero sí puede crecer en complejidad.',
   },
   {
+    id: 'ev1.2-bank-q13',
     type: 'mcq',
     prompt: 'Muchas de las llamadas "fallas del software" se deben principalmente a dos factores. ¿Cuáles son?',
     options: [
@@ -175,6 +188,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Los sistemas deben ser más grandes, complejos y rápidos de entregar (demandas crecientes), y muchas compañías no usan métodos de ingeniería de software (expectativas bajas).',
   },
   {
+    id: 'ev1.2-bank-q14',
     type: 'mcq',
     prompt: '¿A qué se refiere el factor "expectativas bajas" en las fallas del software?',
     options: [
@@ -188,6 +202,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Muchas empresas se deslizan hacia la ingeniería de software conforme evolucionan, por lo que se requiere mejor educación y capacitación.',
   },
   {
+    id: 'ev1.2-bank-q15',
     type: 'mcq',
     prompt: '¿Qué son los productos de software genéricos?',
     options: [
@@ -201,6 +216,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Ejemplos: software para PC, bases de datos, procesadores de texto, paquetes de dibujo y herramientas de administración de proyectos.',
   },
   {
+    id: 'ev1.2-bank-q16',
     type: 'mcq',
     prompt: '¿Qué son los productos de software personalizados (a la medida)?',
     options: [
@@ -214,6 +230,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Ejemplos: sistemas de control para dispositivos electrónicos, sistemas para procesos empresariales y sistemas de control de tráfico aéreo.',
   },
   {
+    id: 'ev1.2-bank-q17',
     type: 'mcq',
     prompt: '¿Quién controla la especificación en un producto de software genérico?',
     options: [
@@ -227,6 +244,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'En los productos personalizados, en cambio, la organización que compra el software suele definir y controlar la especificación.',
   },
   {
+    id: 'ev1.2-bank-q18',
     type: 'mcq',
     prompt: '¿Por qué los sistemas ERP, como SAP, ilustran que la distinción entre producto genérico y personalizado es cada vez más difusa?',
     options: [
@@ -240,6 +258,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Cada vez más sistemas se construyen con un producto genérico como base que luego se adapta a los requerimientos de un cliente.',
   },
   {
+    id: 'ev1.2-bank-q19',
     type: 'mcq',
     prompt: '¿Por qué el mantenimiento es un atributo crítico del buen software?',
     options: [
@@ -253,6 +272,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'El software debe escribirse de forma que pueda evolucionar para satisfacer las necesidades cambiantes de los clientes.',
   },
   {
+    id: 'ev1.2-bank-q20',
     type: 'mcq',
     prompt: '¿Qué abarca el atributo "confiabilidad y seguridad" del software?',
     options: [
@@ -266,6 +286,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Los usuarios malintencionados no deben tener posibilidad de acceder al sistema o dañarlo.',
   },
   {
+    id: 'ev1.2-bank-q21',
     type: 'mcq',
     prompt: '¿Qué significa que el software sea eficiente?',
     options: [
@@ -279,6 +300,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'La eficiencia incluye capacidad de respuesta, tiempo de procesamiento y utilización de memoria.',
   },
   {
+    id: 'ev1.2-bank-q22',
     type: 'mcq',
     prompt: '¿Qué implica el atributo de aceptabilidad del software?',
     options: [
@@ -292,6 +314,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'El software debe ser aceptable para el tipo de usuarios a quienes está dirigido.',
   },
   {
+    id: 'ev1.2-bank-q23',
     type: 'mcq',
     prompt: 'Además de los programas, ¿qué incluye normalmente un sistema de software profesional?',
     options: [
@@ -305,6 +328,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Un sistema profesional es más que un solo programa: consta de programas, archivos de configuración y documentación asociada.',
   },
   {
+    id: 'ev1.2-bank-q24',
     type: 'mcq',
     prompt: '¿Cuál es una diferencia clave entre el desarrollo profesional y el de aficionado?',
     options: [
@@ -318,6 +342,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'En un programa personal nadie más lo usará, por lo que no hay que elaborar guías ni documentar el diseño.',
   },
   {
+    id: 'ev1.2-bank-q25',
     type: 'mcq',
     prompt: 'En la actividad de validación del software, ¿qué se hace?',
     options: [
@@ -331,6 +356,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'La validación comprueba que el software cumple lo que el cliente necesita.',
   },
   {
+    id: 'ev1.2-bank-q26',
     type: 'mcq',
     prompt: 'En la actividad de evolución del software, ¿qué ocurre?',
     options: [
@@ -344,6 +370,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'El software debe cambiar a lo largo de su vida para seguir siendo útil.',
   },
   {
+    id: 'ev1.2-bank-q27',
     type: 'mcq',
     prompt: '¿Qué factor es quizás el más significativo para determinar qué métodos y técnicas de ingeniería de software son más importantes?',
     options: [
@@ -357,6 +384,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Existen muchos tipos de aplicación (independientes, transaccionales, embebidas, por lotes, entretenimiento, etc.) y cada una requiere técnicas distintas.',
   },
   {
+    id: 'ev1.2-bank-q28',
     type: 'mcq',
     prompt: '¿Cuál es un ejemplo de sistema de control embebido?',
     options: [
@@ -370,6 +398,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Los sistemas embebidos regulan y gestionan dispositivos de hardware; también incluyen el software de un celular o de un horno de microondas.',
   },
   {
+    id: 'ev1.2-bank-q29',
     type: 'mcq',
     prompt: '¿Cuál es un ejemplo de sistema de procesamiento en lotes (batch)?',
     options: [
@@ -383,6 +412,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Los sistemas batch procesan grandes cantidades de entradas individuales para crear salidas correspondientes.',
   },
   {
+    id: 'ev1.2-bank-q30',
     type: 'mcq',
     prompt: '¿Cuándo y en qué contexto se propuso originalmente el concepto de "ingeniería de software"?',
     options: [
@@ -396,6 +426,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Se hizo claro que los enfoques individuales no escalaban a sistemas grandes y complejos, que eran poco confiables, costaban más de lo esperado y se entregaban con demora.',
   },
   {
+    id: 'ev1.2-bank-q31',
     type: 'mcq',
     prompt: '¿Cuál NO es un fundamento de la ingeniería de software aplicable a todos los tipos de sistemas?',
     options: [
@@ -409,6 +440,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Los fundamentos son proceso, confiabilidad, requerimientos y reutilización; no cubren técnicas específicas de programación, que varían de un sistema a otro.',
   },
   {
+    id: 'ev1.2-bank-q32',
     type: 'mcq',
     prompt: '¿En qué consiste el reto de la heterogeneidad en la ingeniería de software?',
     options: [
@@ -422,6 +454,7 @@ export const l12QuestionBank: QuestionSeed[] = [
       'Con frecuencia es necesario integrar software nuevo con sistemas legados escritos en diferentes lenguajes.',
   },
   {
+    id: 'ev1.2-bank-q33',
     type: 'mcq',
     prompt: '¿Qué enfoque se ha vuelto dominante para construir sistemas basados en la Web?',
     options: [

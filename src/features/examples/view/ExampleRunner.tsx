@@ -7,7 +7,7 @@ import { IconButton, PrimaryButton, SecondaryButton } from '@/shared/components/
 import { Chevron } from '@/shared/components/Chevron';
 import { Magnifier } from '@/features/modules/view/Magnifier';
 import { ScreenHeader } from '@/shared/components/ScreenHeader';
-import type { Exercise } from '@/shared/model/entities';
+import type { Example, Exercise } from '@/shared/model/entities';
 import { ACTIVITY_TYPE_LABELS as TYPE_LABELS } from '@/shared/utils/activityLabels';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { demoSteps } from '@/features/examples/viewmodel/example.logic';
@@ -15,21 +15,25 @@ import { hintsForType } from '@/features/exercises/viewmodel/exercise.hints';
 
 interface ExampleRunnerProps {
   exercise: Exercise;
+  example?: Example | null;
   index: number;
   total: number;
   isLast: boolean;
   onNext: () => void;
   onGoExercises: () => void;
+  onRedraw?: () => void;
   onBack?: () => void;
 }
 
 export function ExampleRunner({
   exercise,
+  example,
   index,
   total,
   isLast,
   onNext,
   onGoExercises,
+  onRedraw,
   onBack,
 }: ExampleRunnerProps) {
   const { colors, radius, spacing } = useTheme();
@@ -39,8 +43,9 @@ export function ExampleRunner({
   const [solveSignal, setSolveSignal] = useState(0);
   const [solutionShown, setSolutionShown] = useState(false);
 
-  const steps = demoSteps(exercise);
-  const hints = hintsForType(exercise.type);
+  const steps = example && example.steps.length > 0 ? example.steps : demoSteps(exercise);
+  const hints = example && example.hints.length > 0 ? example.hints : hintsForType(exercise.type);
+  const title = example?.title ?? exercise.prompt;
   const pairs = exercise.config.pairs ?? [];
   const label = TYPE_LABELS[exercise.type] ?? exercise.type;
 
@@ -66,12 +71,12 @@ export function ExampleRunner({
           onBack={onBack ?? onGoExercises}
           action={nextAction}
           eyebrow={`Ejemplo ${index + 1}/${total} · A · Demostración · ${label}`}
-          title={exercise.prompt}
+          title={title}
         />
 
         <AppText variant="eyebrow">Solución completa paso a paso</AppText>
 
-        {pairs.length > 0 ? (
+        {pairs.length > 0 && !example ? (
           <View
             style={[styles.table, { borderColor: colors.line, borderRadius: radius.control, marginTop: spacing.md }]}>
             <View style={[styles.tableRow, { backgroundColor: colors.soft, borderTopWidth: 0 }]}>
@@ -121,6 +126,13 @@ export function ExampleRunner({
           onPress={() => setVariant('B')}
           style={{ marginTop: spacing.lg }}
         />
+        {isLast && onRedraw ? (
+          <SecondaryButton
+            label="Nuevo sorteo"
+            onPress={onRedraw}
+            style={{ marginTop: spacing.sm }}
+          />
+        ) : null}
       </View>
     );
   }
@@ -131,7 +143,7 @@ export function ExampleRunner({
         onBack={() => setVariant('A')}
         action={nextAction}
         eyebrow={`Ejemplo ${index + 1}/${total} · B · Acompañamiento · ${label}`}
-        title={exercise.prompt}
+        title={title}
       />
 
       <AppText variant="small" color={colors.muted} style={styles.hint}>
@@ -196,6 +208,14 @@ export function ExampleRunner({
           accessibilityLabel="Ver solución"
         />
       </View>
+
+      {isLast && onRedraw ? (
+        <SecondaryButton
+          label="Nuevo sorteo"
+          onPress={onRedraw}
+          style={{ marginTop: spacing.sm }}
+        />
+      ) : null}
     </View>
   );
 }

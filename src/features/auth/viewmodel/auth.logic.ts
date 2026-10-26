@@ -101,6 +101,15 @@ export async function legacyHashPassword(
   return digest(passwordMaterial(salt, password));
 }
 
+export function timingSafeEqual(actual: string, expected: string): boolean {
+  const length = Math.max(actual.length, expected.length);
+  let diff = actual.length ^ expected.length;
+  for (let index = 0; index < length; index += 1) {
+    diff |= (actual.charCodeAt(index) || 0) ^ (expected.charCodeAt(index) || 0);
+  }
+  return diff === 0;
+}
+
 export async function legacyVerifyPassword(
   password: string,
   salt: string,
@@ -108,7 +117,7 @@ export async function legacyVerifyPassword(
   digest: Digest,
 ): Promise<boolean> {
   const actual = await legacyHashPassword(password, salt, digest);
-  return actual === expectedHash;
+  return timingSafeEqual(actual, expectedHash);
 }
 
 export function bytesToHex(bytes: Uint8Array): string {
@@ -150,5 +159,5 @@ export async function verifyPasswordHash(
     return false;
   }
   const expected = await derivePasswordHash(password, salt, iterations);
-  return expected === stored;
+  return timingSafeEqual(expected, stored);
 }

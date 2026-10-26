@@ -7,24 +7,34 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
 ## Stack de producción
 
 Expo SDK 57 (React Native) + Expo Router + expo-sqlite + TypeScript estricto + Jest/jest-expo
-con `@testing-library/react-native`. Offline-first: **ninguna llamada de red** en ninguna capa.
+con `@testing-library/react-native`. Offline-first: **sin red por defecto**
+(`DATA_MODE = 'local'`). Los servicios son opcionales y solo se consultan con
+`DATA_MODE = 'hybrid'`; SQLite sigue siendo la fuente de verdad local.
 Sin RA, sin sensores nativos, sin empaquetado SCORM/LOM en runtime.
 
 ## Arquitectura (MVVM por features, MLO-AR sin RA)
 
 ```
-src/app/**              →  rutas Expo Router delgadas (re-export de una vista)
-src/features/<f>/view     →  ViewModel "hook" (useXxx)
-src/features/<f>/model    →  Repositorio (xxxRepository)
-src/shared/services       →  expo-sqlite (db) y contenido
+src/app/**                    →  rutas Expo Router delgadas (re-export de una vista)
+src/features/<f>/view         →  componente de pantalla
+src/features/<f>/viewmodel    →  ViewModel "hook" (useXxx); consume useRepositories()
+src/features/<f>/model        →  Repositorio (xxxRepository)
+src/shared/services/data      →  DataProvider, puertos y DATA_MODE
+src/shared/services/http      →  cliente HTTP (solo con DATA_MODE='hybrid')
+src/shared/services/db        →  expo-sqlite (migración/seed)
+src/shared/services/content   →  contenido local y fuente remota
 ```
 
 Reglas:
 
 - La vista (`src/features/*/view`, `src/app`) **nunca** importa repositorios ni `expo-sqlite`
   directamente; solo consume hooks de `src/features/*/viewmodel`.
+- Los ViewModels **no importan `expo-sqlite`** (lo impone `no-restricted-imports`): usan
+  `useRepositories()` de `shared/services/data/DataProvider` y sus puertos por feature.
 - Los repositorios exponen funciones async (`select*`, `insert*`, `mark*`) que reciben la
-  `SQLiteDatabase` como primer argumento.
+  `SQLiteDatabase` como primer argumento; `createRepositories(db)` las liga a los puertos.
+- Con `DATA_MODE='local'` no se ejecuta ninguna petición HTTP. El contenido remoto se valida con
+  `shared/utils/validate.ts` (`parse*Seed`) y nunca reemplaza el contenido local si falla.
 - El esquema conserva las entidades núcleo (`Lesson`, `Example`, `Exercise`, `Evaluation`,
   `Question`) y **mantiene `Exercise` y `Evaluation`/`Question` como tablas separadas**
   (feedback inmediato por reactivo vs. puntaje acumulado). La bitácora real de intentos es
@@ -44,10 +54,13 @@ Reglas:
 - `src/features/` — una carpeta por feature (`auth`, `profile`, `modules`, `examples`,
   `exercises`, `evaluations`), cada una con `model/`, `viewmodel/` y `view/` (+ `__tests__/`).
 - `src/shared/components/` — componentes RN reutilizables (`AppText`, `Screen`, `Buttons`, …).
-- `src/shared/hooks/` — `useReducedMotion`.
+- `src/shared/hooks/` — `useReducedMotion`, `useExitGuard`, `useAsyncResource`.
 - `src/shared/services/db/` — `database.ts` (init/migración/seed), `schema.ts` (DDL), `seed.ts`.
-- `src/shared/services/content/` — `richContent.ts`, `unit1.content.ts`, `banks/`.
-- `src/shared/utils/` — `activityLabels.ts`, `navigation/{tabRoutes,locationRoutes}`.
+- `src/shared/services/data/` — `DataProvider.tsx` (puertos inyectables) y `dataMode.ts`.
+- `src/shared/services/http/` — `client.ts` (timeout, reintentos, errores tipados).
+- `src/shared/services/content/` — `richContent.ts`, `unit1.content.ts`, `banks/`,
+  `remoteContent.ts` (contenido publicado opcional).
+- `src/shared/utils/` — `activityLabels.ts`, `validate.ts`, `navigation/{tabRoutes,locationRoutes}`.
 - `src/shared/model/` — `entities.ts` (tipos compartidos).
 - `src/shared/theme/` — `ThemeProvider.tsx`, `tokens.ts`.
 - `docs/` — documentación y planes del proyecto (ver `docs/README.md`).

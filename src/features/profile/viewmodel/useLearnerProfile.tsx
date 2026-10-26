@@ -1,4 +1,3 @@
-import { useSQLiteContext } from 'expo-sqlite';
 import {
   createContext,
   useCallback,
@@ -10,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 
-import { saveProfile, selectProfile } from '@/features/profile/model/profileRepository';
+import { useRepositories } from '@/shared/services/data/DataProvider';
 import type { LearnerProfile, LearningStyle } from '@/shared/model/entities';
 
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
@@ -31,7 +30,7 @@ const FALLBACK_STYLE: LearningStyle = 'Pragmático';
 const LearnerProfileContext = createContext<LearnerProfileContextValue | null>(null);
 
 export function LearnerProfileProvider({ children }: { children: ReactNode }) {
-  const db = useSQLiteContext();
+  const { profile: profileRepository } = useRepositories();
   const { account } = useAuth();
   const [profile, setProfile] = useState<LearnerProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,18 +47,31 @@ export function LearnerProfileProvider({ children }: { children: ReactNode }) {
       };
     }
     (async () => {
-      const loaded = await selectProfile(db, account.id);
-      if (!active) {
-        return;
+      try {
+        const loaded = await profileRepository.selectProfile(account.id);
+        if (!active) {
+          return;
+        }
+        profileRef.current = loaded;
+        setProfile(loaded);
+      } catch (caught) {
+        if (__DEV__) {
+          console.error('[profile] carga fallida', caught);
+        }
+        if (active) {
+          profileRef.current = null;
+          setProfile(null);
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
       }
-      profileRef.current = loaded;
-      setProfile(loaded);
-      setIsLoading(false);
     })();
     return () => {
       active = false;
     };
-  }, [db, account]);
+  }, [profileRepository, account]);
 
   const update = useCallback(
     (changes: Partial<LearnerProfile>) => {
@@ -70,9 +82,9 @@ export function LearnerProfileProvider({ children }: { children: ReactNode }) {
       const next = { ...current, ...changes };
       profileRef.current = next;
       setProfile(next);
-      void saveProfile(db, next);
+      void profileRepository.saveProfile(next);
     },
-    [db],
+    [profileRepository],
   );
 
   const setStyle = useCallback((style: LearningStyle) => update({ learningStyle: style }), [update]);

@@ -80,15 +80,34 @@ export interface EvaluationPool {
   mixed: Question[];
 }
 
+function dedupeByPrompt(pool: Question[], seen: Set<string>): Question[] {
+  return pool.filter(question => {
+    if (question.prompt.length === 0) {
+      return true;
+    }
+    if (seen.has(question.prompt)) {
+      return false;
+    }
+    seen.add(question.prompt);
+    return true;
+  });
+}
+
 // Arma el pool de la evaluación: 10 preguntas + 5 ejercicios, mezclados y
-// con las opciones de cada mcq barajadas.
+// con las opciones de cada mcq barajadas. Descarta prompts repetidos.
 export function buildEvaluationPool(
   questionPool: Question[],
   exercisePool: Question[],
   random: () => number = Math.random,
 ): EvaluationPool {
-  const questions = shuffleItems(questionPool, random).slice(0, EVALUATION_QUESTIONS_COUNT);
-  const exercises = shuffleItems(exercisePool, random).slice(0, EVALUATION_EXERCISES_COUNT);
+  const questions = dedupeByPrompt(shuffleItems(questionPool, random), new Set()).slice(
+    0,
+    EVALUATION_QUESTIONS_COUNT,
+  );
+  const exercises = dedupeByPrompt(
+    shuffleItems(exercisePool, random),
+    new Set(questions.map(question => question.prompt)),
+  ).slice(0, EVALUATION_EXERCISES_COUNT);
   const mixed = shuffleItems([...questions, ...exercises], random).map(question =>
     shuffleQuestionOptions(question, random),
   );

@@ -28,12 +28,16 @@ export function reorderItem<T>(items: T[], from: number, to: number): T[] {
   return next;
 }
 
-export function scrambleOrder(correctOrder: string[]): string[] {
-  if (correctOrder.length < 3) {
-    return [...correctOrder].reverse();
+export function scrambleOrder(
+  correctOrder: string[],
+  random: () => number = Math.random,
+): string[] {
+  const shuffled = shuffleItems(correctOrder, random);
+  if (new Set(correctOrder).size < 2 || !isOrderCorrect(shuffled, correctOrder)) {
+    return shuffled;
   }
-  const shift = 2;
-  return [...correctOrder.slice(shift), ...correctOrder.slice(0, shift)];
+  // A shuffle can land on the correct order; rotating guarantees a different one.
+  return [...correctOrder.slice(1), correctOrder[0]!];
 }
 
 export interface FillSegment {

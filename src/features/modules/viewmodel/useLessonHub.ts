@@ -1,10 +1,6 @@
-import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 
-import { selectEvaluationByLesson } from '@/features/evaluations/model/evaluationRepository';
-import { selectExercisesByLesson } from '@/features/exercises/model/exerciseRepository';
-import { selectExamplesByLesson } from '@/features/examples/model/exampleRepository';
-import { selectLesson } from '@/features/modules/model/lessonRepository';
+import { useRepositories } from '@/shared/services/data/DataProvider';
 import type { Evaluation, Example, Exercise, Lesson, Unit } from '@/shared/model/entities';
 
 import { useCatalog } from '@/features/modules/viewmodel/useCatalog';
@@ -22,7 +18,8 @@ interface LessonHubResult {
 }
 
 export function useLessonHub(lessonId: string | null): LessonHubResult {
-  const db = useSQLiteContext();
+  const { lessons, examples: exampleRepository, exercises: exerciseRepository, evaluations } =
+    useRepositories();
   const { units } = useCatalog();
   const { progressMap } = useModuleProgress();
   const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -48,10 +45,10 @@ export function useLessonHub(lessonId: string | null): LessonHubResult {
       try {
         const [loadedLesson, loadedExamples, loadedExercises, loadedEvaluation] =
           await Promise.all([
-            selectLesson(db, lessonId),
-            selectExamplesByLesson(db, lessonId),
-            selectExercisesByLesson(db, lessonId),
-            selectEvaluationByLesson(db, lessonId),
+            lessons.selectLesson(lessonId),
+            exampleRepository.selectExamplesByLesson(lessonId),
+            exerciseRepository.selectExercisesByLesson(lessonId),
+            evaluations.selectEvaluationByLesson(lessonId),
           ]);
         if (!active) {
           return;
@@ -73,7 +70,7 @@ export function useLessonHub(lessonId: string | null): LessonHubResult {
     return () => {
       active = false;
     };
-  }, [db, lessonId]);
+  }, [lessons, exampleRepository, exerciseRepository, evaluations, lessonId]);
 
   const unit = units.find(item => item.id === lesson?.unitId) ?? null;
 

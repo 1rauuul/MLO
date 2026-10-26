@@ -95,6 +95,7 @@ describe('progressRepository', () => {
         expect.stringContaining('DELETE FROM module_progress'),
         expect.stringContaining('DELETE FROM evaluation_results'),
         expect.stringContaining('DELETE FROM attempts'),
+        expect.stringContaining('DELETE FROM example_state'),
         expect.stringContaining('DELETE FROM last_location'),
       ]);
       expect(calls.withTransactionAsync).toHaveBeenCalledTimes(1);

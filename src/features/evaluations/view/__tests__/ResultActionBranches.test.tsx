@@ -29,6 +29,11 @@ let mockEvaluationSummary = noneSummary;
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ lesson: 'lesson-2' }),
   useRouter: () => ({ back: mockBack, navigate: jest.fn(), push: mockPush }),
+  useNavigation: () => ({
+    addListener: jest.fn(() => () => {}),
+    setOptions: jest.fn(),
+    dispatch: jest.fn(),
+  }),
   useFocusEffect: jest.fn(),
 }));
 jest.mock('@/features/auth/viewmodel/useSession', () => ({

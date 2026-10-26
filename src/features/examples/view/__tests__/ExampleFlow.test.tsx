@@ -48,9 +48,11 @@ function makeEngine(items: Exercise[], index: number): ExamplesEngine {
     index,
     total: items.length,
     current: items[index] ?? null,
+    currentExample: null,
     isLast: index === items.length - 1,
     isLoading: false,
     next: () => mockNext(),
+    redraw: jest.fn(),
   };
 }
 
@@ -157,6 +159,31 @@ describe('Ejemplos sequential flow', () => {
 
     fireEvent.press(getByRole('button', { name: 'Ir a ejercicios' }));
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/ejercicios', params: { lesson: 'lesson-2' } });
+  });
+
+  it('muestra el why y las pistas del ejemplo curado', () => {
+    mockEngine = {
+      ...makeEngine([firstExercise], 0),
+      currentExample: {
+        id: 'ex-1',
+        lessonId: 'lesson-2',
+        type: 'fill',
+        title: 'Ejemplo propio',
+        prompt: '',
+        config: {},
+        steps: [{ text: 'Paso curado', why: 'Razón curada' }],
+        hints: ['Pista curada'],
+        explanation: '',
+      },
+    };
+    const { getByRole, getByText } = render(<ExamplesScreen />);
+
+    expect(getByText('Ejemplo propio')).toBeTruthy();
+    expect(getByText('Por qué: Razón curada')).toBeTruthy();
+
+    fireEvent.press(getByRole('button', { name: 'Ahora inténtalo tú' }));
+    fireEvent.press(getByRole('button', { name: 'Ver pista' }));
+    expect(getByText('Pista 1: Pista curada')).toBeTruthy();
   });
 
   it('revela pistas con Ver pista', () => {

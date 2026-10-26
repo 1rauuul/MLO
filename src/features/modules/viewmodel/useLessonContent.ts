@@ -1,8 +1,6 @@
-import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 
-import { selectExamplesByLesson } from '@/features/examples/model/exampleRepository';
-import { selectLesson } from '@/features/modules/model/lessonRepository';
+import { useRepositories } from '@/shared/services/data/DataProvider';
 import type { Example, Lesson } from '@/shared/model/entities';
 
 interface UseLessonContentResult {
@@ -13,7 +11,7 @@ interface UseLessonContentResult {
 }
 
 export function useLessonContent(lessonId: string | null): UseLessonContentResult {
-  const db = useSQLiteContext();
+  const { lessons, examples: exampleRepository } = useRepositories();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [examples, setExamples] = useState<Example[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,8 +31,8 @@ export function useLessonContent(lessonId: string | null): UseLessonContentResul
     (async () => {
       try {
         const [loadedLesson, loadedExamples] = await Promise.all([
-          selectLesson(db, lessonId),
-          selectExamplesByLesson(db, lessonId),
+          lessons.selectLesson(lessonId),
+          exampleRepository.selectExamplesByLesson(lessonId),
         ]);
         if (!active) {
           return;
@@ -55,7 +53,7 @@ export function useLessonContent(lessonId: string | null): UseLessonContentResul
     return () => {
       active = false;
     };
-  }, [db, lessonId]);
+  }, [lessons, exampleRepository, lessonId]);
 
   return { lesson, examples, isLoading, error };
 }
