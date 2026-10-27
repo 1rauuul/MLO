@@ -1,6 +1,6 @@
 # MLO — Introducción a la Ingeniería de Software
 
-App móvil offline-first (Expo SDK 57 + React Native) para el curso de Introducción a la
+App móvil offline-first (Expo SDK 58 + React Native 0.88) para el curso de Introducción a la
 Ingeniería de Software. Sin red, sin RA, sin sensores nativos.
 
 ## Ejecutar

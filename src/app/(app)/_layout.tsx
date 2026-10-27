@@ -10,10 +10,15 @@ export default function AppLayout() {
   return (
     <Tabs
       screenOptions={{ headerShown: false }}
-      tabBar={({ state, navigation }) => (
+      tabBar={({ state, navigateToTab }) => (
         <AppTabBar
           routeName={state.routes[state.index].name}
-          onNavigateTab={tab => navigation.navigate(tabRouteName(tab))}
+          onNavigateTab={tab => {
+            const target = state.routes.find(route => route.name === tabRouteName(tab));
+            if (target) {
+              navigateToTab(target.key);
+            }
+          }}
           bottomInset={bottom}
         />
       )}>

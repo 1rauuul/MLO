@@ -57,6 +57,7 @@ jest.mock('expo-router', () => {
       dispatch: jest.fn(),
     }),
     useFocusEffect: (callback: () => void | (() => void)) => useEffect(callback, [callback]),
+    usePreventRemove: () => () => {},
   };
 });
 jest.mock('@/shared/theme/ThemeProvider', () => ({

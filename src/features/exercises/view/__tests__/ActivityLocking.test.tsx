@@ -75,6 +75,7 @@ jest.mock('expo-router', () => ({
     dispatch: jest.fn(),
   }),
   useFocusEffect: jest.fn(),
+  usePreventRemove: () => () => {},
 }));
 jest.mock('@/features/auth/viewmodel/useSession', () => ({
   useSession: () => ({

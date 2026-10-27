@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View, type TextInputInstance } from 'react-native';
 
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
 import { AUTH_MESSAGES } from '@/features/auth/viewmodel/auth.messages';
@@ -15,8 +15,8 @@ export default function LoginScreen() {
   const { login } = useAuth();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
-  const usernameRef = useRef<TextInput>(null);
-  const passwordRef = useRef<TextInput>(null);
+  const usernameRef = useRef<TextInputInstance>(null);
+  const passwordRef = useRef<TextInputInstance>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorKey, setErrorKey] = useState<string | null>(null);

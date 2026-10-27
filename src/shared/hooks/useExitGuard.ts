@@ -1,5 +1,5 @@
-import { useNavigation } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useNavigation, usePreventRemove } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 
 import { setExitGuard } from '@/shared/services/navigation/exitGuard';
 
@@ -12,15 +12,31 @@ export interface ExitGuardState {
 
 /**
  * Cubre el botón físico de Android, el gesto de iOS, el atrás del header y la
- * barra inferior. El gesto nativo no puede cancelarse desde beforeRemove, por
- * eso también se desactiva mientras hay progreso sin guardar.
+ * barra inferior. El gesto nativo se desactiva mientras hay progreso sin guardar.
  */
 export function useExitGuard(active: boolean): ExitGuardState {
   const navigation = useNavigation();
   const [pending, setPending] = useState<(() => void) | null>(null);
   const [visible, setVisible] = useState(false);
-  // El reintento de la acción confirmada vuelve a emitir beforeRemove.
-  const allowRef = useRef(false);
+  // Tras confirmar, se desactiva la prevención para dejar pasar la acción.
+  const [bypass, setBypass] = useState(false);
+
+  const disablePrevention = usePreventRemove(active && !bypass, ({ repeat }) => {
+    setPending(() => repeat);
+    setVisible(true);
+  });
+
+  useFocusEffect(
+    useCallback(() => {
+      setBypass(false);
+    }, []),
+  );
+
+  useEffect(() => {
+    if (!active) {
+      setBypass(false);
+    }
+  }, [active]);
 
   const request = useCallback(
     (next: () => void) => {
@@ -33,22 +49,6 @@ export function useExitGuard(active: boolean): ExitGuardState {
     },
     [active],
   );
-
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', event => {
-      if (!active) {
-        return;
-      }
-      if (allowRef.current) {
-        allowRef.current = false;
-        return;
-      }
-      event.preventDefault();
-      setPending(() => () => navigation.dispatch(event.data.action));
-      setVisible(true);
-    });
-    return unsubscribe;
-  }, [navigation, active]);
 
   useEffect(() => {
     navigation.setOptions({ gestureEnabled: !active });
@@ -68,9 +68,10 @@ export function useExitGuard(active: boolean): ExitGuardState {
     const action = pending;
     setVisible(false);
     setPending(null);
-    allowRef.current = true;
+    setBypass(true);
+    disablePrevention();
     action?.();
-  }, [pending]);
+  }, [pending, disablePrevention]);
 
   return { visible, request, confirm, cancel };
 }

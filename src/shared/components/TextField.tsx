@@ -1,5 +1,11 @@
 import { forwardRef, useState, type ReactNode } from 'react';
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import {
+  StyleSheet,
+  TextInput,
+  View,
+  type TextInputInstance,
+  type TextInputProps,
+} from 'react-native';
 
 import { useTheme } from '@/shared/theme/ThemeProvider';
 
@@ -11,7 +17,7 @@ interface TextFieldProps extends TextInputProps {
   trailing?: ReactNode;
 }
 
-export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
+export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function TextField(
   { label, error, trailing, style, onFocus, onBlur, ...rest },
   ref,
 ) {

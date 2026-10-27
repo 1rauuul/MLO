@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View, type TextInputInstance } from 'react-native';
 
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
 import { AUTH_MESSAGES } from '@/features/auth/viewmodel/auth.messages';
@@ -17,11 +17,11 @@ export default function RegisterScreen() {
   const { register } = useAuth();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
-  const firstNameRef = useRef<TextInput>(null);
-  const lastNameRef = useRef<TextInput>(null);
-  const usernameRef = useRef<TextInput>(null);
-  const passwordRef = useRef<TextInput>(null);
-  const confirmRef = useRef<TextInput>(null);
+  const firstNameRef = useRef<TextInputInstance>(null);
+  const lastNameRef = useRef<TextInputInstance>(null);
+  const usernameRef = useRef<TextInputInstance>(null);
+  const passwordRef = useRef<TextInputInstance>(null);
+  const confirmRef = useRef<TextInputInstance>(null);
   const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');

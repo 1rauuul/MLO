@@ -13,3 +13,4 @@
 - [`planes/`](planes/) — planes de implementación por sesión.
 - [`especificaciones/`](especificaciones/) — especificaciones de diseño por sesión.
 - [`informe-cambios-demo-apk.md`](informe-cambios-demo-apk.md) — cambios y configuración del APK de demo.
+- [`informe-migracion-sdk58.md`](informe-migracion-sdk58.md) — migración de Expo SDK 57 a SDK 58.

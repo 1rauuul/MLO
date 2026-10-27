@@ -2,11 +2,11 @@
 
 ## Expo HAS CHANGED
 
-Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before writing any code.
+Read the exact versioned docs at https://docs.expo.dev/versions/v58.0.0/ before writing any code.
 
 ## Stack de producción
 
-Expo SDK 57 (React Native) + Expo Router + expo-sqlite + TypeScript estricto + Jest/jest-expo
+Expo SDK 58 (React Native 0.88) + Expo Router + expo-sqlite + TypeScript estricto + Jest/jest-expo
 con `@testing-library/react-native`. Offline-first: **sin red por defecto**
 (`DATA_MODE = 'local'`). Los servicios son opcionales y solo se consultan con
 `DATA_MODE = 'hybrid'`; SQLite sigue siendo la fuente de verdad local.

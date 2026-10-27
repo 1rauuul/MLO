@@ -30,7 +30,7 @@ export function useProgressBackup() {
         file.delete();
       }
       file.create({ overwrite: true });
-      file.write(JSON.stringify(snapshot, null, 2));
+      await file.write(JSON.stringify(snapshot, null, 2));
       if (!(await Sharing.isAvailableAsync())) {
         throw new Error('Compartir archivos no está disponible en este dispositivo.');
       }
