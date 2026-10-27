@@ -1,7 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { ExampleState } from '@/features/exercises/model/exampleStateRepository';
-import type { ProgressBackup } from '@/features/profile/model/backup.logic';
+import type { BackupGroup, ProgressBackup } from '@/features/profile/model/backup.logic';
 
 interface ProgressRow {
   lesson_id: string;
@@ -42,6 +42,18 @@ interface LastLocationRow {
   updated_at: string;
 }
 
+interface GroupRow {
+  group_id: string | null;
+  group_code: string;
+  catalog_id: string;
+  group_name: string;
+  teacher_name: string | null;
+}
+
+export interface BackupImportResult {
+  omitted: number;
+}
+
 function parsePayload(raw: string): ExampleState {
   try {
     const parsed = JSON.parse(raw) as ExampleState;
@@ -57,7 +69,8 @@ function parsePayload(raw: string): ExampleState {
 }
 
 export async function selectProgressBackup(db: SQLiteDatabase, accountId: number): Promise<ProgressBackup> {
-  const [moduleProgress, attempts, evaluationResults, exampleState, lastLocation] = await Promise.all([
+  const [moduleProgress, attempts, evaluationResults, exampleState, lastLocation, group] =
+    await Promise.all([
     db.getAllAsync<ProgressRow>(
       'SELECT lesson_id, completed, updated_at FROM module_progress WHERE account_id = ? ORDER BY lesson_id',
       accountId,
@@ -78,11 +91,27 @@ export async function selectProgressBackup(db: SQLiteDatabase, accountId: number
       'SELECT unit_id, lesson_id, lesson_code, section, updated_at FROM last_location WHERE account_id = ?',
       accountId,
     ),
+    db.getFirstAsync<GroupRow>(
+      `SELECT group_id, group_code, catalog_id, group_name, teacher_name
+       FROM account_group WHERE account_id = ?`,
+      accountId,
+    ),
   ]);
 
+  const backupGroup: BackupGroup | null = group
+    ? {
+        code: group.group_code,
+        catalogId: group.catalog_id,
+        name: group.group_name,
+        groupId: group.group_id,
+        teacherName: group.teacher_name,
+      }
+    : null;
+
   return {
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
+    group: backupGroup,
     moduleProgress: moduleProgress.map(row => ({
       lessonId: row.lesson_id,
       completed: row.completed === 1,
@@ -126,7 +155,15 @@ export async function replaceProgressFromBackup(
   db: SQLiteDatabase,
   accountId: number,
   backup: ProgressBackup,
-): Promise<void> {
+): Promise<BackupImportResult> {
+  const [lessonRows, evaluationRows] = await Promise.all([
+    db.getAllAsync<{ id: string }>('SELECT id FROM lessons'),
+    db.getAllAsync<{ id: string }>('SELECT id FROM evaluations'),
+  ]);
+  const lessonIds = new Set(lessonRows.map(row => row.id));
+  const evaluationIds = new Set(evaluationRows.map(row => row.id));
+  let omitted = 0;
+
   await db.withTransactionAsync(async () => {
     await db.runAsync('DELETE FROM module_progress WHERE account_id = ?', accountId);
     await db.runAsync('DELETE FROM attempts WHERE account_id = ?', accountId);
@@ -135,6 +172,10 @@ export async function replaceProgressFromBackup(
     await db.runAsync('DELETE FROM last_location WHERE account_id = ?', accountId);
 
     for (const progress of backup.moduleProgress) {
+      if (!lessonIds.has(progress.lessonId)) {
+        omitted += 1;
+        continue;
+      }
       await db.runAsync(
         'INSERT INTO module_progress (account_id, lesson_id, completed, updated_at) VALUES (?, ?, ?, ?)',
         accountId,
@@ -145,6 +186,10 @@ export async function replaceProgressFromBackup(
     }
 
     for (const attempt of backup.attempts) {
+      if (!lessonIds.has(attempt.lessonId)) {
+        omitted += 1;
+        continue;
+      }
       await db.runAsync(
         `INSERT INTO attempts (account_id, source, item_id, item_type, lesson_id, correct, score_correct, score_total, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -161,6 +206,10 @@ export async function replaceProgressFromBackup(
     }
 
     for (const result of backup.evaluationResults) {
+      if (!evaluationIds.has(result.evaluationId)) {
+        omitted += 1;
+        continue;
+      }
       await db.runAsync(
         'INSERT INTO evaluation_results (account_id, evaluation_id, score, correct_count, total_count, created_at) VALUES (?, ?, ?, ?, ?, ?)',
         accountId,
@@ -173,6 +222,10 @@ export async function replaceProgressFromBackup(
     }
 
     for (const state of backup.exampleState) {
+      if (!lessonIds.has(state.lessonId)) {
+        omitted += 1;
+        continue;
+      }
       await db.runAsync(
         `INSERT INTO example_state (account_id, lesson_id, payload, updated_at) VALUES (?, ?, ?, ?)
          ON CONFLICT(account_id, lesson_id) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at`,
@@ -183,7 +236,7 @@ export async function replaceProgressFromBackup(
       );
     }
 
-    if (backup.lastLocation) {
+    if (backup.lastLocation && lessonIds.has(backup.lastLocation.lessonId ?? '')) {
       await db.runAsync(
         'INSERT INTO last_location (account_id, unit_id, lesson_id, lesson_code, section, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
         accountId,
@@ -195,4 +248,6 @@ export async function replaceProgressFromBackup(
       );
     }
   });
+
+  return { omitted };
 }

@@ -98,6 +98,8 @@ export interface Evaluation {
   lessonId: string;
   title: string;
   description: string;
+  questionCount?: number;
+  exerciseCount?: number;
 }
 
 export interface Question {

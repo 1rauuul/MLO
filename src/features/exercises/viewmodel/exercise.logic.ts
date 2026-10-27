@@ -1,4 +1,13 @@
 import type { ExerciseConfig, MatchPair } from '@/shared/model/entities';
+import {
+  BLANK_PATTERN,
+  crosswordCells,
+  extractFillAnswers,
+  type CrosswordCell,
+} from '@/shared/utils/exerciseRules';
+
+export { crosswordCells, extractFillAnswers };
+export type { CrosswordCell };
 
 export function isOrderCorrect(steps: string[], correctOrder: string[]): boolean {
   return (
@@ -43,18 +52,6 @@ export function scrambleOrder(
 export interface FillSegment {
   text: string;
   blank: number | null;
-}
-
-const BLANK_PATTERN = /\{\{(.+?)\}\}/g;
-
-export function extractFillAnswers(sentences: string[]): string[] {
-  const answers: string[] = [];
-  for (const sentence of sentences) {
-    for (const match of sentence.matchAll(BLANK_PATTERN)) {
-      answers.push(match[1] ?? '');
-    }
-  }
-  return answers;
 }
 
 export function splitFillSentences(sentences: string[]): FillSegment[][] {
@@ -120,42 +117,6 @@ export function isMatchCorrect(
     const rightPosition = assignment[index];
     return rightPosition !== null && shuffledRights[rightPosition] === pair.right;
   });
-}
-
-export interface CrosswordCell {
-  row: number;
-  col: number;
-  entryIndexes: number[];
-  solution: string;
-}
-
-export function crosswordCells(config: ExerciseConfig): CrosswordCell[] {
-  const crossword = config.crossword;
-  if (!crossword) {
-    return [];
-  }
-  const cells = new Map<string, CrosswordCell>();
-  crossword.entries.forEach((entry, entryIndex) => {
-    const stepRow = entry.direction === 'down' ? 1 : 0;
-    const stepCol = entry.direction === 'across' ? 1 : 0;
-    for (let offset = 0; offset < entry.word.length; offset += 1) {
-      const row = entry.row + stepRow * offset;
-      const col = entry.col + stepCol * offset;
-      const key = `${row}-${col}`;
-      const existing = cells.get(key);
-      if (existing) {
-        existing.entryIndexes.push(entryIndex);
-      } else {
-        cells.set(key, {
-          row,
-          col,
-          entryIndexes: [entryIndex],
-          solution: entry.word[offset]!.toUpperCase(),
-        });
-      }
-    }
-  });
-  return [...cells.values()];
 }
 
 export function isCrosswordCorrect(config: ExerciseConfig, letters: Record<string, string>): boolean {

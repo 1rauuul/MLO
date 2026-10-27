@@ -39,8 +39,9 @@ describe('progressRepository', () => {
 
       expect(map).toEqual({ 'l1.1': true, 'l1.2': false });
       expect(calls.getAllAsync).toHaveBeenCalledWith(
-        expect.stringContaining('FROM module_progress WHERE account_id = ?'),
+        expect.stringContaining('JOIN lessons'),
         7,
+        'base',
       );
     });
 

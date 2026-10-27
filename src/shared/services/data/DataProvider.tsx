@@ -19,11 +19,20 @@ import {
 } from '@/features/evaluations/model/evaluationRepository';
 import { selectExamplesByLesson } from '@/features/examples/model/exampleRepository';
 import { insertAttempt, selectAttemptsByLesson } from '@/features/exercises/model/attemptRepository';
+import { applyStagedContent } from '@/shared/services/content/remote/applyStagedContent';
+import { fetchGroup, refreshCatalog } from '@/shared/services/content/remoteContent';
+import { http } from '@/shared/services/http/client';
 import {
   saveExampleState,
   selectExampleState,
 } from '@/features/exercises/model/exampleStateRepository';
 import { selectExercisesByLesson } from '@/features/exercises/model/exerciseRepository';
+import {
+  clearAccountGroup,
+  saveAccountGroup,
+  selectAccountGroup,
+  selectActiveCatalogId,
+} from '@/features/groups/model/groupRepository';
 import {
   selectLesson,
   selectLessons,
@@ -76,9 +85,10 @@ export function createRepositories(db: SQLiteDatabase) {
         correctCount: number,
         totalCount: number,
       ) => insertEvaluationResult(db, accountId, evaluationId, score, correctCount, totalCount),
-      selectRecentEvaluationResults: (accountId: number, limit?: number) =>
-        selectRecentEvaluationResults(db, accountId, limit),
-      selectEvaluationSummaries: () => selectEvaluationSummaries(db),
+      selectRecentEvaluationResults: (accountId: number, limit?: number, catalogId?: string) =>
+        selectRecentEvaluationResults(db, accountId, limit, catalogId),
+      selectEvaluationSummaries: (catalogId?: string) =>
+        selectEvaluationSummaries(db, catalogId),
     },
     examples: {
       selectExamplesByLesson: (lessonId: string) => selectExamplesByLesson(db, lessonId),
@@ -109,9 +119,24 @@ export function createRepositories(db: SQLiteDatabase) {
       ) => saveExampleState(db, accountId, lessonId, state),
     },
     lessons: {
-      selectUnits: () => selectUnits(db),
-      selectLessons: () => selectLessons(db),
-      selectLesson: (id: string) => selectLesson(db, id),
+      selectUnits: (catalogId?: string) => selectUnits(db, catalogId),
+      selectLessons: (catalogId?: string) => selectLessons(db, catalogId),
+      selectLesson: (id: string, catalogId?: string) => selectLesson(db, id, catalogId),
+    },
+    groups: {
+      selectAccountGroup: (accountId: number) => selectAccountGroup(db, accountId),
+      saveAccountGroup: (
+        accountId: number,
+        group: Parameters<typeof saveAccountGroup>[2],
+      ) => saveAccountGroup(db, accountId, group),
+      clearAccountGroup: (accountId: number) => clearAccountGroup(db, accountId),
+      selectActiveCatalogId: (accountId: number) => selectActiveCatalogId(db, accountId),
+    },
+    content: {
+      fetchGroup: (code: string) => fetchGroup(http, code),
+      refreshCatalog: (catalogId: string, force?: boolean) =>
+        refreshCatalog(db, http, catalogId, force),
+      applyStagedContent: (catalogId?: string) => applyStagedContent(db, catalogId),
     },
     locations: {
       selectLocation: (accountId: number) => selectLocation(db, accountId),
@@ -122,11 +147,12 @@ export function createRepositories(db: SQLiteDatabase) {
       clearLocation: (accountId: number) => clearLocation(db, accountId),
     },
     progress: {
-      selectProgressMap: (accountId: number) => selectProgressMap(db, accountId),
+      selectProgressMap: (accountId: number, catalogId?: string) =>
+        selectProgressMap(db, accountId, catalogId),
       markLessonCompleted: (accountId: number, lessonId: string) =>
         markLessonCompleted(db, accountId, lessonId),
-      countCompletedByUnit: (accountId: number, unitId: string) =>
-        countCompletedByUnit(db, accountId, unitId),
+      countCompletedByUnit: (accountId: number, unitId: string, catalogId?: string) =>
+        countCompletedByUnit(db, accountId, unitId, catalogId),
       resetAccountProgress: (accountId: number) => resetAccountProgress(db, accountId),
     },
     backup: {

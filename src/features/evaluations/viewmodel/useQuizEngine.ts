@@ -62,7 +62,13 @@ export function useEvaluationForLesson(lessonId: string | null): UseEvaluationFo
         const exercisePool = exercises
           .filter(exercise => EXERCISE_TYPES.includes(exercise.type))
           .map(exercise => questionFromExercise(exercise, evaluationId));
-        const { mixed } = buildEvaluationPool(questionPool, exercisePool, Math.random);
+        const { mixed } = buildEvaluationPool(
+          questionPool,
+          exercisePool,
+          Math.random,
+          loadedEvaluation?.questionCount,
+          loadedEvaluation?.exerciseCount,
+        );
         if (!active) {
           return;
         }

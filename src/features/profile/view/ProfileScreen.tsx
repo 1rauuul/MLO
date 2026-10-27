@@ -11,11 +11,14 @@ import type { LearningStyle } from '@/shared/model/entities';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { initials } from '@/features/auth/viewmodel/auth.logic';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
+import { useActiveCatalog } from '@/features/groups/viewmodel/useActiveCatalog';
 import { useCatalog } from '@/features/modules/viewmodel/useCatalog';
 import { useLearnerProfile } from '@/features/profile/viewmodel/useLearnerProfile';
 import { useRecentResults } from '@/features/profile/viewmodel/useRecentResults';
 import { useProgressBackup } from '@/features/profile/viewmodel/useProgressBackup';
 import { useSession } from '@/features/auth/viewmodel/useSession';
+import { useRepositories } from '@/shared/services/data/DataProvider';
+import { isHybrid } from '@/shared/services/data/dataMode';
 
 const LEARNING_STYLES: LearningStyle[] = ['Activo', 'Reflexivo', 'Teórico', 'Pragmático'];
 
@@ -25,6 +28,8 @@ export default function ProfileScreen() {
   const { account, logout, resetProgress } = useAuth();
   const { style, setStyle, darkMode, setDarkMode, largeText, setLargeText } = useLearnerProfile();
   const { clear: clearLocation } = useSession();
+  const { group, refresh: refreshGroup } = useActiveCatalog();
+  const { groups } = useRepositories();
   const { lessonsByUnit, progressMap, refresh } = useCatalog();
   const { averageScore, refresh: refreshResults } = useRecentResults();
   const { exportProgress, importProgress, isBusy: backupBusy, error: backupError, message: backupMessage } =
@@ -56,6 +61,30 @@ export default function ProfileScreen() {
               clearLocation();
               return Promise.all([refresh(), refreshResults()]);
             });
+          },
+        },
+      ],
+    );
+
+  const onLeaveGroup = () =>
+    Alert.alert(
+      'Salir del grupo',
+      'Volverás al curso base. El progreso del curso actual se conserva y puedes recuperarlo si vuelves a unirte.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Salir',
+          style: 'destructive',
+          onPress: () => {
+            if (!account) {
+              return;
+            }
+            void (async () => {
+              await groups.clearAccountGroup(account.id);
+              clearLocation();
+              refreshGroup();
+              await Promise.all([refresh(), refreshResults()]);
+            })();
           },
         },
       ],
@@ -112,6 +141,26 @@ export default function ProfileScreen() {
           </View>
         ))}
       </View>
+
+      {isHybrid() ? (
+        <>
+          <SectionHeading eyebrow="Grupo" title={group ? group.groupName : 'Curso base'} />
+          <AppText variant="small">
+            {group
+              ? [group.teacherName ? `Maestro: ${group.teacherName}` : null, `Curso ${group.catalogId}`]
+                  .filter(Boolean)
+                  .join(' · ')
+              : 'No estás en ningún grupo. Usas el curso base de MLO.'}
+          </AppText>
+          <View style={{ gap: spacing.sm, marginTop: spacing.md }}>
+            <SecondaryButton
+              label={group ? 'Cambiar de grupo' : 'Unirme a un grupo'}
+              onPress={() => router.push('/join-group' as Href)}
+            />
+            {group ? <SecondaryButton label="Salir del grupo" onPress={onLeaveGroup} /> : null}
+          </View>
+        </>
+      ) : null}
 
       <SectionHeading eyebrow="Estilo de aprendizaje" title="¿Cómo te resulta mejor?" />
       <View style={styles.styleSelector}>

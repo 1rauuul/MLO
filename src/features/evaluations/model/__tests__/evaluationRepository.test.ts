@@ -34,6 +34,8 @@ describe('evaluationRepository', () => {
       lessonId: 'l1.2',
       title: 'Evaluación',
       description: 'desc',
+      questionCount: 10,
+      exerciseCount: 5,
     });
   });
 
@@ -137,7 +139,7 @@ describe('evaluationRepository', () => {
         createdAt: '2026-01-01',
       },
     ]);
-    expect(calls.getAllAsync).toHaveBeenCalledWith(expect.any(String), 7, 5);
+    expect(calls.getAllAsync).toHaveBeenCalledWith(expect.any(String), 7, 'base', 5);
   });
 
   it('selectEvaluationSummaries mapea con joins', async () => {

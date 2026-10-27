@@ -1,4 +1,4 @@
-export const DATABASE_VERSION = 15;
+export const DATABASE_VERSION = 16;
 
 export const SCHEMA_DDL = `
 CREATE TABLE IF NOT EXISTS accounts (
@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS units (
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   difficulty TEXT NOT NULL,
-  color TEXT NOT NULL
+  color TEXT NOT NULL,
+  catalog_id TEXT NOT NULL DEFAULT 'base',
+  archived_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS lessons (
@@ -36,7 +38,9 @@ CREATE TABLE IF NOT EXISTS lessons (
   context_body TEXT NOT NULL DEFAULT '',
   synthesis TEXT NOT NULL DEFAULT '[]',
   content TEXT NOT NULL DEFAULT '[]',
-  position INTEGER NOT NULL DEFAULT 0
+  position INTEGER NOT NULL DEFAULT 0,
+  catalog_id TEXT NOT NULL DEFAULT 'base',
+  archived_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS examples (
@@ -66,7 +70,10 @@ CREATE TABLE IF NOT EXISTS evaluations (
   id TEXT PRIMARY KEY NOT NULL,
   lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
-  description TEXT NOT NULL
+  description TEXT NOT NULL,
+  question_count INTEGER NOT NULL DEFAULT 10,
+  exercise_count INTEGER NOT NULL DEFAULT 5,
+  archived_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS questions (
@@ -142,6 +149,35 @@ CREATE TABLE IF NOT EXISTS meta (
   value TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS remote_catalogs (
+  catalog_id TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL DEFAULT '',
+  version TEXT NOT NULL DEFAULT '',
+  manifest_hash TEXT NOT NULL DEFAULT '',
+  lesson_ids TEXT NOT NULL DEFAULT '[]',
+  fetched_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS remote_lessons (
+  catalog_id TEXT NOT NULL,
+  lesson_id TEXT NOT NULL,
+  hash TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  fetched_at TEXT NOT NULL,
+  applied_hash TEXT,
+  PRIMARY KEY (catalog_id, lesson_id)
+);
+
+CREATE TABLE IF NOT EXISTS account_group (
+  account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+  group_id TEXT,
+  group_code TEXT NOT NULL,
+  group_name TEXT NOT NULL,
+  teacher_name TEXT,
+  catalog_id TEXT NOT NULL,
+  joined_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_lessons_unit ON lessons(unit_id);
 CREATE INDEX IF NOT EXISTS idx_examples_lesson ON examples(lesson_id);
 CREATE INDEX IF NOT EXISTS idx_exercises_lesson ON exercises(lesson_id);
@@ -151,6 +187,9 @@ CREATE INDEX IF NOT EXISTS idx_progress_account ON module_progress(account_id);
 CREATE INDEX IF NOT EXISTS idx_eval_results_account ON evaluation_results(account_id);
 CREATE INDEX IF NOT EXISTS idx_attempts_account_lesson ON attempts(account_id, lesson_id);
 CREATE INDEX IF NOT EXISTS idx_attempts_account_type ON attempts(account_id, item_type);
+CREATE INDEX IF NOT EXISTS idx_units_catalog ON units(catalog_id);
+CREATE INDEX IF NOT EXISTS idx_lessons_catalog ON lessons(catalog_id);
+CREATE INDEX IF NOT EXISTS idx_remote_lessons_catalog ON remote_lessons(catalog_id);
 `;
 
 export const DROP_ALL_DDL = `
@@ -160,6 +199,9 @@ DROP TABLE IF EXISTS evaluation_results;
 DROP TABLE IF EXISTS module_progress;
 DROP TABLE IF EXISTS last_location;
 DROP TABLE IF EXISTS example_state;
+DROP TABLE IF EXISTS account_group;
+DROP TABLE IF EXISTS remote_lessons;
+DROP TABLE IF EXISTS remote_catalogs;
 DROP TABLE IF EXISTS meta;
 DROP TABLE IF EXISTS learner_profile;
 DROP TABLE IF EXISTS questions;

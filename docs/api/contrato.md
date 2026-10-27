@@ -1,88 +1,124 @@
-# Contrato de API — contenido publicado (borrador)
+# Contrato de API v2 — contenido publicado con maestros, cursos y grupos
 
-Solo contenido. La sincronización de progreso, `sync/*` y `auth/*` quedan
-fuera de alcance: SQLite sigue siendo la fuente de verdad local y la app
-funciona sin red con `DATA_MODE=local` (valor por defecto).
+Revisión 2.1 (2026-10-26): aclara versión, ejemplos, preguntas de ordenar, campos
+vacíos, códigos de grupo, releases vacíos/parciales y errores de descarga. El
+`schemaVersion` sigue siendo `2`.
 
-- Base URL: `EXPO_PUBLIC_API_URL` (sin secretos en el cliente).
-- Formato: JSON UTF-8. Fechas ISO-8601.
-- Idempotencia: `GET` es de solo lectura; no hay escritura remota.
-- Errores: `4xx` y `5xx` con cuerpo `{ "error": string, "message": string }`.
+Solo contenido. La sincronización de progreso, las cuentas remotas y la lectura
+de resultados por el maestro siguen fuera de alcance. SQLite es la fuente de
+verdad local y con `DATA_MODE=local` (por defecto) no se hace ninguna petición.
 
-## GET /content/manifest
+- **URL base:** `EXPO_PUBLIC_API_URL = https://<host>/api/mlo/v2` (sin secretos).
+- **Formato:** JSON UTF-8; fechas ISO-8601.
+- **Errores:** `{ "error": string, "message": string }`.
+- **`schemaVersion`:** debe ser `2`; cualquier otro valor se descarta.
 
-Devuelve la versión publicada y un hash por lección. El cliente compara el
-hash global con el suyo y no descarga nada si coincide.
+## GET /groups/{code}
+
+Código de 6 caracteres en mayúsculas; el cliente acepta minúsculas y espacios
+pero envía la forma canónica en mayúsculas. Sin caché y con límite de peticiones
+por IP. Si se supera el límite, responde `429` con `Retry-After`.
 
 ```json
 {
-  "version": "2026-10-23",
+  "schemaVersion": 2,
+  "group": { "id": "g1", "name": "Grupo A", "teacherName": "Profesora Ríos" },
+  "catalog": { "id": "k7f3q", "title": "Curso de prueba" }
+}
+```
+
+`404` si el código no existe; `410` si el grupo está cerrado. El cliente no
+cambia de grupo si la descarga o la aplicación del curso falla.
+
+## GET /catalogs/{catalogId}/manifest
+
+```json
+{
+  "schemaVersion": 2,
+  "catalogId": "k7f3q",
+  "title": "Curso de prueba",
+  "version": "3",
   "hash": "8f14e45f",
-  "lessons": [{ "lessonId": "l1.2", "hash": "a1b2c3d4" }]
+  "publishedAt": "2026-10-26T00:00:00.000Z",
+  "lessons": [{ "lessonId": "k7f3q-l1.2", "unitId": "k7f3q-u1", "hash": "a1b2c3d4" }]
 }
 ```
 
-## GET /content/lessons/{lessonId}
+`version` es el entero incremental de `releases.version` serializado como texto;
+el cliente también acepta un número y lo normaliza. `hash` no puede ir vacío,
+`lessons` no puede ir vacío y no puede repetir `lessonId`.
 
-Devuelve ejercicios, ejemplos y preguntas validadas con `parse*Seed`. Los
-ejercicios conservan el formato `ExerciseSeed`; las preguntas van asociadas a
-su evaluación.
+## GET /catalogs/{catalogId}/lessons/{lessonId}
+
+La respuesta es **siempre completa**: lo que no viene ya no existe en la
+lección. `lessonId` y `evaluation.lessonId` deben coincidir; `question.id` es
+obligatorio. Una lección puede ser **de solo lectura** (por ejemplo, 1.1): sin
+ejercicios, sin evaluación y sin preguntas. Si publica evaluación, debe traer al
+menos una pregunta. Todos los ids (unidad, lección, evaluación, ejercicios,
+ejemplos y preguntas) son globales y no pueden coincidir con los de otro curso
+ni con los de otra lección del mismo curso.
+
+- `examples` solo contiene ejemplos **independientes**; los ejemplos de un
+  ejercicio viajan en `exercises[].example`. Puede ser `[]`.
+- El serializador debe enviar siempre los campos, aunque estén vacíos:
+  `codeSample`, `contextTitle`, `contextBody`, `synthesis`, `correctOrder`,
+  `options` y `answer`. El cliente normaliza los que falten.
+- Preguntas `order`: `options` es la **secuencia correcta** y `answer` es `0`.
+  En `fill`/`match`/`crossword`, `options` es `[]`, `answer` es `0` y la verdad
+  está en `config`.
+- No hay bloques de imagen: un bloque desconocido descarta la lección completa.
 
 ```json
 {
-  "lessonId": "l1.2",
-  "exercises": [
-    {
-      "id": "ord1.2",
-      "lessonId": "l1.2",
-      "type": "order",
-      "prompt": "Actividades fundamentales del proceso",
-      "instructions": "Usa las flechas para ordenar la secuencia correcta.",
-      "correctOrder": ["Especificación", "Desarrollo", "Validación", "Evolución"],
-      "config": {},
-      "explanation": "…",
-      "example": {
-        "title": "Las cuatro actividades del proceso",
-        "steps": [{ "text": "Especificar", "why": "Fija el problema." }],
-        "hints": ["Piensa qué ocurre antes de escribir código."]
-      }
-    }
-  ],
-  "examples": [
-    {
-      "id": "exA1.2",
-      "lessonId": "l1.2",
-      "type": "match",
-      "title": "Atributos del buen software",
-      "prompt": "Enlaza cada atributo con su descripción",
-      "config": { "pairs": [{ "left": "Mantenimiento", "right": "…" }] },
-      "steps": [{ "text": "…", "why": "…" }],
-      "hints": ["…"],
-      "explanation": "…"
-    }
-  ],
-  "questions": [
-    {
-      "evaluationId": "ev1.2",
-      "question": {
-        "id": "ev1.2-bank-q01",
-        "type": "mcq",
-        "prompt": "¿Cuál es un atributo esencial del buen software?",
-        "options": ["…", "…"],
-        "answer": 1,
-        "explanation": "…"
-      }
-    }
-  ]
+  "schemaVersion": 2,
+  "catalogId": "k7f3q",
+  "lessonId": "k7f3q-l1.2",
+  "hash": "…",
+  "unit": { "id": "k7f3q-u1", "number": 1, "title": "…", "description": "…", "difficulty": "Fundamental", "color": "blue" },
+  "lesson": {
+    "id": "k7f3q-l1.2", "unitId": "k7f3q-u1", "code": "1.2", "title": "…",
+    "eyebrow": "…", "body": "…", "codeSample": "", "contextTitle": "…",
+    "contextBody": "…", "synthesis": ["…"],
+    "content": [{ "type": "p", "text": "…" }], "position": 2
+  },
+  "evaluation": {
+    "id": "k7f3q-ev1.2", "lessonId": "k7f3q-l1.2", "title": "…",
+    "description": "…", "questionCount": 10, "exerciseCount": 5
+  },
+  "exercises": [],
+  "examples": [],
+  "questions": [{ "evaluationId": "k7f3q-ev1.2", "question": { "id": "k7f3q-q01", "type": "mcq", "…": "…" } }]
 }
 ```
+
+`evaluation` puede ser `null`.
 
 ## Reglas del cliente
 
-1. Con `DATA_MODE=local` no se ejecuta ninguna petición.
-2. Un manifiesto o contenido inválido se descarta (`ParseError`) y se conserva
-   el contenido local.
-3. Una respuesta `5xx` o un `NetworkError` se reintenta con backoff exponencial;
-   un `4xx` no se reintenta.
-4. El contenido remoto aplicado no borra huérfanos: el contenido empaquetado
-   sigue decidiendo qué se elimina.
+1. Con `DATA_MODE=local` no se ejecuta ninguna petición; el arranque nunca
+   espera a la red.
+2. La descarga valida con `validateLessonPayload` y guarda en `remote_lessons`
+   (área de espera). No escribe en las tablas de contenido.
+3. Un fallo de validación descarta la lección y no avanza el `manifest_hash`.
+   Un manifiesto vacío, con hash vacío, con lecciones repetidas o una misma
+   versión con otro hash también se descartan.
+4. La lección descargada debe traer el mismo `hash` que su entrada del manifest.
+   Si no coincide, se descarta (protege contra una lección vieja en caché).
+5. Los ids de una lección no pueden repetirse en otra lección del mismo curso;
+   el cliente compara contra el área de espera y descarta el manifest si chocan.
+6. Al arrancar, `applyStagedContent` aplica lo pendiente de forma local y
+   devuelve las lecciones que fallaron; unirse a un grupo se aborta si hay
+   alguna fallida.
+7. Un `4xx` no se reintenta; la red y los `5xx` sí (backoff exponencial). Un
+   `429` se muestra como límite de intentos y no cambia el grupo.
+8. Si falta `EXPO_PUBLIC_API_URL`, el cliente no hace peticiones relativas:
+   falla con un error de configuración y el modo local sigue funcionando.
+9. Una lección que deja de aparecer en el manifest se archiva (también en el
+   curso base); no se borra para conservar `attempts`, `module_progress` y
+   `evaluation_results`.
+10. El respaldo v3 restaura el grupo aunque el curso ya esté descargado; los
+    respaldos v1 y v2 siguen aceptándose. Si el grupo cambió de catálogo, se
+    comprueba el catálogo que devuelve el servidor antes de restaurarlo.
+11. Publicar en varios grupos: si comparten `catalogId`, el contenido es el
+    mismo y no se duplica; si son catálogos distintos, el servidor debe prefijar
+    los ids con cada clave de curso.

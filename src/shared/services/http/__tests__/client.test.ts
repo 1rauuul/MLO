@@ -1,4 +1,6 @@
 import {
+  apiBaseUrl,
+  ConfigError,
   createHttpClient,
   HttpError,
   NetworkError,
@@ -80,5 +82,35 @@ describe('http client', () => {
     const client = makeClient(fetchImpl);
 
     await expect(client.get('/content/manifest')).rejects.toBeInstanceOf(ParseError);
+  });
+
+  it('falla con ConfigError si falta la URL base y no reintenta', async () => {
+    const fetchImpl = jest.fn();
+    const client = createHttpClient({ baseUrl: '', fetchImpl });
+
+    await expect(client.get('/content/manifest')).rejects.toBeInstanceOf(ConfigError);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe('apiBaseUrl', () => {
+  const previous = process.env.EXPO_PUBLIC_API_URL;
+
+  afterEach(() => {
+    if (previous === undefined) {
+      delete process.env.EXPO_PUBLIC_API_URL;
+    } else {
+      process.env.EXPO_PUBLIC_API_URL = previous;
+    }
+  });
+
+  it('quita espacios y barras finales', () => {
+    process.env.EXPO_PUBLIC_API_URL = ' https://api.test/// ';
+    expect(apiBaseUrl()).toBe('https://api.test');
+  });
+
+  it('devuelve vacío si no está configurada', () => {
+    delete process.env.EXPO_PUBLIC_API_URL;
+    expect(apiBaseUrl()).toBe('');
   });
 });

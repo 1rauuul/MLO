@@ -1,9 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { DATABASE_VERSION, DROP_ALL_DDL, SCHEMA_DDL } from '@/shared/services/db/schema';
-import { syncRemoteContent } from '@/shared/services/content/remoteContent';
-import { isHybrid } from '@/shared/services/data/dataMode';
-import { http } from '@/shared/services/http/client';
+import { applyStagedContent } from '@/shared/services/content/remote/applyStagedContent';
 
 import {
   applyContentMigration,
@@ -48,9 +46,7 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
       await saveContentHash(db);
       await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
     });
-    if (isHybrid()) {
-      await syncRemoteContent(db, http);
-    }
+    await applyStagedContent(db);
     return;
   }
 
@@ -253,18 +249,46 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     version = 15;
   }
 
+  if (version < 16) {
+    await db.withTransactionAsync(async () => {
+      if (!(await hasColumn(db, 'units', 'catalog_id'))) {
+        await db.execAsync(`ALTER TABLE units ADD COLUMN catalog_id TEXT NOT NULL DEFAULT 'base'`);
+      }
+      if (!(await hasColumn(db, 'units', 'archived_at'))) {
+        await db.execAsync(`ALTER TABLE units ADD COLUMN archived_at TEXT`);
+      }
+      if (!(await hasColumn(db, 'lessons', 'catalog_id'))) {
+        await db.execAsync(`ALTER TABLE lessons ADD COLUMN catalog_id TEXT NOT NULL DEFAULT 'base'`);
+      }
+      if (!(await hasColumn(db, 'lessons', 'archived_at'))) {
+        await db.execAsync(`ALTER TABLE lessons ADD COLUMN archived_at TEXT`);
+      }
+      if (!(await hasColumn(db, 'evaluations', 'archived_at'))) {
+        await db.execAsync(`ALTER TABLE evaluations ADD COLUMN archived_at TEXT`);
+      }
+      if (!(await hasColumn(db, 'evaluations', 'question_count'))) {
+        await db.execAsync(
+          `ALTER TABLE evaluations ADD COLUMN question_count INTEGER NOT NULL DEFAULT 10`,
+        );
+      }
+      if (!(await hasColumn(db, 'evaluations', 'exercise_count'))) {
+        await db.execAsync(
+          `ALTER TABLE evaluations ADD COLUMN exercise_count INTEGER NOT NULL DEFAULT 5`,
+        );
+      }
+      await db.execAsync(SCHEMA_DDL);
+      await db.runAsync("DELETE FROM meta WHERE key = 'remote_content_hash'");
+      await db.execAsync('PRAGMA user_version = 16');
+    });
+    version = 16;
+  }
+
   await seedIfEmpty(db);
   await syncBundledAndRemote(db);
 }
 
-// Si el contenido empaquetado cambió, el remoto debe volver a aplicarse.
+// Primero el contenido incluido; después lo remoto ya validado, sin red.
 async function syncBundledAndRemote(db: SQLiteDatabase): Promise<void> {
-  const bundledSynced = await syncContentIfChanged(db);
-  if (!isHybrid()) {
-    return;
-  }
-  if (bundledSynced) {
-    await db.runAsync("DELETE FROM meta WHERE key = 'remote_content_hash'");
-  }
-  await syncRemoteContent(db, http);
+  await syncContentIfChanged(db);
+  await applyStagedContent(db);
 }

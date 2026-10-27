@@ -49,7 +49,10 @@ describe('lessonRepository', () => {
       difficulty: 'Fundamental',
       color: 'blue',
     });
-    expect(calls.getAllAsync).toHaveBeenCalledWith(expect.stringContaining('ORDER BY number'));
+    expect(calls.getAllAsync).toHaveBeenCalledWith(
+      expect.stringContaining('ORDER BY number'),
+      'base',
+    );
   });
 
   it('selectLessons parsea synthesis sin cargar content', async () => {

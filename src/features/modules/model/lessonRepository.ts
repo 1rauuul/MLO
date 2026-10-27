@@ -72,23 +72,42 @@ function mapLesson(row: LessonRow): Lesson {
   };
 }
 
-export async function selectUnits(db: SQLiteDatabase): Promise<Unit[]> {
-  const rows = await db.getAllAsync<UnitRow>('SELECT * FROM units ORDER BY number');
+export async function selectUnits(
+  db: SQLiteDatabase,
+  catalogId = 'base',
+): Promise<Unit[]> {
+  const rows = await db.getAllAsync<UnitRow>(
+    'SELECT * FROM units WHERE catalog_id = ? AND archived_at IS NULL ORDER BY number',
+    catalogId,
+  );
   return rows.map(mapUnit);
 }
 
 // The catalog only needs metadata; full richContent is loaded by selectLesson.
-export async function selectLessons(db: SQLiteDatabase): Promise<Lesson[]> {
+export async function selectLessons(
+  db: SQLiteDatabase,
+  catalogId = 'base',
+): Promise<Lesson[]> {
   const rows = await db.getAllAsync<LessonRow>(
     `SELECT id, unit_id, code, title, eyebrow, body, code_sample, context_title,
             context_body, synthesis, position
      FROM lessons
+     WHERE catalog_id = ? AND archived_at IS NULL
      ORDER BY unit_id, position`,
+    catalogId,
   );
   return rows.map(mapLesson);
 }
 
-export async function selectLesson(db: SQLiteDatabase, id: string): Promise<Lesson | null> {
-  const row = await db.getFirstAsync<LessonRow>('SELECT * FROM lessons WHERE id = ?', id);
+export async function selectLesson(
+  db: SQLiteDatabase,
+  id: string,
+  catalogId = 'base',
+): Promise<Lesson | null> {
+  const row = await db.getFirstAsync<LessonRow>(
+    'SELECT * FROM lessons WHERE id = ? AND catalog_id = ? AND archived_at IS NULL',
+    id,
+    catalogId,
+  );
   return row ? mapLesson(row) : null;
 }

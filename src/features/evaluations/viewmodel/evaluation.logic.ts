@@ -99,15 +99,17 @@ export function buildEvaluationPool(
   questionPool: Question[],
   exercisePool: Question[],
   random: () => number = Math.random,
+  questionCount: number = EVALUATION_QUESTIONS_COUNT,
+  exerciseCount: number = EVALUATION_EXERCISES_COUNT,
 ): EvaluationPool {
   const questions = dedupeByPrompt(shuffleItems(questionPool, random), new Set()).slice(
     0,
-    EVALUATION_QUESTIONS_COUNT,
+    questionCount,
   );
   const exercises = dedupeByPrompt(
     shuffleItems(exercisePool, random),
     new Set(questions.map(question => question.prompt)),
-  ).slice(0, EVALUATION_EXERCISES_COUNT);
+  ).slice(0, exerciseCount);
   const mixed = shuffleItems([...questions, ...exercises], random).map(question =>
     shuffleQuestionOptions(question, random),
   );

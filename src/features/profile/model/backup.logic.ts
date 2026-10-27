@@ -2,7 +2,16 @@ import type { ExampleState } from '@/features/exercises/model/exampleStateReposi
 
 import { isBoolean, isNumber, isRecord, isString, isStringOrNull } from '@/shared/utils/validate';
 
-export const PROGRESS_BACKUP_VERSION = 2;
+export const PROGRESS_BACKUP_VERSION = 3;
+
+export interface BackupGroup {
+  code: string;
+  catalogId: string;
+  name: string;
+  /** null cuando el respaldo se creó sin red y no había metadata remota. */
+  groupId: string | null;
+  teacherName: string | null;
+}
 
 export interface BackupAttempt {
   source: 'practice' | 'evaluation';
@@ -30,8 +39,9 @@ export interface BackupLastLocation {
 }
 
 export interface ProgressBackup {
-  version: 2;
+  version: 3;
   exportedAt: string;
+  group: BackupGroup | null;
   moduleProgress: {
     lessonId: string;
     completed: boolean;
@@ -118,7 +128,7 @@ function parseLastLocation(value: unknown): BackupLastLocation | null {
 
 export function parseProgressBackup(raw: string): ProgressBackup {
   const value: unknown = JSON.parse(raw);
-  if (!isRecord(value) || (value.version !== 1 && value.version !== 2)) {
+  if (!isRecord(value) || (value.version !== 1 && value.version !== 2 && value.version !== 3)) {
     throw new Error('Formato de respaldo no compatible.');
   }
 
@@ -160,7 +170,7 @@ export function parseProgressBackup(raw: string): ProgressBackup {
     throw new Error('Los resultados del respaldo no son válidos.');
   }
 
-  const isV2 = value.version === 2;
+  const isV2 = value.version === 2 || value.version === 3;
   const exampleState = isV2 ? value.exampleState : [];
   if (
     isV2 &&
@@ -176,9 +186,35 @@ export function parseProgressBackup(raw: string): ProgressBackup {
     throw new Error('El estado de ejemplos del respaldo no es válido.');
   }
 
+  let group: BackupGroup | null = null;
+  if (value.version === 3 && value.group !== null && value.group !== undefined) {
+    if (
+      !isRecord(value.group) ||
+      !isString(value.group.code) ||
+      !isString(value.group.catalogId) ||
+      !isString(value.group.name) ||
+      (value.group.groupId !== undefined &&
+        value.group.groupId !== null &&
+        !isString(value.group.groupId)) ||
+      (value.group.teacherName !== undefined &&
+        value.group.teacherName !== null &&
+        !isString(value.group.teacherName))
+    ) {
+      throw new Error('El grupo del respaldo no es válido.');
+    }
+    group = {
+      code: value.group.code,
+      catalogId: value.group.catalogId,
+      name: value.group.name,
+      groupId: isString(value.group.groupId) ? value.group.groupId : null,
+      teacherName: isString(value.group.teacherName) ? value.group.teacherName : null,
+    };
+  }
+
   return {
     version: PROGRESS_BACKUP_VERSION,
     exportedAt: value.exportedAt,
+    group,
     moduleProgress: moduleProgress as ProgressBackup['moduleProgress'],
     attempts: attempts.map(parseAttempt),
     evaluationResults: evaluationResults as ProgressBackup['evaluationResults'],

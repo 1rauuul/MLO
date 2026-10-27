@@ -13,6 +13,8 @@ interface EvaluationRow {
   lesson_id: string;
   title: string;
   description: string;
+  question_count?: number;
+  exercise_count?: number;
 }
 
 interface QuestionRow {
@@ -42,6 +44,8 @@ function mapEvaluation(row: EvaluationRow): Evaluation {
     lessonId: row.lesson_id,
     title: row.title,
     description: row.description,
+    questionCount: row.question_count ?? 10,
+    exerciseCount: row.exercise_count ?? 5,
   };
 }
 
@@ -82,7 +86,7 @@ export async function selectEvaluationByLesson(
   lessonId: string,
 ): Promise<Evaluation | null> {
   const row = await db.getFirstAsync<EvaluationRow>(
-    'SELECT * FROM evaluations WHERE lesson_id = ? ORDER BY rowid LIMIT 1',
+    'SELECT * FROM evaluations WHERE lesson_id = ? AND archived_at IS NULL ORDER BY rowid LIMIT 1',
     lessonId,
   );
   return row ? mapEvaluation(row) : null;
@@ -119,14 +123,21 @@ export async function selectRecentEvaluationResults(
   db: SQLiteDatabase,
   accountId: number,
   limit = 5,
+  catalogId = 'base',
 ): Promise<EvaluationResult[]> {
   const rows = await db.getAllAsync<EvaluationResultRow>(
     `SELECT er.id, er.evaluation_id, er.score, er.correct_count, er.total_count, er.created_at
      FROM evaluation_results er
      WHERE er.account_id = ?
+       AND er.evaluation_id IN (
+         SELECT e.id FROM evaluations e
+         JOIN lessons l ON l.id = e.lesson_id
+         WHERE l.catalog_id = ? AND e.archived_at IS NULL AND l.archived_at IS NULL
+       )
      ORDER BY er.created_at DESC
      LIMIT ?`,
     accountId,
+    catalogId,
     limit,
   );
   return rows.map(row => ({
@@ -157,13 +168,18 @@ interface EvaluationSummaryRow {
   unit_number: number;
 }
 
-export async function selectEvaluationSummaries(db: SQLiteDatabase): Promise<EvaluationSummary[]> {
+export async function selectEvaluationSummaries(
+  db: SQLiteDatabase,
+  catalogId = 'base',
+): Promise<EvaluationSummary[]> {
   const rows = await db.getAllAsync<EvaluationSummaryRow>(
     `SELECT e.id, e.lesson_id, e.title, e.description, l.title AS lesson_title, u.number AS unit_number
      FROM evaluations e
      JOIN lessons l ON l.id = e.lesson_id
      JOIN units u ON u.id = l.unit_id
+     WHERE l.catalog_id = ? AND e.archived_at IS NULL AND l.archived_at IS NULL AND u.archived_at IS NULL
      ORDER BY u.number, l.position`,
+    catalogId,
   );
   return rows.map(row => ({
     id: row.id,

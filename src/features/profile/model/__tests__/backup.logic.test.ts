@@ -53,27 +53,56 @@ const v2Backup = {
 const parse = (value: unknown) => parseProgressBackup(JSON.stringify(value));
 
 describe('parseProgressBackup', () => {
-  it('acepta el respaldo v2 con estado de ejemplos y ubicación', () => {
-    const backup = parse(v2Backup);
+  it('acepta el respaldo v3 con grupo, ejemplos y ubicación', () => {
+    const backup = parse({
+      ...v2Backup,
+      version: 3,
+      group: { code: 'abc123', catalogId: 'k7f3q', name: 'Grupo A' },
+    });
 
-    expect(backup.version).toBe(2);
+    expect(backup.version).toBe(3);
+    expect(backup.group).toEqual({
+      code: 'abc123',
+      catalogId: 'k7f3q',
+      name: 'Grupo A',
+      groupId: null,
+      teacherName: null,
+    });
     expect(backup.exampleState[0]?.payload.drawExerciseIds).toEqual(['b']);
-    expect(backup.lastLocation?.lessonId).toBe('lesson-1');
     expect(backup.attempts[0]?.scoreCorrect).toBe(3);
   });
 
-  it('sigue aceptando el respaldo v1 y lo normaliza a v2', () => {
-    const backup = parse(v1Backup);
+  it('conserva groupId y maestro cuando el respaldo los trae', () => {
+    const backup = parse({
+      ...v2Backup,
+      version: 3,
+      group: {
+        code: 'abc123',
+        catalogId: 'k7f3q',
+        name: 'Grupo A',
+        groupId: 'g1',
+        teacherName: 'Profesora Ríos',
+      },
+    });
 
-    expect(backup.version).toBe(2);
-    expect(backup.exampleState).toEqual([]);
-    expect(backup.lastLocation).toBeNull();
-    expect(backup.attempts[0]?.scoreCorrect).toBe(1);
-    expect(backup.attempts[0]?.scoreTotal).toBe(1);
+    expect(backup.group?.groupId).toBe('g1');
+    expect(backup.group?.teacherName).toBe('Profesora Ríos');
+  });
+
+  it('sigue aceptando v1 y v2 y los normaliza a v3 sin grupo', () => {
+    const v1 = parse(v1Backup);
+    const v2 = parse(v2Backup);
+
+    expect(v1.version).toBe(3);
+    expect(v2.version).toBe(3);
+    expect(v1.group).toBeNull();
+    expect(v1.exampleState).toEqual([]);
+    expect(v1.attempts[0]?.scoreCorrect).toBe(1);
+    expect(v2.exampleState).toHaveLength(1);
   });
 
   it('rechaza versiones desconocidas', () => {
-    expect(() => parse({ ...v2Backup, version: 3 })).toThrow('Formato de respaldo no compatible.');
+    expect(() => parse({ ...v2Backup, version: 4 })).toThrow('Formato de respaldo no compatible.');
   });
 
   it('rechaza intentos con una fuente desconocida', () => {

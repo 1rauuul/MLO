@@ -97,3 +97,63 @@
 - **Requisito para el reporte:** describir la app como **offline-first** con servicios
   opcionales, no como una app conectada. La prueba de modo avión sigue siendo válida y
   obligatoria para el comportamiento por defecto.
+
+---
+
+## C10. Varios maestros, cursos y grupos (2026-10-26)
+
+- **D1 — un grupo por cuenta:** el alumno pertenece a un grupo a la vez; cambiar de grupo
+  conserva el progreso anterior porque los ids de contenido son globales.
+- **D2 — ids globales:** el servidor prefija los ids con la clave del curso
+  (`k7f3q-l1.2`). El curso base conserva los ids actuales y no se añade `catalog_id` a
+  `attempts` ni a las tablas de progreso.
+- **D3 — lectura pública por curso:** la clave aleatoria del curso es suficiente; el
+  contenido educativo no es sensible y la CDN puede cachearlo. El código de grupo solo se
+  usa para unirse.
+- **D4 — actualización diferida:** el contenido se descarga en segundo plano y se aplica
+  al siguiente arranque, o de inmediato al unirse a un grupo. Nunca se cambia el contenido
+  en caliente durante una actividad.
+- **D5 — archivar, no borrar:** unidades, lecciones y evaluaciones retiradas se ocultan con
+  `archived_at`; ejercicios, ejemplos y preguntas sí se pueden borrar. Se preservan
+  `attempts`, `module_progress` y `evaluation_results`.
+- **D6 — grupo cerrado:** solo bloquea nuevas uniones; los miembros actuales siguen
+  recibiendo actualizaciones del curso.
+- **D7 — sin purga de cursos:** los cursos que ya no usa ninguna cuenta se conservan (pesan
+  pocos KB) para no borrar progreso por cascada.
+- **Contrato:** v2 en `docs/api/contrato.md`. El curso base es `base` y no lleva prefijo.
+- **Respaldo:** v3 incluye el grupo; se aceptan v1 y v2. Al importar se omiten las filas de
+  cursos no disponibles y se informa cuántas. Si no hay red, `group_id` y `teacher_name`
+  quedan nulos: nunca se inventa un id remoto con el código del grupo.
+- **Lecciones de solo lectura:** una lección puede no tener ejercicios ni evaluación
+  (por ejemplo, la introducción 1.1). Si publica evaluación, debe traer al menos una pregunta.
+- **Publicación por grupos:** un curso puede compartirse entre varios grupos. Añadir contenido
+  a un grupo concreto exige un catálogo propio para ese grupo; los grupos de un mismo catálogo
+  ven el mismo contenido. Los ids se prefijan por catálogo.
+
+---
+
+## C11. Ajustes del contrato v2 para el sistema del maestro (2026-10-26)
+
+Se derivan de `docs/planes/COMPARATIVA-consumo-servicios-vs-plan-maestro.md`.
+
+- **`version`:** el API publica el entero de `releases.version` como texto; MLO acepta
+  string o entero y lo normaliza a string. `hash` y `lessons[].hash` no pueden ir vacíos.
+- **Ejemplos:** `examples` contiene solo ejemplos independientes y puede ser `[]`; los
+  ejemplos de un ejercicio viajan en `exercises[].example`. MLO normaliza los campos vacíos
+  omitidos (`codeSample`, `contextTitle`, `contextBody`, `synthesis`, `correctOrder`,
+  `options`, `answer`), pero el serializador debe emitirlos.
+- **Preguntas de ordenar:** `options` es la secuencia correcta y `answer` es `0`. En
+  `fill`/`match`/`crossword`, `options` es `[]`, `answer` es `0` y la verdad está en `config`.
+- **Códigos de grupo:** se envían en mayúsculas; MLO acepta minúsculas y espacios y los
+  normaliza. El servidor debe aceptar esa forma canónica.
+- **Publicación:** un release vacío no se publica; el release de `base` es un snapshot
+  completo de lecciones activas. MLO archiva lo que no viene y rechaza un manifest vacío.
+- **Integridad:** MLO descarta una lección si su `hash` no coincide con el manifest y rechaza
+  ids repetidos entre lecciones del mismo curso. El servidor sigue siendo la validación
+  principal.
+- **Errores:** `429` se muestra como límite de intentos; un `404`/`410` al descargar el curso
+  no se confunde con un código de grupo inexistente. Si falta `EXPO_PUBLIC_API_URL`, el
+  cliente falla con un error de configuración y no hace peticiones relativas.
+- **Imágenes:** fuera de alcance hasta que MLO tenga un bloque de imagen y su validador.
+- **Ejemplos independientes** (`exA1.2`, `exA1.3`, `exA1.4`): se retiran del release; la UI de
+  MLO solo muestra el ejemplo cuyo id coincide con un ejercicio.

@@ -22,6 +22,13 @@ export class ParseError extends Error {
   }
 }
 
+export class ConfigError extends Error {
+  constructor(message = 'Falta configurar EXPO_PUBLIC_API_URL.') {
+    super(message);
+    this.name = 'ConfigError';
+  }
+}
+
 export interface HttpRequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
@@ -51,6 +58,9 @@ function wait(ms: number): Promise<void> {
 }
 
 function shouldRetry(error: unknown): boolean {
+  if (error instanceof ConfigError) {
+    return false;
+  }
   if (error instanceof NetworkError) {
     return true;
   }
@@ -69,6 +79,9 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
     body: unknown,
     headers: Record<string, string>,
   ): Promise<T> {
+    if (!config.baseUrl) {
+      throw new ConfigError();
+    }
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     const token = config.getToken?.() ?? null;
@@ -136,7 +149,7 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
 }
 
 export function apiBaseUrl(): string {
-  return process.env.EXPO_PUBLIC_API_URL ?? '';
+  return (process.env.EXPO_PUBLIC_API_URL ?? '').trim().replace(/\/+$/, '');
 }
 
 export const http = createHttpClient({ baseUrl: apiBaseUrl() });

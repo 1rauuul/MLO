@@ -10,12 +10,15 @@ describe('replaceProgressFromBackup', () => {
     }));
     const db = {
       runAsync,
+      getAllAsync: async (sql: string) =>
+        sql.includes('lessons') ? [{ id: 'l1.2' }] : [{ id: 'ev1.2' }],
       withTransactionAsync: async (task: () => Promise<void>) => task(),
     } as unknown as SQLiteDatabase;
 
     await replaceProgressFromBackup(db, 7, {
-      version: 2,
+      version: 3,
       exportedAt: '2026-10-15T00:00:00.000Z',
+      group: null,
       moduleProgress: [],
       attempts: [],
       evaluationResults: [],
@@ -49,6 +52,52 @@ describe('replaceProgressFromBackup', () => {
 });
 
 describe('selectProgressBackup', () => {
+  it('omite filas de lecciones que no existen en el dispositivo', async () => {
+    const db = {
+      getAllAsync: async () => [],
+      runAsync: jest.fn(async () => ({ changes: 1, lastInsertRowId: 0 })),
+      withTransactionAsync: async (task: () => Promise<void>) => task(),
+    } as unknown as SQLiteDatabase;
+
+    const result = await replaceProgressFromBackup(db, 7, {
+      version: 3,
+      exportedAt: '2026-10-15T00:00:00.000Z',
+      group: {
+        code: 'abc123',
+        catalogId: 'k7f3q',
+        name: 'Grupo A',
+        groupId: null,
+        teacherName: null,
+      },
+      moduleProgress: [{ lessonId: 'k7f3q-l1.2', completed: true, updatedAt: '2026-01-01' }],
+      attempts: [
+        {
+          source: 'practice',
+          itemId: 'k7f3q-ord1',
+          itemType: 'order',
+          lessonId: 'k7f3q-l1.2',
+          correct: true,
+          scoreCorrect: 1,
+          scoreTotal: 1,
+          createdAt: '2026-01-01',
+        },
+      ],
+      evaluationResults: [
+        {
+          evaluationId: 'k7f3q-ev1.2',
+          score: 80,
+          correctCount: 8,
+          totalCount: 10,
+          createdAt: '2026-01-01',
+        },
+      ],
+      exampleState: [],
+      lastLocation: null,
+    });
+
+    expect(result.omitted).toBe(3);
+  });
+
   it('incluye sorteo, ubicación y puntaje parcial', async () => {
     const db = {
       getAllAsync: jest.fn(async (sql: string) => {
@@ -85,18 +134,35 @@ describe('selectProgressBackup', () => {
         }
         return [];
       }),
-      getFirstAsync: jest.fn(async () => ({
-        unit_id: 'u1',
-        lesson_id: 'l1.2',
-        lesson_code: '1.2',
-        section: 'exercise',
-        updated_at: '2026-01-01',
-      })),
+      getFirstAsync: jest.fn(async (sql: string) =>
+        sql.includes('account_group')
+          ? {
+              group_id: 'g1',
+              group_code: 'abc123',
+              catalog_id: 'k7f3q',
+              group_name: 'Grupo A',
+              teacher_name: 'Profesora Ríos',
+            }
+          : {
+              unit_id: 'u1',
+              lesson_id: 'l1.2',
+              lesson_code: '1.2',
+              section: 'exercise',
+              updated_at: '2026-01-01',
+            },
+      ),
     } as unknown as SQLiteDatabase;
 
     const backup = await selectProgressBackup(db, 7);
 
-    expect(backup.version).toBe(2);
+    expect(backup.version).toBe(3);
+    expect(backup.group).toEqual({
+      code: 'abc123',
+      catalogId: 'k7f3q',
+      name: 'Grupo A',
+      groupId: 'g1',
+      teacherName: 'Profesora Ríos',
+    });
     expect(backup.attempts[0]).toEqual({
       source: 'practice',
       itemId: 'ord1.2',

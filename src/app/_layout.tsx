@@ -6,9 +6,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { DATABASE_NAME, migrateAndSeed } from '@/shared/services/db/database';
+import { ContentSyncProvider } from '@/shared/services/content/ContentSyncProvider';
 import { DataProvider } from '@/shared/services/data/DataProvider';
 import { AppThemeProvider } from '@/shared/theme/ThemeProvider';
 import { AuthProvider, useAuth } from '@/features/auth/viewmodel/useAuth';
+import { ActiveCatalogProvider } from '@/features/groups/viewmodel/useActiveCatalog';
 import { LearnerProfileProvider } from '@/features/profile/viewmodel/useLearnerProfile';
 import { SessionProvider } from '@/features/auth/viewmodel/useSession';
 
@@ -20,18 +22,22 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateAndSeed}>
           <DataProvider>
-            <AuthProvider>
-              <SessionProvider>
-                <LearnerProfileProvider>
-                  <AppThemeProvider>
-                    <StatusBar style="auto" />
-                    <ErrorBoundary>
-                      <RootNavigator />
-                    </ErrorBoundary>
-                  </AppThemeProvider>
-                </LearnerProfileProvider>
-              </SessionProvider>
-            </AuthProvider>
+            <ContentSyncProvider>
+              <AuthProvider>
+                <ActiveCatalogProvider>
+                  <SessionProvider>
+                    <LearnerProfileProvider>
+                      <AppThemeProvider>
+                        <StatusBar style="auto" />
+                        <ErrorBoundary>
+                          <RootNavigator />
+                        </ErrorBoundary>
+                      </AppThemeProvider>
+                    </LearnerProfileProvider>
+                  </SessionProvider>
+                </ActiveCatalogProvider>
+              </AuthProvider>
+            </ContentSyncProvider>
           </DataProvider>
         </SQLiteProvider>
       </SafeAreaProvider>

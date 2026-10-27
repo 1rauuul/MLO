@@ -3,7 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import type { Complexity, UnitColor } from '@/shared/model/entities';
 
 import { richContent } from '@/shared/services/content/richContent';
-import type { RemoteLessonContent } from '@/shared/services/content/remoteContent';
+import type { RemoteLessonPayload } from '@/shared/services/content/remote/validateLessonPayload';
 import { l12QuestionBank } from '@/shared/services/content/banks/lesson1.2.questions';
 import type { ExerciseSeed } from '@/shared/services/content/banks/types';
 import {
@@ -521,6 +521,10 @@ export async function syncContentIfChanged(db: SQLiteDatabase): Promise<boolean>
   await db.withTransactionAsync(async () => {
     await writeContentSync(db);
     await saveContentHash(db);
+    // El remoto del curso base se reaplica en el próximo arranque, sin red (B2).
+    await db.runAsync(
+      "UPDATE remote_lessons SET applied_hash = NULL WHERE catalog_id = 'base'",
+    );
   });
   return true;
 }
@@ -557,30 +561,136 @@ export async function applyContentMigration(db: SQLiteDatabase): Promise<void> {
 }
 
 /**
- * Aplica contenido remoto ya validado. No borra huérfanos: el contenido
- * empaquetado sigue siendo la fuente local y decide qué se elimina.
+ * Aplica una lección remota completa. Cada lección es atómica: si una llave
+ * foránea falla, la transacción revierte y la fila queda pendiente.
  */
-export async function applyRemoteContent(
+export async function applyLessonPayload(
   db: SQLiteDatabase,
-  content: RemoteLessonContent[],
+  payload: RemoteLessonPayload,
 ): Promise<void> {
+  const now = new Date().toISOString();
   await db.withTransactionAsync(async () => {
-    for (const lesson of content) {
-      for (const exercise of lesson.exercises) {
-        await insertExerciseWithExample(db, exercise);
-      }
-      for (const example of lesson.examples) {
-        await insertExampleRow(db, example);
-      }
-      for (const [index, entry] of lesson.questions.entries()) {
+    const { unit, lesson, evaluation } = payload;
+
+    await db.runAsync(
+      `INSERT INTO units (id, number, title, description, difficulty, color, catalog_id, archived_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+       ON CONFLICT(id) DO UPDATE SET
+         number = excluded.number, title = excluded.title, description = excluded.description,
+         difficulty = excluded.difficulty, color = excluded.color,
+         catalog_id = excluded.catalog_id, archived_at = NULL`,
+      unit.id,
+      unit.number,
+      unit.title,
+      unit.description,
+      unit.difficulty,
+      unit.color,
+      payload.catalogId,
+    );
+
+    await db.runAsync(
+      `INSERT INTO lessons (id, unit_id, code, title, eyebrow, body, code_sample, context_title,
+                            context_body, synthesis, content, position, catalog_id, archived_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+       ON CONFLICT(id) DO UPDATE SET
+         unit_id = excluded.unit_id, code = excluded.code, title = excluded.title,
+         eyebrow = excluded.eyebrow, body = excluded.body, code_sample = excluded.code_sample,
+         context_title = excluded.context_title, context_body = excluded.context_body,
+         synthesis = excluded.synthesis, content = excluded.content, position = excluded.position,
+         catalog_id = excluded.catalog_id, archived_at = NULL`,
+      lesson.id,
+      lesson.unitId,
+      lesson.code,
+      lesson.title,
+      lesson.eyebrow,
+      lesson.body,
+      lesson.codeSample,
+      lesson.contextTitle,
+      lesson.contextBody,
+      JSON.stringify(lesson.synthesis),
+      JSON.stringify(lesson.content),
+      lesson.position,
+      payload.catalogId,
+    );
+
+    if (evaluation) {
+      await db.runAsync(
+        `INSERT INTO evaluations (id, lesson_id, title, description, question_count, exercise_count, archived_at)
+         VALUES (?, ?, ?, ?, ?, ?, NULL)
+         ON CONFLICT(id) DO UPDATE SET
+           lesson_id = excluded.lesson_id, title = excluded.title, description = excluded.description,
+           question_count = excluded.question_count, exercise_count = excluded.exercise_count,
+           archived_at = NULL`,
+        evaluation.id,
+        evaluation.lessonId,
+        evaluation.title,
+        evaluation.description,
+        evaluation.questionCount,
+        evaluation.exerciseCount,
+      );
+    } else {
+      await db.runAsync(
+        'UPDATE evaluations SET archived_at = ? WHERE lesson_id = ? AND archived_at IS NULL',
+        now,
+        lesson.id,
+      );
+      await db.runAsync(
+        'DELETE FROM questions WHERE evaluation_id IN (SELECT id FROM evaluations WHERE lesson_id = ?)',
+        lesson.id,
+      );
+    }
+
+    const exerciseIds = payload.exercises.map(exercise => exercise.id);
+    await deleteMissing(
+      db,
+      'exercises',
+      'lesson_id',
+      lesson.id,
+      exerciseIds,
+    );
+    for (const exercise of payload.exercises) {
+      await insertExerciseWithExample(db, exercise);
+    }
+
+    const exampleIds = [
+      ...payload.examples.map(example => example.id),
+      ...payload.exercises.filter(exercise => exercise.example).map(exercise => exercise.id),
+    ];
+    await deleteMissing(db, 'examples', 'lesson_id', lesson.id, exampleIds);
+    for (const example of payload.examples) {
+      await insertExampleRow(db, example);
+    }
+
+    if (evaluation) {
+      const questionIds = payload.questions.map(entry => entry.question.id!);
+      await deleteMissing(db, 'questions', 'evaluation_id', evaluation.id, questionIds);
+      for (const [index, entry] of payload.questions.entries()) {
         await insertQuestionRow(
           db,
-          entry.question.id ?? `${entry.evaluationId}-${lesson.lessonId}-remote-q${index + 1}`,
+          entry.question.id!,
           entry.evaluationId,
-          2000 + index,
+          index,
           entry.question,
         );
       }
     }
   });
+}
+
+async function deleteMissing(
+  db: SQLiteDatabase,
+  table: 'exercises' | 'examples' | 'questions',
+  column: 'lesson_id' | 'evaluation_id',
+  ownerId: string,
+  keepIds: string[],
+): Promise<void> {
+  if (keepIds.length === 0) {
+    await db.runAsync(`DELETE FROM ${table} WHERE ${column} = ?`, ownerId);
+    return;
+  }
+  await db.runAsync(
+    `DELETE FROM ${table} WHERE ${column} = ? AND id NOT IN (${placeholders(keepIds)})`,
+    ownerId,
+    ...keepIds,
+  );
 }

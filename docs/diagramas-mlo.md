@@ -5,6 +5,7 @@ Este documento explica **qué muestra cada diagrama, cómo leerlo y de dónde sa
 - Proyecto: **MLO — Introducción a la Ingeniería de Software**
 - Stack: Expo SDK 57 + Expo Router + `expo-sqlite` + TypeScript estricto
 - Base de datos: SQLite local `mlo.db` (offline-first; **sin red con `DATA_MODE='local'`**, contenido remoto opcional con `hybrid`)
+- Área de espera remota: `remote_catalogs` (manifest y hash por curso) y `remote_lessons` (payload validado pendiente de aplicar). El arranque aplica lo pendiente con `applyStagedContent`; nunca espera a la red.
 - Skin de los diagramas: por defecto del skill *diagram-design* (papel `#f5f5f5`, tinta `#2d3142`, acento `#bf4520`)
 
 ---

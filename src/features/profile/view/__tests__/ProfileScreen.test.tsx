@@ -25,6 +25,17 @@ jest.mock('@/features/auth/viewmodel/useAuth', () => ({
   }),
 }));
 jest.mock('@/features/modules/viewmodel/useCatalog', () => ({ useCatalog: () => mockCatalog }));
+jest.mock('@/shared/services/data/DataProvider', () => ({
+  useRepositories: () => ({ groups: { clearAccountGroup: jest.fn() } }),
+}));
+jest.mock('@/features/groups/viewmodel/useActiveCatalog', () => ({
+  useActiveCatalog: () => ({
+    catalogId: 'base',
+    group: null,
+    isLoading: false,
+    refresh: jest.fn(),
+  }),
+}));
 jest.mock('@/features/auth/viewmodel/useSession', () => ({
   useSession: () => ({
     location: { unitId: null, lessonId: null, lessonCode: null, section: null },

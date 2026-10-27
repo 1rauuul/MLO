@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useActiveCatalog } from '@/features/groups/viewmodel/useActiveCatalog';
 import { useRepositories } from '@/shared/services/data/DataProvider';
 import type { Example, Lesson } from '@/shared/model/entities';
 
@@ -12,6 +13,7 @@ interface UseLessonContentResult {
 
 export function useLessonContent(lessonId: string | null): UseLessonContentResult {
   const { lessons, examples: exampleRepository } = useRepositories();
+  const { catalogId, isLoading: catalogLoading } = useActiveCatalog();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [examples, setExamples] = useState<Example[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,6 +26,10 @@ export function useLessonContent(lessonId: string | null): UseLessonContentResul
       setIsLoading(false);
       return;
     }
+    if (catalogLoading) {
+      setIsLoading(true);
+      return;
+    }
 
     let active = true;
     setIsLoading(true);
@@ -31,7 +37,7 @@ export function useLessonContent(lessonId: string | null): UseLessonContentResul
     (async () => {
       try {
         const [loadedLesson, loadedExamples] = await Promise.all([
-          lessons.selectLesson(lessonId),
+          lessons.selectLesson(lessonId, catalogId),
           exampleRepository.selectExamplesByLesson(lessonId),
         ]);
         if (!active) {
@@ -53,7 +59,7 @@ export function useLessonContent(lessonId: string | null): UseLessonContentResul
     return () => {
       active = false;
     };
-  }, [lessons, exampleRepository, lessonId]);
+  }, [lessons, exampleRepository, lessonId, catalogId, catalogLoading]);
 
   return { lesson, examples, isLoading, error };
 }

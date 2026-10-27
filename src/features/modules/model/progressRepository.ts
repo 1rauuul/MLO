@@ -8,10 +8,15 @@ interface ProgressRow {
 export async function selectProgressMap(
   db: SQLiteDatabase,
   accountId: number,
+  catalogId = 'base',
 ): Promise<Record<string, boolean>> {
   const rows = await db.getAllAsync<ProgressRow>(
-    'SELECT lesson_id, completed FROM module_progress WHERE account_id = ?',
+    `SELECT p.lesson_id, p.completed
+     FROM module_progress p
+     JOIN lessons l ON l.id = p.lesson_id
+     WHERE p.account_id = ? AND l.catalog_id = ? AND l.archived_at IS NULL`,
     accountId,
+    catalogId,
   );
   const map: Record<string, boolean> = {};
   for (const row of rows) {
@@ -38,17 +43,21 @@ export async function countCompletedByUnit(
   db: SQLiteDatabase,
   accountId: number,
   unitId: string,
+  catalogId = 'base',
 ): Promise<{ completed: number; total: number }> {
   const totalRow = await db.getFirstAsync<{ total: number }>(
-    'SELECT COUNT(*) AS total FROM lessons WHERE unit_id = ?',
+    'SELECT COUNT(*) AS total FROM lessons WHERE unit_id = ? AND catalog_id = ? AND archived_at IS NULL',
     unitId,
+    catalogId,
   );
   const completedRow = await db.getFirstAsync<{ completed: number }>(
     `SELECT COUNT(*) AS completed
      FROM lessons l
      JOIN module_progress p ON p.lesson_id = l.id
-     WHERE l.unit_id = ? AND p.account_id = ? AND p.completed = 1`,
+     WHERE l.unit_id = ? AND l.catalog_id = ? AND l.archived_at IS NULL
+       AND p.account_id = ? AND p.completed = 1`,
     unitId,
+    catalogId,
     accountId,
   );
   return { completed: completedRow?.completed ?? 0, total: totalRow?.total ?? 0 };
