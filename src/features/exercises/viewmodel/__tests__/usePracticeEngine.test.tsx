@@ -34,8 +34,8 @@ jest.mock('@/features/exercises/viewmodel/lessonDraw', () => ({
 const insertAttempt = attemptRepository.insertAttempt as jest.MockedFunction<
   typeof attemptRepository.insertAttempt
 >;
-const selectExercisesByLesson = exerciseRepository.selectExercisesByLesson as jest.MockedFunction<
-  typeof exerciseRepository.selectExercisesByLesson
+const selectPracticeExercisesByLesson = exerciseRepository.selectPracticeExercisesByLesson as jest.MockedFunction<
+  typeof exerciseRepository.selectPracticeExercisesByLesson
 >;
 
 const fillExercise: Exercise = {
@@ -63,7 +63,7 @@ const orderExercise: Exercise = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockAccountState = { id: 7 };
-  selectExercisesByLesson.mockResolvedValue([fillExercise]);
+  selectPracticeExercisesByLesson.mockResolvedValue([fillExercise]);
 });
 
 it('persiste un único intento por pulsación de Comprobar', async () => {
@@ -79,7 +79,7 @@ it('persiste un único intento por pulsación de Comprobar', async () => {
 });
 
 it('permite registrar un nuevo intento al avanzar al siguiente ejercicio', async () => {
-  selectExercisesByLesson.mockResolvedValue([fillExercise, orderExercise]);
+  selectPracticeExercisesByLesson.mockResolvedValue([fillExercise, orderExercise]);
 
   const { result } = renderHook(() => usePracticeEngine('lesson-2'));
 
@@ -116,7 +116,7 @@ it('no escribe intentos cuando no hay cuenta', async () => {
 });
 
 it('califica solo las preguntas de la sesión con puntaje parcial', async () => {
-  selectExercisesByLesson.mockResolvedValue([fillExercise, orderExercise]);
+  selectPracticeExercisesByLesson.mockResolvedValue([fillExercise, orderExercise]);
 
   const { result } = renderHook(() => usePracticeEngine('lesson-2'));
 

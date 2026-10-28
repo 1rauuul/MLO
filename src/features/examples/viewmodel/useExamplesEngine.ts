@@ -8,6 +8,28 @@ import { useRepositories } from '@/shared/services/data/DataProvider';
 
 export const EXAMPLE_DRAW_COUNT = 10;
 
+/**
+ * Los ejemplos independientes viven en `examples` sin una fila en `exercises`.
+ * Se envuelven como Exercise para reutilizar ExampleRunner y la vista previa.
+ * `order` necesita correctOrder y el contrato de ejemplos no lo lleva.
+ */
+function syntheticExamples(exercises: Exercise[], examples: Example[]): Exercise[] {
+  const exerciseIds = new Set(exercises.map(exercise => exercise.id));
+  return examples
+    .filter(example => !exerciseIds.has(example.id) && example.type !== 'order')
+    .map(example => ({
+      id: example.id,
+      lessonId: example.lessonId,
+      type: example.type,
+      prompt: example.prompt,
+      instructions: '',
+      correctOrder: [],
+      config: example.config,
+      explanation: example.explanation,
+      className: example.className,
+    }));
+}
+
 export interface ExamplesEngine {
   items: Exercise[];
   index: number;
@@ -45,11 +67,16 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
     (async () => {
       try {
         const [loadedExercises, loadedExamples] = await Promise.all([
-          exerciseRepository.selectExercisesByLesson(lessonId),
-          exampleRepository.selectExamplesByLesson(lessonId),
+          account
+            ? exerciseRepository.selectPracticeExercisesByLesson(account.id, lessonId)
+            : exerciseRepository.selectExercisesByLesson(lessonId),
+          account
+            ? exampleRepository.selectExamplesWithExtras(account.id, lessonId)
+            : exampleRepository.selectExamplesByLesson(lessonId),
         ]);
         const loaded = loadedExercises.filter(exercise => EXERCISE_TYPES.includes(exercise.type));
         const byId = new Map(loaded.map(exercise => [exercise.id, exercise]));
+        const independent = syntheticExamples(loaded, loadedExamples);
         let chosenIds: string[] = [];
         let exerciseIds: string[] = [];
         let startIndex = 0;
@@ -62,7 +89,10 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
           );
           chosenIds = state.drawExampleIds.filter(id => byId.has(id));
           exerciseIds = state.drawExerciseIds;
-          startIndex = Math.max(0, Math.min(state.exampleIndex, chosenIds.length - 1));
+          startIndex = Math.max(
+            0,
+            Math.min(state.exampleIndex, chosenIds.length + independent.length - 1),
+          );
         }
 
         if (chosenIds.length === 0) {
@@ -75,7 +105,10 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
         setPool(loaded);
         setExamples(loadedExamples);
         setDrawExerciseIds(exerciseIds);
-        setItems(chosenIds.map(id => byId.get(id)).filter((item): item is Exercise => Boolean(item)));
+        setItems([
+          ...chosenIds.map(id => byId.get(id)).filter((item): item is Exercise => Boolean(item)),
+          ...independent,
+        ]);
         setIndex(Math.max(0, startIndex));
       } catch (caught) {
         if (__DEV__) {
@@ -134,11 +167,14 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
     }
     const drawn = splitDraw(ids, EXAMPLE_DRAW_COUNT);
     const byId = new Map(pool.map(item => [item.id, item]));
-    setItems(drawn.exampleIds.map(id => byId.get(id)).filter((item): item is Exercise => Boolean(item)));
+    setItems([
+      ...drawn.exampleIds.map(id => byId.get(id)).filter((item): item is Exercise => Boolean(item)),
+      ...syntheticExamples(pool, examples),
+    ]);
     setDrawExerciseIds(drawn.exerciseIds);
     setIndex(0);
     persist(0, [], drawn.exampleIds, drawn.exerciseIds);
-  }, [pool, persist]);
+  }, [pool, examples, persist]);
 
   const current = items[index] ?? null;
   const examplesById = useMemo(() => new Map(examples.map(example => [example.id, example])), [examples]);

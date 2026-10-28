@@ -4,9 +4,11 @@ import {
   clearSession,
   insertAccount,
   saveSession,
+  selectAccountByExternalKey,
   selectAccountById,
   selectAccountByUsername,
   selectSessionAccountId,
+  updateExternalKey,
   updatePasswordHash,
 } from '@/features/auth/model/accountRepository';
 
@@ -27,6 +29,7 @@ function makeDb(overrides: Partial<Calls> = {}) {
 const accountRow = {
   id: 7,
   username: 'valentina',
+  external_key: '11111111-1111-4111-8111-111111111111',
   display_name: 'Valentina Ríos',
   password_hash: 'abc',
   salt: 's1',
@@ -39,6 +42,7 @@ describe('accountRepository', () => {
 
     const id = await insertAccount(db, {
       username: 'valentina',
+      externalKey: '11111111-1111-4111-8111-111111111111',
       displayName: 'Valentina',
       passwordHash: 'hash',
       salt: 's1',
@@ -48,6 +52,7 @@ describe('accountRepository', () => {
     expect(calls.runAsync).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO accounts'),
       'valentina',
+      '11111111-1111-4111-8111-111111111111',
       'Valentina',
       'hash',
       's1',
@@ -61,6 +66,7 @@ describe('accountRepository', () => {
     await expect(selectAccountByUsername(db, 'valentina')).resolves.toEqual({
       id: 7,
       username: 'valentina',
+      externalKey: '11111111-1111-4111-8111-111111111111',
       displayName: 'Valentina Ríos',
       passwordHash: 'abc',
       salt: 's1',
@@ -121,6 +127,33 @@ describe('accountRepository', () => {
       'nuevo-hash',
       'nueva-salt',
       7,
+    );
+  });
+
+  it('updateExternalKey cambia la identidad de la persona', async () => {
+    const { db, calls } = makeDb();
+
+    await updateExternalKey(db, 7, '22222222-2222-4222-8222-222222222222');
+
+    expect(calls.runAsync).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE accounts SET external_key'),
+      '22222222-2222-4222-8222-222222222222',
+      7,
+    );
+  });
+
+  it('selectAccountByExternalKey consulta por la identidad estable', async () => {
+    const { db, calls } = makeDb({ getFirstAsync: jest.fn(async () => accountRow) });
+
+    const account = await selectAccountByExternalKey(
+      db,
+      '11111111-1111-4111-8111-111111111111',
+    );
+
+    expect(account?.username).toBe('valentina');
+    expect(calls.getFirstAsync).toHaveBeenCalledWith(
+      expect.stringContaining('WHERE external_key'),
+      '11111111-1111-4111-8111-111111111111',
     );
   });
 });

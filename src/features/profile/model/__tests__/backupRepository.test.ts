@@ -12,13 +12,17 @@ describe('replaceProgressFromBackup', () => {
       runAsync,
       getAllAsync: async (sql: string) =>
         sql.includes('lessons') ? [{ id: 'l1.2' }] : [{ id: 'ev1.2' }],
+      getFirstAsync: async () => null,
       withTransactionAsync: async (task: () => Promise<void>) => task(),
     } as unknown as SQLiteDatabase;
 
     await replaceProgressFromBackup(db, 7, {
-      version: 3,
+      version: 4,
       exportedAt: '2026-10-15T00:00:00.000Z',
-      group: null,
+      student: { externalKey: '11111111-1111-4111-8111-111111111111' },
+      classes: [
+        { classId: 'c1', code: 'ABC123', name: 'Grupo A', teacherName: null },
+      ],
       moduleProgress: [],
       attempts: [],
       evaluationResults: [],
@@ -48,6 +52,8 @@ describe('replaceProgressFromBackup', () => {
     expect(statements.filter(statement => statement.includes('DELETE FROM last_location'))).toHaveLength(1);
     expect(statements.some(statement => statement.includes('INSERT INTO example_state'))).toBe(true);
     expect(statements.some(statement => statement.includes('INSERT INTO last_location'))).toBe(true);
+    expect(statements.some(statement => statement.includes('UPDATE accounts SET external_key'))).toBe(true);
+    expect(statements.some(statement => statement.includes('INSERT INTO account_classes'))).toBe(true);
   });
 });
 
@@ -60,15 +66,10 @@ describe('selectProgressBackup', () => {
     } as unknown as SQLiteDatabase;
 
     const result = await replaceProgressFromBackup(db, 7, {
-      version: 3,
+      version: 4,
       exportedAt: '2026-10-15T00:00:00.000Z',
-      group: {
-        code: 'abc123',
-        catalogId: 'k7f3q',
-        name: 'Grupo A',
-        groupId: null,
-        teacherName: null,
-      },
+      student: null,
+      classes: [],
       moduleProgress: [{ lessonId: 'k7f3q-l1.2', completed: true, updatedAt: '2026-01-01' }],
       attempts: [
         {
@@ -132,17 +133,21 @@ describe('selectProgressBackup', () => {
             },
           ];
         }
+        if (sql.includes('account_classes')) {
+          return [
+            {
+              class_id: 'c1',
+              class_code: 'ABC123',
+              class_name: 'Grupo A',
+              teacher_name: 'Profesora Ríos',
+            },
+          ];
+        }
         return [];
       }),
       getFirstAsync: jest.fn(async (sql: string) =>
-        sql.includes('account_group')
-          ? {
-              group_id: 'g1',
-              group_code: 'abc123',
-              catalog_id: 'k7f3q',
-              group_name: 'Grupo A',
-              teacher_name: 'Profesora Ríos',
-            }
+        sql.includes('FROM accounts')
+          ? { external_key: '11111111-1111-4111-8111-111111111111' }
           : {
               unit_id: 'u1',
               lesson_id: 'l1.2',
@@ -155,14 +160,18 @@ describe('selectProgressBackup', () => {
 
     const backup = await selectProgressBackup(db, 7);
 
-    expect(backup.version).toBe(3);
-    expect(backup.group).toEqual({
-      code: 'abc123',
-      catalogId: 'k7f3q',
-      name: 'Grupo A',
-      groupId: 'g1',
-      teacherName: 'Profesora Ríos',
+    expect(backup.version).toBe(4);
+    expect(backup.student).toEqual({
+      externalKey: '11111111-1111-4111-8111-111111111111',
     });
+    expect(backup.classes).toEqual([
+      {
+        classId: 'c1',
+        code: 'ABC123',
+        name: 'Grupo A',
+        teacherName: 'Profesora Ríos',
+      },
+    ]);
     expect(backup.attempts[0]).toEqual({
       source: 'practice',
       itemId: 'ord1.2',

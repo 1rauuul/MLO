@@ -24,7 +24,7 @@ const LAST_SECTION = SECTION_LABELS.length - 1;
 export default function LessonDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const lessonId = id ?? null;
-  const { lesson, isLoading, error } = useLessonContent(lessonId);
+  const { lesson, lessonExtras, isLoading, error } = useLessonContent(lessonId);
   const { exercises } = useExercisesForLesson(lessonId);
   const { evaluation } = useEvaluationForLesson(lessonId);
   const { markCompleted } = useModuleProgress();
@@ -135,6 +135,32 @@ export default function LessonDetailScreen() {
             ) : (
               <AppText style={{ marginTop: spacing.sm, textAlign: 'justify' }}>{lesson.body}</AppText>
             )}
+
+            {lessonExtras.length > 0 && (
+              <View style={{ gap: spacing.md, marginTop: spacing.lg }}>
+                <AppText variant="eyebrow">Contenido de tus clases</AppText>
+                {lessonExtras.map(extra => (
+                  <View
+                    key={extra.id}
+                    style={[
+                      styles.classExtra,
+                      {
+                        borderColor: colors.line,
+                        backgroundColor: colors.soft,
+                        borderRadius: radius.control,
+                      },
+                    ]}>
+                    {extra.classNames.length > 0 && (
+                      <AppText variant="eyebrow" color={colors.primary}>
+                        {extra.classNames.join(' · ')}
+                      </AppText>
+                    )}
+                    {extra.title ? <AppText variant="heading">{extra.title}</AppText> : null}
+                    <RichContent blocks={extra.blocks} />
+                  </View>
+                ))}
+              </View>
+            )}
           </>
         )}
         {section === 1 && (
@@ -186,6 +212,7 @@ const styles = StyleSheet.create({
   tabs: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   tab: { flex: 1, paddingHorizontal: 8 },
   card: { borderWidth: 1, padding: 20, gap: 6 },
+  classExtra: { borderWidth: 1, padding: 14, gap: 4 },
   code: { padding: 16, marginTop: 12 },
   list: { marginTop: 12, gap: 10 },
   synthesisRow: { flexDirection: 'row', gap: 10 },

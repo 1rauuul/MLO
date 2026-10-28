@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { extraToExercise, selectExtrasByLesson } from '@/features/classes/model/classRepository';
 import type { Exercise, ExerciseConfig, ExerciseType } from '@/shared/model/entities';
 
 interface ExerciseRow {
@@ -50,4 +51,22 @@ export async function selectExercisesByLesson(db: SQLiteDatabase, lessonId: stri
     lessonId,
   );
   return rows.map(mapExercise);
+}
+
+/** Core + ejercicios extra de todas las clases de la cuenta. */
+export async function selectPracticeExercisesByLesson(
+  db: SQLiteDatabase,
+  accountId: number,
+  lessonId: string,
+): Promise<Exercise[]> {
+  const [core, extras] = await Promise.all([
+    selectExercisesByLesson(db, lessonId),
+    selectExtrasByLesson(db, accountId, lessonId),
+  ]);
+  return [
+    ...core,
+    ...extras
+      .map(extraToExercise)
+      .filter((exercise): exercise is Exercise => exercise !== null),
+  ];
 }

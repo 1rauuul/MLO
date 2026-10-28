@@ -1,7 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { ExampleState } from '@/features/exercises/model/exampleStateRepository';
-import type { BackupGroup, ProgressBackup } from '@/features/profile/model/backup.logic';
+import type { ProgressBackup } from '@/features/profile/model/backup.logic';
 
 interface ProgressRow {
   lesson_id: string;
@@ -42,11 +42,10 @@ interface LastLocationRow {
   updated_at: string;
 }
 
-interface GroupRow {
-  group_id: string | null;
-  group_code: string;
-  catalog_id: string;
-  group_name: string;
+interface ClassRow {
+  class_id: string;
+  class_code: string;
+  class_name: string;
   teacher_name: string | null;
 }
 
@@ -69,8 +68,15 @@ function parsePayload(raw: string): ExampleState {
 }
 
 export async function selectProgressBackup(db: SQLiteDatabase, accountId: number): Promise<ProgressBackup> {
-  const [moduleProgress, attempts, evaluationResults, exampleState, lastLocation, group] =
-    await Promise.all([
+  const [
+    moduleProgress,
+    attempts,
+    evaluationResults,
+    exampleState,
+    lastLocation,
+    account,
+    classes,
+  ] = await Promise.all([
     db.getAllAsync<ProgressRow>(
       'SELECT lesson_id, completed, updated_at FROM module_progress WHERE account_id = ? ORDER BY lesson_id',
       accountId,
@@ -91,27 +97,32 @@ export async function selectProgressBackup(db: SQLiteDatabase, accountId: number
       'SELECT unit_id, lesson_id, lesson_code, section, updated_at FROM last_location WHERE account_id = ?',
       accountId,
     ),
-    db.getFirstAsync<GroupRow>(
-      `SELECT group_id, group_code, catalog_id, group_name, teacher_name
-       FROM account_group WHERE account_id = ?`,
+    db.getFirstAsync<{ external_key: string }>(
+      'SELECT external_key FROM accounts WHERE id = ?',
+      accountId,
+    ),
+    db.getAllAsync<ClassRow>(
+      `SELECT ac.class_id, ac.class_code,
+              COALESCE(c.class_name, ac.class_code) AS class_name,
+              c.teacher_name
+         FROM account_classes ac
+         LEFT JOIN class_cache c ON c.class_id = ac.class_id
+        WHERE ac.account_id = ?
+        ORDER BY class_name COLLATE NOCASE`,
       accountId,
     ),
   ]);
 
-  const backupGroup: BackupGroup | null = group
-    ? {
-        code: group.group_code,
-        catalogId: group.catalog_id,
-        name: group.group_name,
-        groupId: group.group_id,
-        teacherName: group.teacher_name,
-      }
-    : null;
-
   return {
-    version: 3,
+    version: 4,
     exportedAt: new Date().toISOString(),
-    group: backupGroup,
+    student: account?.external_key ? { externalKey: account.external_key } : null,
+    classes: classes.map(row => ({
+      classId: row.class_id,
+      code: row.class_code,
+      name: row.class_name,
+      teacherName: row.teacher_name,
+    })),
     moduleProgress: moduleProgress.map(row => ({
       lessonId: row.lesson_id,
       completed: row.completed === 1,
@@ -164,12 +175,56 @@ export async function replaceProgressFromBackup(
   const evaluationIds = new Set(evaluationRows.map(row => row.id));
   let omitted = 0;
 
+  if (backup.student) {
+    const conflict = await db.getFirstAsync<{ id: number }>(
+      'SELECT id FROM accounts WHERE external_key = ? AND id <> ?',
+      backup.student.externalKey,
+      accountId,
+    );
+    if (conflict) {
+      throw new Error('Ese respaldo pertenece a otra cuenta local.');
+    }
+  }
+
   await db.withTransactionAsync(async () => {
     await db.runAsync('DELETE FROM module_progress WHERE account_id = ?', accountId);
     await db.runAsync('DELETE FROM attempts WHERE account_id = ?', accountId);
     await db.runAsync('DELETE FROM evaluation_results WHERE account_id = ?', accountId);
     await db.runAsync('DELETE FROM example_state WHERE account_id = ?', accountId);
     await db.runAsync('DELETE FROM last_location WHERE account_id = ?', accountId);
+
+    if (backup.student) {
+      await db.runAsync(
+        'UPDATE accounts SET external_key = ? WHERE id = ?',
+        backup.student.externalKey,
+        accountId,
+      );
+      await db.runAsync('DELETE FROM account_classes WHERE account_id = ?', accountId);
+      for (const klass of backup.classes) {
+        await db.runAsync(
+          `INSERT INTO class_cache
+             (class_id, class_code, class_name, teacher_name, version, hash, published_at, fetched_at)
+           VALUES (?, ?, ?, ?, 0, '', NULL, NULL)
+           ON CONFLICT(class_id) DO UPDATE SET
+             class_code = excluded.class_code,
+             class_name = excluded.class_name,
+             teacher_name = excluded.teacher_name`,
+          klass.classId,
+          klass.code,
+          klass.name,
+          klass.teacherName,
+        );
+        await db.runAsync(
+          `INSERT INTO account_classes (account_id, class_id, class_code, joined_at)
+           VALUES (?, ?, ?, ?)
+           ON CONFLICT(account_id, class_id) DO UPDATE SET class_code = excluded.class_code`,
+          accountId,
+          klass.classId,
+          klass.code,
+          backup.exportedAt,
+        );
+      }
+    }
 
     for (const progress of backup.moduleProgress) {
       if (!lessonIds.has(progress.lessonId)) {

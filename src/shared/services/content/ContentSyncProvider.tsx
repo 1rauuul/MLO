@@ -2,6 +2,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
+import { refreshClassContent } from '@/shared/services/content/classSync';
 import { refreshCatalogs } from '@/shared/services/content/remoteContent';
 import { isHybrid } from '@/shared/services/data/dataMode';
 import { apiBaseUrl, http } from '@/shared/services/http/client';
@@ -31,11 +32,13 @@ export function ContentSyncProvider({ children }: { children: ReactNode }) {
       return;
     }
     lastRefreshRef.current = now;
-    void refreshCatalogs(db, http).catch(caught => {
-      if (__DEV__) {
-        console.warn('[content] no se pudo sincronizar', caught);
-      }
-    });
+    void refreshCatalogs(db, http)
+      .then(() => refreshClassContent(db, http))
+      .catch(caught => {
+        if (__DEV__) {
+          console.warn('[content] no se pudo sincronizar', caught);
+        }
+      });
   }, [db]);
 
   useEffect(() => {

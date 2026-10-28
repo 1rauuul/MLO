@@ -31,6 +31,7 @@ También se actualizaron `react-native-reanimated` 4.7.1, `react-native-worklets
 - **Testing:** se mantiene `@testing-library/react-native` 13.3.3 porque el proyecto no usa `expo-router/testing-library`. Así se evita reescribir los tests a la API asíncrona de RNTL 14. Jest y `jest-expo` sí subieron a 30/58.
 - **Instalación:** se añadió `.npmrc` con `legacy-peer-deps=true` porque `expo-router@58` declara RNTL 14 como peer opcional y `npm ci` de EAS rechazaba la instalación con RNTL 13. El runtime de la app no usa RNTL.
 - **R8:** SDK 58 activa R8 por defecto. Se conserva la regla `-keep class com.margelo.nitro.** { *; }` para Quick Crypto.
+- **Expo Go:** Quick Crypto no está incluido. `passwordKdf` comprueba `TurboModuleRegistry.get('QuickBase64')` y, si no existe, usa `@noble/hashes`. Así Expo Go no falla; el login nativo rápido requiere el APK o un development build.
 - **Configuración Android:** se mantienen `arm64-v8a`, `minSdkVersion 31`, `useLegacyPackaging` y `versionCode 4`.
 
 ## Verificación

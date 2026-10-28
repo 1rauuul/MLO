@@ -5,9 +5,11 @@ import {
   clearSession,
   insertAccount,
   saveSession,
+  selectAccountByExternalKey,
   selectAccountById,
   selectAccountByUsername,
   selectSessionAccountId,
+  updateExternalKey,
   updatePasswordHash,
 } from '@/features/auth/model/accountRepository';
 import {
@@ -17,22 +19,38 @@ import {
   selectQuestions,
   selectRecentEvaluationResults,
 } from '@/features/evaluations/model/evaluationRepository';
-import { selectExamplesByLesson } from '@/features/examples/model/exampleRepository';
+import {
+  selectExamplesByLesson,
+  selectExamplesWithExtras,
+} from '@/features/examples/model/exampleRepository';
 import { insertAttempt, selectAttemptsByLesson } from '@/features/exercises/model/attemptRepository';
+import {
+  removeAccountClass,
+  saveAccountClass,
+  selectAccountClasses,
+  selectLessonExtras,
+} from '@/features/classes/model/classRepository';
 import { applyStagedContent } from '@/shared/services/content/remote/applyStagedContent';
-import { fetchGroup, refreshCatalog } from '@/shared/services/content/remoteContent';
+import {
+  refreshClassContent,
+  refreshClassRelease,
+} from '@/shared/services/content/classSync';
+import {
+  fetchClassPreview,
+  fetchClassRelease,
+  joinClassRequest,
+  leaveClassRequest,
+  refreshCatalog,
+} from '@/shared/services/content/remoteContent';
 import { http } from '@/shared/services/http/client';
 import {
   saveExampleState,
   selectExampleState,
 } from '@/features/exercises/model/exampleStateRepository';
-import { selectExercisesByLesson } from '@/features/exercises/model/exerciseRepository';
 import {
-  clearAccountGroup,
-  saveAccountGroup,
-  selectAccountGroup,
-  selectActiveCatalogId,
-} from '@/features/groups/model/groupRepository';
+  selectExercisesByLesson,
+  selectPracticeExercisesByLesson,
+} from '@/features/exercises/model/exerciseRepository';
 import {
   selectLesson,
   selectLessons,
@@ -69,10 +87,14 @@ export function createRepositories(db: SQLiteDatabase) {
       insertAccount: (input: Parameters<typeof insertAccount>[1]) => insertAccount(db, input),
       selectAccountByUsername: (username: string) => selectAccountByUsername(db, username),
       selectAccountById: (id: number) => selectAccountById(db, id),
+      selectAccountByExternalKey: (externalKey: string) =>
+        selectAccountByExternalKey(db, externalKey),
       selectSessionAccountId: () => selectSessionAccountId(db),
       saveSession: (accountId: number) => saveSession(db, accountId),
       updatePasswordHash: (accountId: number, passwordHash: string, salt: string) =>
         updatePasswordHash(db, accountId, passwordHash, salt),
+      updateExternalKey: (accountId: number, externalKey: string) =>
+        updateExternalKey(db, accountId, externalKey),
       clearSession: () => clearSession(db),
     },
     evaluations: {
@@ -92,9 +114,13 @@ export function createRepositories(db: SQLiteDatabase) {
     },
     examples: {
       selectExamplesByLesson: (lessonId: string) => selectExamplesByLesson(db, lessonId),
+      selectExamplesWithExtras: (accountId: number, lessonId: string) =>
+        selectExamplesWithExtras(db, accountId, lessonId),
     },
     exercises: {
       selectExercisesByLesson: (lessonId: string) => selectExercisesByLesson(db, lessonId),
+      selectPracticeExercisesByLesson: (accountId: number, lessonId: string) =>
+        selectPracticeExercisesByLesson(db, accountId, lessonId),
     },
     attempts: {
       insertAttempt: (
@@ -123,17 +149,28 @@ export function createRepositories(db: SQLiteDatabase) {
       selectLessons: (catalogId?: string) => selectLessons(db, catalogId),
       selectLesson: (id: string, catalogId?: string) => selectLesson(db, id, catalogId),
     },
-    groups: {
-      selectAccountGroup: (accountId: number) => selectAccountGroup(db, accountId),
-      saveAccountGroup: (
+    classes: {
+      selectAccountClasses: (accountId: number) => selectAccountClasses(db, accountId),
+      saveAccountClass: (
         accountId: number,
-        group: Parameters<typeof saveAccountGroup>[2],
-      ) => saveAccountGroup(db, accountId, group),
-      clearAccountGroup: (accountId: number) => clearAccountGroup(db, accountId),
-      selectActiveCatalogId: (accountId: number) => selectActiveCatalogId(db, accountId),
+        code: string,
+        preview: Parameters<typeof saveAccountClass>[3],
+      ) => saveAccountClass(db, accountId, code, preview),
+      removeAccountClass: (accountId: number, classId: string) =>
+        removeAccountClass(db, accountId, classId),
+      selectLessonExtras: (accountId: number, lessonId: string) =>
+        selectLessonExtras(db, accountId, lessonId),
     },
     content: {
-      fetchGroup: (code: string) => fetchGroup(http, code),
+      fetchClassPreview: (code: string) => fetchClassPreview(http, code),
+      joinClass: (code: string, studentKey: string, studentName: string) =>
+        joinClassRequest(http, code, studentKey, studentName),
+      leaveClass: (code: string, studentKey: string) =>
+        leaveClassRequest(http, code, studentKey),
+      fetchClassRelease: (code: string) => fetchClassRelease(http, code),
+      refreshClass: (classId: string, code: string) =>
+        refreshClassRelease(db, http, classId, code),
+      refreshClassContent: () => refreshClassContent(db, http),
       refreshCatalog: (catalogId: string, force?: boolean) =>
         refreshCatalog(db, http, catalogId, force),
       applyStagedContent: (catalogId?: string) => applyStagedContent(db, catalogId),

@@ -4,7 +4,7 @@ import { useRepositories } from '@/shared/services/data/DataProvider';
 import type { Lesson, Unit } from '@/shared/model/entities';
 
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
-import { useActiveCatalog } from '@/features/groups/viewmodel/useActiveCatalog';
+import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
 
 interface CatalogResult {
   units: Unit[];
@@ -18,7 +18,6 @@ interface CatalogResult {
 export function useCatalog(): CatalogResult {
   const { lessons, progress } = useRepositories();
   const { account } = useAuth();
-  const { catalogId, isLoading: catalogLoading } = useActiveCatalog();
   const [units, setUnits] = useState<Unit[]>([]);
   const [lessonsByUnit, setLessonsByUnit] = useState<Record<string, Lesson[]>>({});
   const [progressMap, setProgressMap] = useState<Record<string, boolean>>({});
@@ -27,18 +26,15 @@ export function useCatalog(): CatalogResult {
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
-    if (catalogLoading) {
-      return;
-    }
     try {
-      const loadedUnits = await lessons.selectUnits(catalogId);
-      const loadedLessons = await lessons.selectLessons(catalogId);
+      const loadedUnits = await lessons.selectUnits(BASE_CATALOG_ID);
+      const loadedLessons = await lessons.selectLessons(BASE_CATALOG_ID);
       const grouped: Record<string, Lesson[]> = {};
       for (const lesson of loadedLessons) {
         (grouped[lesson.unitId] ??= []).push(lesson);
       }
       const loadedProgress = account
-        ? await progress.selectProgressMap(account.id, catalogId)
+        ? await progress.selectProgressMap(account.id, BASE_CATALOG_ID)
         : {};
       setUnits(loadedUnits);
       setLessonsByUnit(grouped);
@@ -49,7 +45,7 @@ export function useCatalog(): CatalogResult {
     } finally {
       setIsLoading(false);
     }
-  }, [lessons, progress, account, catalogId, catalogLoading]);
+  }, [lessons, progress, account]);
 
   useEffect(() => {
     void refresh();

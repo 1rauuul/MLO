@@ -25,16 +25,26 @@ jest.mock('@/features/auth/viewmodel/useAuth', () => ({
   }),
 }));
 jest.mock('@/features/modules/viewmodel/useCatalog', () => ({ useCatalog: () => mockCatalog }));
-jest.mock('@/shared/services/data/DataProvider', () => ({
-  useRepositories: () => ({ groups: { clearAccountGroup: jest.fn() } }),
-}));
-jest.mock('@/features/groups/viewmodel/useActiveCatalog', () => ({
-  useActiveCatalog: () => ({
-    catalogId: 'base',
-    group: null,
+jest.mock('@/features/classes/viewmodel/useClasses', () => ({
+  useClasses: () => ({
+    classes: [
+      {
+        classId: 'c1',
+        classCode: 'ABC123',
+        className: 'Grupo A',
+        teacherName: 'Profesora Ríos',
+        version: 1,
+        joinedAt: '2026-01-01',
+      },
+    ],
     isLoading: false,
     refresh: jest.fn(),
+    leaveClass: jest.fn(),
   }),
+}));
+let mockIsHybrid = true;
+jest.mock('@/shared/services/data/dataMode', () => ({
+  isHybrid: () => mockIsHybrid,
 }));
 jest.mock('@/features/auth/viewmodel/useSession', () => ({
   useSession: () => ({
@@ -134,16 +144,31 @@ function makeCatalog(overrides: Record<string, unknown>) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockIsHybrid = true;
   makeCatalog({});
 });
 
 describe('ProfileScreen', () => {
-  it('muestra estadísticas y cuenta', () => {
+  it('muestra estadísticas, cuenta y clases', () => {
     const { getByText, getAllByText } = render(<ProfileScreen />);
 
     expect(getByText('1/2')).toBeTruthy();
     expect(getByText('75%')).toBeTruthy();
     expect(getAllByText('@valentina').length).toBeGreaterThan(0);
+    expect(getByText('Grupo A')).toBeTruthy();
+    expect(getByText('Unirme a una clase')).toBeTruthy();
+  });
+
+  it('muestra la opción de clases también en modo local', () => {
+    mockIsHybrid = false;
+    const { getByText } = render(<ProfileScreen />);
+
+    expect(getByText('Unirme a una clase')).toBeTruthy();
+    expect(
+      getByText(
+        /Las clases necesitan conexión/,
+      ),
+    ).toBeTruthy();
   });
 
   it('reinicia progreso limpiando la ubicación de sesión', async () => {

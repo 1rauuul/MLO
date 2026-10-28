@@ -29,14 +29,13 @@ export async function selectLocation(
   db: SQLiteDatabase,
   accountId: number,
 ): Promise<LocationRecord | null> {
-  // Solo se reanuda dentro del curso activo y con una lección visible.
+  // Solo se reanuda dentro del curso base y con una lección visible.
   const row = await db.getFirstAsync<LocationRow>(
     `SELECT ll.unit_id, ll.lesson_id, ll.lesson_code, ll.section
      FROM last_location ll
      JOIN lessons l ON l.id = ll.lesson_id
-     LEFT JOIN account_group g ON g.account_id = ll.account_id
      WHERE ll.account_id = ?
-       AND l.catalog_id = COALESCE(g.catalog_id, 'base')
+       AND l.catalog_id = 'base'
        AND l.archived_at IS NULL`,
     accountId,
   );

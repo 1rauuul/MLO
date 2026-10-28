@@ -1,21 +1,24 @@
 import { useEffect, useState } from 'react';
 
-import { useActiveCatalog } from '@/features/groups/viewmodel/useActiveCatalog';
+import { useAuth } from '@/features/auth/viewmodel/useAuth';
+import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
 import { useRepositories } from '@/shared/services/data/DataProvider';
-import type { Example, Lesson } from '@/shared/model/entities';
+import type { Example, Lesson, LessonClassExtra } from '@/shared/model/entities';
 
 interface UseLessonContentResult {
   lesson: Lesson | null;
   examples: Example[];
+  lessonExtras: LessonClassExtra[];
   isLoading: boolean;
   error: string | null;
 }
 
 export function useLessonContent(lessonId: string | null): UseLessonContentResult {
-  const { lessons, examples: exampleRepository } = useRepositories();
-  const { catalogId, isLoading: catalogLoading } = useActiveCatalog();
+  const { lessons, examples: exampleRepository, classes } = useRepositories();
+  const { account } = useAuth();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [examples, setExamples] = useState<Example[]>([]);
+  const [lessonExtras, setLessonExtras] = useState<LessonClassExtra[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,11 +26,8 @@ export function useLessonContent(lessonId: string | null): UseLessonContentResul
     if (!lessonId) {
       setLesson(null);
       setExamples([]);
+      setLessonExtras([]);
       setIsLoading(false);
-      return;
-    }
-    if (catalogLoading) {
-      setIsLoading(true);
       return;
     }
 
@@ -36,15 +36,17 @@ export function useLessonContent(lessonId: string | null): UseLessonContentResul
     setError(null);
     (async () => {
       try {
-        const [loadedLesson, loadedExamples] = await Promise.all([
-          lessons.selectLesson(lessonId, catalogId),
+        const [loadedLesson, loadedExamples, loadedExtras] = await Promise.all([
+          lessons.selectLesson(lessonId, BASE_CATALOG_ID),
           exampleRepository.selectExamplesByLesson(lessonId),
+          account ? classes.selectLessonExtras(account.id, lessonId) : Promise.resolve([]),
         ]);
         if (!active) {
           return;
         }
         setLesson(loadedLesson);
         setExamples(loadedExamples);
+        setLessonExtras(loadedExtras);
       } catch {
         if (active) {
           setError('No se pudo cargar la lección.');
@@ -59,7 +61,7 @@ export function useLessonContent(lessonId: string | null): UseLessonContentResul
     return () => {
       active = false;
     };
-  }, [lessons, exampleRepository, lessonId, catalogId, catalogLoading]);
+  }, [lessons, exampleRepository, classes, account, lessonId]);
 
-  return { lesson, examples, isLoading, error };
+  return { lesson, examples, lessonExtras, isLoading, error };
 }

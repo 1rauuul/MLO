@@ -1,18 +1,17 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import {
-  fetchGroup,
+  canonicalClassCode,
+  fetchClassPreview,
+  isClassError,
   isContentError,
-  isGroupError,
   parseCatalogManifest,
-  parseGroupResponse,
   refreshCatalog,
   refreshCatalogs,
 } from '@/shared/services/content/remoteContent';
 import { validateLessonPayload } from '@/shared/services/content/remote/validateLessonPayload';
 import { ConfigError, HttpError, type HttpClient } from '@/shared/services/http/client';
 import {
-  groupFixture,
   lessonAllTypesFixture,
   lessonFixture,
   manifestFixture,
@@ -41,9 +40,15 @@ function clientFor(payload: unknown = lessonFixture): HttpClient {
   } as unknown as HttpClient;
 }
 
+const classPreviewFixture = {
+  schemaVersion: 2,
+  class: { id: 'c1', name: 'Grupo A', teacherName: 'Profesora Ríos' },
+  published: null,
+};
+
 describe('contrato v2', () => {
-  it('parsea el grupo y el manifiesto', () => {
-    expect(parseGroupResponse(groupFixture, 'abc123').catalog.id).toBe('k7f3q');
+  it('parsea la vista previa de clase y el manifiesto', () => {
+    expect(canonicalClassCode(' ab c123 ')).toBe('ABC123');
     expect(parseCatalogManifest(manifestFixture, 'k7f3q').lessons[0]?.lessonId).toBe(
       'k7f3q-l1.2',
     );
@@ -80,22 +85,22 @@ describe('contrato v2', () => {
     ).toThrow('El manifiesto repite lecciones.');
   });
 
-  it('clasifica los errores de grupo y de contenido por separado', () => {
-    expect(isGroupError(new HttpError(429, ''))).toBe('rate_limited');
-    expect(isGroupError(new HttpError(404, ''))).toBe('not_found');
+  it('clasifica los errores de clase y de contenido por separado', () => {
+    expect(isClassError(new HttpError(429, ''))).toBe('rate_limited');
+    expect(isClassError(new HttpError(404, ''))).toBe('not_found');
     expect(isContentError(new HttpError(404, ''))).toBe('content_missing');
     expect(isContentError(new HttpError(429, ''))).toBe('rate_limited');
-    expect(isGroupError(new ConfigError())).toBe('config');
+    expect(isClassError(new ConfigError())).toBe('config');
     expect(isContentError(new ConfigError())).toBe('config');
   });
 
-  it('envía el código del grupo en mayúsculas', async () => {
-    const get = jest.fn(async () => groupFixture);
+  it('envía el código de la clase en mayúsculas', async () => {
+    const get = jest.fn(async () => classPreviewFixture);
     const client = { get, post: jest.fn() } as unknown as HttpClient;
 
-    await fetchGroup(client, ' ab c123 ');
+    await fetchClassPreview(client, ' ab c123 ');
 
-    expect(get).toHaveBeenCalledWith('/groups/ABC123');
+    expect(get).toHaveBeenCalledWith('/classes/ABC123');
   });
 });
 

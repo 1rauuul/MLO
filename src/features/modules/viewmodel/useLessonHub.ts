@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
-import { useActiveCatalog } from '@/features/groups/viewmodel/useActiveCatalog';
+import { useAuth } from '@/features/auth/viewmodel/useAuth';
+import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
 import { useRepositories } from '@/shared/services/data/DataProvider';
 import type { Evaluation, Example, Exercise, Lesson, Unit } from '@/shared/model/entities';
 
@@ -23,7 +24,7 @@ export function useLessonHub(lessonId: string | null): LessonHubResult {
     useRepositories();
   const { units } = useCatalog();
   const { progressMap } = useModuleProgress();
-  const { catalogId, isLoading: catalogLoading } = useActiveCatalog();
+  const { account } = useAuth();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [examples, setExamples] = useState<Example[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -40,10 +41,6 @@ export function useLessonHub(lessonId: string | null): LessonHubResult {
       setIsLoading(false);
       return;
     }
-    if (catalogLoading) {
-      setIsLoading(true);
-      return;
-    }
     let active = true;
     setIsLoading(true);
     setError(null);
@@ -51,9 +48,13 @@ export function useLessonHub(lessonId: string | null): LessonHubResult {
       try {
         const [loadedLesson, loadedExamples, loadedExercises, loadedEvaluation] =
           await Promise.all([
-            lessons.selectLesson(lessonId, catalogId),
-            exampleRepository.selectExamplesByLesson(lessonId),
-            exerciseRepository.selectExercisesByLesson(lessonId),
+            lessons.selectLesson(lessonId, BASE_CATALOG_ID),
+            account
+              ? exampleRepository.selectExamplesWithExtras(account.id, lessonId)
+              : exampleRepository.selectExamplesByLesson(lessonId),
+            account
+              ? exerciseRepository.selectPracticeExercisesByLesson(account.id, lessonId)
+              : exerciseRepository.selectExercisesByLesson(lessonId),
             evaluations.selectEvaluationByLesson(lessonId),
           ]);
         if (!active) {
@@ -82,8 +83,7 @@ export function useLessonHub(lessonId: string | null): LessonHubResult {
     exerciseRepository,
     evaluations,
     lessonId,
-    catalogId,
-    catalogLoading,
+    account,
   ]);
 
   const unit = units.find(item => item.id === lesson?.unitId) ?? null;

@@ -80,6 +80,8 @@ export interface Example {
   steps: ExampleStep[];
   hints: string[];
   explanation: string;
+  /** Clase(s) que publicaron este ejemplo extra; undefined si es del core. */
+  className?: string;
 }
 
 export interface Exercise {
@@ -91,6 +93,26 @@ export interface Exercise {
   correctOrder: string[];
   config: ExerciseConfig;
   explanation: string;
+  /** Clase(s) que publicaron este ejercicio extra; undefined si es del core. */
+  className?: string;
+}
+
+/** Bloques extra publicados por una o varias clases para una lección. */
+export interface LessonClassExtra {
+  id: string;
+  lessonId: string;
+  title: string;
+  blocks: ContentBlock[];
+  classNames: string[];
+}
+
+export interface AccountClass {
+  classId: string;
+  classCode: string;
+  className: string;
+  teacherName: string | null;
+  version: number;
+  joinedAt: string;
 }
 
 export interface Evaluation {
@@ -139,6 +161,8 @@ export interface EvaluationResult {
 export interface Account {
   id: number;
   username: string;
+  /** Identidad estable de la persona ante el panel; viaja en el respaldo. */
+  externalKey: string;
   displayName: string;
   createdAt: string;
 }

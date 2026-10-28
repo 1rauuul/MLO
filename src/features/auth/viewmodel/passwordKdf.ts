@@ -1,6 +1,14 @@
 import { pbkdf2 } from '@noble/hashes/pbkdf2.js';
 import { sha256 } from '@noble/hashes/sha2.js';
-import { Platform } from 'react-native';
+import { Platform, TurboModuleRegistry } from 'react-native';
+
+function hasQuickCrypto(): boolean {
+  try {
+    return TurboModuleRegistry.get('QuickBase64') != null;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Native PBKDF2 on Android/iOS (fast), pure JS on web and as a fallback.
@@ -11,7 +19,7 @@ export function deriveKey(
   iterations: number,
   keyLength: number,
 ): Uint8Array {
-  if (Platform.OS !== 'web') {
+  if (Platform.OS !== 'web' && hasQuickCrypto()) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const quickCrypto = require('react-native-quick-crypto') as typeof import('react-native-quick-crypto');

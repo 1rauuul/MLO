@@ -99,7 +99,7 @@ function defaultStringArray(value: unknown): string[] {
   return value;
 }
 
-function parseContentBlocks(value: unknown): ContentBlock[] {
+export function parseContentBlocks(value: unknown): ContentBlock[] {
   if (!Array.isArray(value)) {
     fail('content no es un arreglo');
   }

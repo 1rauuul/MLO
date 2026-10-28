@@ -10,6 +10,7 @@ export interface AccountRecord extends Account {
 interface AccountRow {
   id: number;
   username: string;
+  external_key: string;
   display_name: string;
   password_hash: string;
   salt: string;
@@ -20,6 +21,7 @@ function mapAccount(row: AccountRow): AccountRecord {
   return {
     id: row.id,
     username: row.username,
+    externalKey: row.external_key,
     displayName: row.display_name,
     passwordHash: row.password_hash,
     salt: row.salt,
@@ -29,11 +31,18 @@ function mapAccount(row: AccountRow): AccountRecord {
 
 export async function insertAccount(
   db: SQLiteDatabase,
-  input: { username: string; displayName: string; passwordHash: string; salt: string },
+  input: {
+    username: string;
+    externalKey: string;
+    displayName: string;
+    passwordHash: string;
+    salt: string;
+  },
 ): Promise<number> {
   const result = await db.runAsync(
-    'INSERT INTO accounts (username, display_name, password_hash, salt, created_at) VALUES (?, ?, ?, ?, ?)',
+    'INSERT INTO accounts (username, external_key, display_name, password_hash, salt, created_at) VALUES (?, ?, ?, ?, ?, ?)',
     input.username,
+    input.externalKey,
     input.displayName,
     input.passwordHash,
     input.salt,
@@ -82,6 +91,29 @@ export async function updatePasswordHash(
     salt,
     accountId,
   );
+}
+
+export async function updateExternalKey(
+  db: SQLiteDatabase,
+  accountId: number,
+  externalKey: string,
+): Promise<void> {
+  await db.runAsync(
+    'UPDATE accounts SET external_key = ? WHERE id = ?',
+    externalKey,
+    accountId,
+  );
+}
+
+export async function selectAccountByExternalKey(
+  db: SQLiteDatabase,
+  externalKey: string,
+): Promise<AccountRecord | null> {
+  const row = await db.getFirstAsync<AccountRow>(
+    'SELECT * FROM accounts WHERE external_key = ?',
+    externalKey,
+  );
+  return row ? mapAccount(row) : null;
 }
 
 export async function clearSession(db: SQLiteDatabase): Promise<void> {

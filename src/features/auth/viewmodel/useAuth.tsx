@@ -40,6 +40,7 @@ interface AuthContextValue {
   login: (username: string, password: string) => Promise<AuthOutcome>;
   logout: () => Promise<void>;
   resetProgress: () => Promise<void>;
+  reloadAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -63,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ? {
                 id: loaded.id,
                 username: loaded.username,
+                externalKey: loaded.externalKey,
                 displayName: loaded.displayName,
                 createdAt: loaded.createdAt,
               }
@@ -102,10 +104,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           PBKDF2_DEFAULT_ITERATIONS,
         );
         const displayName = `${input.firstName.trim()} ${input.lastName.trim()}`;
-        const id = await accounts.insertAccount({ username, displayName, passwordHash, salt });
+        const externalKey = Crypto.randomUUID();
+        const id = await accounts.insertAccount({
+          username,
+          externalKey,
+          displayName,
+          passwordHash,
+          salt,
+        });
         await profileRepository.createDefaultProfile(id);
         await accounts.saveSession(id);
-        setAccount({ id, username, displayName, createdAt: new Date().toISOString() });
+        setAccount({
+          id,
+          username,
+          externalKey,
+          displayName,
+          createdAt: new Date().toISOString(),
+        });
         return { ok: true };
       } catch (error) {
         if (__DEV__) {
@@ -148,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAccount({
           id: found.id,
           username: found.username,
+          externalKey: found.externalKey,
           displayName: found.displayName,
           createdAt: found.createdAt,
         });
@@ -171,9 +187,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await progress.resetAccountProgress(account.id);
   }, [account, progress]);
 
+  const reloadAccount = useCallback(async () => {
+    const accountId = await accounts.selectSessionAccountId();
+    const loaded = accountId ? await accounts.selectAccountById(accountId) : null;
+    setAccount(
+      loaded
+        ? {
+            id: loaded.id,
+            username: loaded.username,
+            externalKey: loaded.externalKey,
+            displayName: loaded.displayName,
+            createdAt: loaded.createdAt,
+          }
+        : null,
+    );
+  }, [accounts]);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ account, isLoading, register, login, logout, resetProgress }),
-    [account, isLoading, register, login, logout, resetProgress],
+    () => ({ account, isLoading, register, login, logout, resetProgress, reloadAccount }),
+    [account, isLoading, register, login, logout, resetProgress, reloadAccount],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

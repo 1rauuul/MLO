@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { CrosswordEntry, Exercise, ExerciseConfig, MatchPair } from '@/shared/model/entities';
+import { useAuth } from '@/features/auth/viewmodel/useAuth';
 import { useRepositories } from '@/shared/services/data/DataProvider';
 
 import {
@@ -113,6 +114,7 @@ interface UseExercisesForLessonResult {
 
 export function useExercisesForLesson(lessonId: string | null): UseExercisesForLessonResult {
   const { exercises: exerciseRepository } = useRepositories();
+  const { account } = useAuth();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -126,7 +128,9 @@ export function useExercisesForLesson(lessonId: string | null): UseExercisesForL
     setIsLoading(true);
     (async () => {
       try {
-        const loaded = await exerciseRepository.selectExercisesByLesson(lessonId);
+        const loaded = account
+          ? await exerciseRepository.selectPracticeExercisesByLesson(account.id, lessonId)
+          : await exerciseRepository.selectExercisesByLesson(lessonId);
         if (!active) {
           return;
         }
@@ -147,7 +151,7 @@ export function useExercisesForLesson(lessonId: string | null): UseExercisesForL
     return () => {
       active = false;
     };
-  }, [exerciseRepository, lessonId]);
+  }, [exerciseRepository, lessonId, account]);
 
   return { exercises, isLoading };
 }

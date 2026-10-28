@@ -1,0 +1,77 @@
+{
+  "hash": "a73fad4b5f6617d4836f82b8e9322c0166485484a0645a614d526c8d258e32bf",
+  "class": {
+    "id": "4dba127d-01c2-44f2-b639-dfc230ac09bb",
+    "name": "Clase contrato MLO",
+    "teacherName": "Docente contrato"
+  },
+  "lessons": [
+    {
+      "code": "1.2",
+      "extras": [
+        {
+          "id": "42ac6e3f-59dc-4a53-a262-a9f03190d133",
+          "type": "exercise",
+          "content": {
+            "type": "order",
+            "config": {},
+            "prompt": "Ordena los pasos",
+            "example": null,
+            "explanation": "",
+            "correctOrder": [
+              "Requisitos",
+              "Diseño"
+            ],
+            "instructions": ""
+          }
+        },
+        {
+          "id": "6963d455-7ba4-4de8-b04b-70729b9b706f",
+          "type": "lesson",
+          "content": {
+            "title": "Contexto de la clase",
+            "blocks": [
+              {
+                "text": "Texto extra de la clase.",
+                "type": "p"
+              }
+            ]
+          }
+        },
+        {
+          "id": "e7530ea4-44d5-4605-8eeb-6a5855a3deaf",
+          "type": "example",
+          "content": {
+            "type": "match",
+            "hints": [],
+            "steps": [
+              {
+                "why": "Porque sí",
+                "text": "Paso"
+              }
+            ],
+            "title": "Ejemplo de relación",
+            "config": {
+              "pairs": [
+                {
+                  "left": "a",
+                  "right": "1"
+                },
+                {
+                  "left": "b",
+                  "right": "2"
+                }
+              ]
+            },
+            "prompt": "Relaciona",
+            "explanation": ""
+          }
+        }
+      ],
+      "lessonId": "l1.2"
+    }
+  ],
+  "version": 2,
+  "publishedAt": "2026-10-27T22:56:58.231Z",
+  "schemaVersion": 2
+}

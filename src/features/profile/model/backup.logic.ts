@@ -2,14 +2,17 @@ import type { ExampleState } from '@/features/exercises/model/exampleStateReposi
 
 import { isBoolean, isNumber, isRecord, isString, isStringOrNull } from '@/shared/utils/validate';
 
-export const PROGRESS_BACKUP_VERSION = 3;
+export const PROGRESS_BACKUP_VERSION = 4;
 
-export interface BackupGroup {
+export interface BackupStudent {
+  /** Identidad estable de la persona ante el panel. */
+  externalKey: string;
+}
+
+export interface BackupClass {
+  classId: string;
   code: string;
-  catalogId: string;
   name: string;
-  /** null cuando el respaldo se creó sin red y no había metadata remota. */
-  groupId: string | null;
   teacherName: string | null;
 }
 
@@ -39,9 +42,10 @@ export interface BackupLastLocation {
 }
 
 export interface ProgressBackup {
-  version: 3;
+  version: 4;
   exportedAt: string;
-  group: BackupGroup | null;
+  student: BackupStudent | null;
+  classes: BackupClass[];
   moduleProgress: {
     lessonId: string;
     completed: boolean;
@@ -128,7 +132,10 @@ function parseLastLocation(value: unknown): BackupLastLocation | null {
 
 export function parseProgressBackup(raw: string): ProgressBackup {
   const value: unknown = JSON.parse(raw);
-  if (!isRecord(value) || (value.version !== 1 && value.version !== 2 && value.version !== 3)) {
+  if (
+    !isRecord(value) ||
+    (value.version !== 1 && value.version !== 2 && value.version !== 3 && value.version !== 4)
+  ) {
     throw new Error('Formato de respaldo no compatible.');
   }
 
@@ -170,7 +177,7 @@ export function parseProgressBackup(raw: string): ProgressBackup {
     throw new Error('Los resultados del respaldo no son válidos.');
   }
 
-  const isV2 = value.version === 2 || value.version === 3;
+  const isV2 = value.version === 2 || value.version === 3 || value.version === 4;
   const exampleState = isV2 ? value.exampleState : [];
   if (
     isV2 &&
@@ -186,35 +193,58 @@ export function parseProgressBackup(raw: string): ProgressBackup {
     throw new Error('El estado de ejemplos del respaldo no es válido.');
   }
 
-  let group: BackupGroup | null = null;
-  if (value.version === 3 && value.group !== null && value.group !== undefined) {
-    if (
-      !isRecord(value.group) ||
-      !isString(value.group.code) ||
-      !isString(value.group.catalogId) ||
-      !isString(value.group.name) ||
-      (value.group.groupId !== undefined &&
-        value.group.groupId !== null &&
-        !isString(value.group.groupId)) ||
-      (value.group.teacherName !== undefined &&
-        value.group.teacherName !== null &&
-        !isString(value.group.teacherName))
-    ) {
-      throw new Error('El grupo del respaldo no es válido.');
+  let student: BackupStudent | null = null;
+  if (value.version === 4 && value.student !== null && value.student !== undefined) {
+    if (!isRecord(value.student) || !isString(value.student.externalKey)) {
+      throw new Error('La identidad del respaldo no es válida.');
     }
-    group = {
-      code: value.group.code,
-      catalogId: value.group.catalogId,
-      name: value.group.name,
-      groupId: isString(value.group.groupId) ? value.group.groupId : null,
-      teacherName: isString(value.group.teacherName) ? value.group.teacherName : null,
-    };
+    if (value.student.externalKey.trim().length === 0) {
+      throw new Error('La identidad del respaldo está vacía.');
+    }
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        value.student.externalKey,
+      )
+    ) {
+      throw new Error('La identidad del respaldo no es un UUID válido.');
+    }
+    student = { externalKey: value.student.externalKey };
+  }
+
+  let classes: BackupClass[] = [];
+  if (value.version === 4 && value.classes !== null && value.classes !== undefined) {
+    if (!Array.isArray(value.classes)) {
+      throw new Error('Las clases del respaldo no son válidas.');
+    }
+    const seen = new Set<string>();
+    classes = value.classes.map(item => {
+      if (
+        !isRecord(item) ||
+        !isString(item.classId) ||
+        !isString(item.code) ||
+        !isString(item.name) ||
+        (item.teacherName !== null && item.teacherName !== undefined && !isString(item.teacherName))
+      ) {
+        throw new Error('Una clase del respaldo no es válida.');
+      }
+      if (seen.has(item.classId)) {
+        throw new Error('El respaldo repite una clase.');
+      }
+      seen.add(item.classId);
+      return {
+        classId: item.classId,
+        code: item.code,
+        name: item.name,
+        teacherName: isString(item.teacherName) ? item.teacherName : null,
+      };
+    });
   }
 
   return {
     version: PROGRESS_BACKUP_VERSION,
     exportedAt: value.exportedAt,
-    group,
+    student,
+    classes,
     moduleProgress: moduleProgress as ProgressBackup['moduleProgress'],
     attempts: attempts.map(parseAttempt),
     evaluationResults: evaluationResults as ProgressBackup['evaluationResults'],

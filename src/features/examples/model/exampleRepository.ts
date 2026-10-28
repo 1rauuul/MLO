@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { extraToExample, selectExtrasByLesson } from '@/features/classes/model/classRepository';
 import type { Example, ExerciseConfig, ExerciseType } from '@/shared/model/entities';
 
 interface ExampleRow {
@@ -71,4 +72,20 @@ export async function selectExamplesByLesson(db: SQLiteDatabase, lessonId: strin
     lessonId,
   );
   return rows.map(mapExample);
+}
+
+/** Core + ejemplos extra de todas las clases de la cuenta. */
+export async function selectExamplesWithExtras(
+  db: SQLiteDatabase,
+  accountId: number,
+  lessonId: string,
+): Promise<Example[]> {
+  const [core, extras] = await Promise.all([
+    selectExamplesByLesson(db, lessonId),
+    selectExtrasByLesson(db, accountId, lessonId),
+  ]);
+  return [
+    ...core,
+    ...extras.map(extraToExample).filter((example): example is Example => example !== null),
+  ];
 }

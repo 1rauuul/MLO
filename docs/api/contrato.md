@@ -1,8 +1,9 @@
-# Contrato de API v2 — contenido publicado con maestros, cursos y grupos
+# Contrato de API v2 — contenido publicado con maestros, cursos y clases
 
-Revisión 2.1 (2026-10-26): aclara versión, ejemplos, preguntas de ordenar, campos
-vacíos, códigos de grupo, releases vacíos/parciales y errores de descarga. El
-`schemaVersion` sigue siendo `2`.
+Revisión 2.2 (2026-10-27): las clases reemplazan a los grupos. Cada clase publica
+su propio snapshot de contenido extra y el alumno puede pertenecer a varias; el
+contenido se combina localmente sobre el curso base. El `schemaVersion` sigue
+siendo `2`.
 
 Solo contenido. La sincronización de progreso, las cuentas remotas y la lectura
 de resultados por el maestro siguen fuera de alcance. SQLite es la fuente de
@@ -13,22 +14,92 @@ verdad local y con `DATA_MODE=local` (por defecto) no se hace ninguna petición.
 - **Errores:** `{ "error": string, "message": string }`.
 - **`schemaVersion`:** debe ser `2`; cualquier otro valor se descarta.
 
-## GET /groups/{code}
+## Clases
 
-Código de 6 caracteres en mayúsculas; el cliente acepta minúsculas y espacios
-pero envía la forma canónica en mayúsculas. Sin caché y con límite de peticiones
-por IP. Si se supera el límite, responde `429` con `Retry-After`.
+El código es de 6 caracteres en mayúsculas; el cliente acepta minúsculas y
+espacios pero envía la forma canónica. Las clases no cambian el catálogo: el
+alumno siempre estudia el curso base y recibe, además, el contenido extra de sus
+clases.
+
+### GET /classes/{code}
+
+Vista previa antes de unirse. Sin caché.
 
 ```json
 {
   "schemaVersion": 2,
-  "group": { "id": "g1", "name": "Grupo A", "teacherName": "Profesora Ríos" },
-  "catalog": { "id": "k7f3q", "title": "Curso de prueba" }
+  "class": { "id": "c1", "name": "Grupo A", "teacherName": "Profesora Ríos" },
+  "published": { "version": 2, "hash": "…", "publishedAt": "2026-10-27T00:00:00.000Z" }
 }
 ```
 
-`404` si el código no existe; `410` si el grupo está cerrado. El cliente no
-cambia de grupo si la descarga o la aplicación del curso falla.
+`published` es `null` si la clase todavía no tiene contenido publicado. `404` si
+el código no existe.
+
+### POST /classes/{code}/join
+
+```json
+{ "studentKey": "11111111-1111-4111-8111-111111111111", "studentName": "Ana Alumna" }
+```
+
+Devuelve la misma vista previa y `"joined": true`. El `studentKey` es el UUID
+estable de la cuenta local; debe viajar en el respaldo para restaurar la misma
+identidad. La operación es idempotente.
+
+### DELETE /classes/{code}/members/{studentKey}
+
+Elimina la membresía. Responde `204`. El cliente borra la clase de su lista y
+deja de mostrar su contenido extra, pero conserva la caché por si vuelve.
+
+### GET /classes/{code}/release
+
+Último snapshot inmutable de la clase. `404` si no hay nada publicado.
+
+```json
+{
+  "schemaVersion": 2,
+  "class": { "id": "c1", "name": "Grupo A", "teacherName": "Profesora Ríos" },
+  "version": 2,
+  "hash": "…",
+  "publishedAt": "2026-10-27T00:00:00.000Z",
+  "lessons": [
+    {
+      "lessonId": "l1.2",
+      "code": "1.2",
+      "extras": [
+        {
+          "id": "x-lesson",
+          "type": "lesson",
+          "content": { "title": "Contexto de clase", "blocks": [{ "type": "p", "text": "…" }] }
+        },
+        {
+          "id": "x-exercise",
+          "type": "exercise",
+          "content": {
+            "type": "order", "prompt": "Ordena", "instructions": "",
+            "correctOrder": ["uno", "dos"], "config": {}, "explanation": ""
+          }
+        },
+        {
+          "id": "x-example",
+          "type": "example",
+          "content": {
+            "type": "match", "title": "Ejemplo", "prompt": "Relaciona",
+            "config": { "pairs": [{ "left": "a", "right": "1" }, { "left": "b", "right": "2" }] },
+            "steps": [{ "text": "Paso", "why": "Porque sí" }], "hints": [], "explanation": ""
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+`lessonId` es el id publicado del curso base (`l1.2`); el snapshot solo lleva
+contenido extra, nunca el curso completo. Los `extras` de tipo `lesson` son
+bloques que se muestran debajo del contenido base; `exercise` y `example` se
+suman a la práctica y a los ejemplos. El mismo `id` puede aparecer en el release
+de varias clases: el cliente lo muestra una vez y junta las etiquetas.
 
 ## GET /catalogs/{catalogId}/manifest
 
@@ -107,18 +178,21 @@ ni con los de otra lección del mismo curso.
 5. Los ids de una lección no pueden repetirse en otra lección del mismo curso;
    el cliente compara contra el área de espera y descarta el manifest si chocan.
 6. Al arrancar, `applyStagedContent` aplica lo pendiente de forma local y
-   devuelve las lecciones que fallaron; unirse a un grupo se aborta si hay
-   alguna fallida.
+   devuelve las lecciones que fallaron. Las clases se sincronizan aparte: si una
+   falla, se conserva su caché anterior.
 7. Un `4xx` no se reintenta; la red y los `5xx` sí (backoff exponencial). Un
-   `429` se muestra como límite de intentos y no cambia el grupo.
+   `429` se muestra como límite de intentos y no altera las membresías.
 8. Si falta `EXPO_PUBLIC_API_URL`, el cliente no hace peticiones relativas:
    falla con un error de configuración y el modo local sigue funcionando.
 9. Una lección que deja de aparecer en el manifest se archiva (también en el
    curso base); no se borra para conservar `attempts`, `module_progress` y
    `evaluation_results`.
-10. El respaldo v3 restaura el grupo aunque el curso ya esté descargado; los
-    respaldos v1 y v2 siguen aceptándose. Si el grupo cambió de catálogo, se
-    comprueba el catálogo que devuelve el servidor antes de restaurarlo.
-11. Publicar en varios grupos: si comparten `catalogId`, el contenido es el
-    mismo y no se duplica; si son catálogos distintos, el servidor debe prefijar
-    los ids con cada clave de curso.
+10. El respaldo v4 incluye `student.externalKey` y `classes`. Al importarlo se
+    restauran la identidad y las membresías; los respaldos v1, v2 y v3 siguen
+    aceptándose, pero no traen identidad ni clases. Si el UUID restaurado cambia,
+    el cliente vuelve a unirse a sus clases con la identidad original y retira la
+    identidad temporal del dispositivo. Eso evita que una reinstalación cree otro
+    alumno en la lista del docente.
+11. Un contenido asignado a varias clases aparece en el release de cada una al
+    publicarla. El cliente deduplica por `extra.id`, junta los nombres de las
+    clases y conserva la versión publicada más recientemente.

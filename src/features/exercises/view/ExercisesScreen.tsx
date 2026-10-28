@@ -239,6 +239,11 @@ export default function PracticeScreen() {
         trailing={`${engine.index + 1}/${engine.total}`}
       />
 
+      {exercise.className ? (
+        <AppText variant="eyebrow" color={colors.primary}>
+          {`Extra de ${exercise.className}`}
+        </AppText>
+      ) : null}
       <AppText variant="heading">{exercise.prompt}</AppText>
 
       <View style={{ marginTop: spacing.md }}>

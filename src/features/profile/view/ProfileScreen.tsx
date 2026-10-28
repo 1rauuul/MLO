@@ -7,17 +7,16 @@ import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
 import { Screen } from '@/shared/components/Screen';
 import { SectionHeading } from '@/shared/components/SectionHeading';
 import { Toggle } from '@/features/profile/view/Toggle';
-import type { LearningStyle } from '@/shared/model/entities';
+import type { AccountClass, LearningStyle } from '@/shared/model/entities';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { initials } from '@/features/auth/viewmodel/auth.logic';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
-import { useActiveCatalog } from '@/features/groups/viewmodel/useActiveCatalog';
+import { useClasses } from '@/features/classes/viewmodel/useClasses';
 import { useCatalog } from '@/features/modules/viewmodel/useCatalog';
 import { useLearnerProfile } from '@/features/profile/viewmodel/useLearnerProfile';
 import { useRecentResults } from '@/features/profile/viewmodel/useRecentResults';
 import { useProgressBackup } from '@/features/profile/viewmodel/useProgressBackup';
 import { useSession } from '@/features/auth/viewmodel/useSession';
-import { useRepositories } from '@/shared/services/data/DataProvider';
 import { isHybrid } from '@/shared/services/data/dataMode';
 
 const LEARNING_STYLES: LearningStyle[] = ['Activo', 'Reflexivo', 'Teórico', 'Pragmático'];
@@ -28,8 +27,7 @@ export default function ProfileScreen() {
   const { account, logout, resetProgress } = useAuth();
   const { style, setStyle, darkMode, setDarkMode, largeText, setLargeText } = useLearnerProfile();
   const { clear: clearLocation } = useSession();
-  const { group, refresh: refreshGroup } = useActiveCatalog();
-  const { groups } = useRepositories();
+  const { classes, refresh: refreshClasses, leaveClass } = useClasses();
   const { lessonsByUnit, progressMap, refresh } = useCatalog();
   const { averageScore, refresh: refreshResults } = useRecentResults();
   const { exportProgress, importProgress, isBusy: backupBusy, error: backupError, message: backupMessage } =
@@ -39,7 +37,8 @@ export default function ProfileScreen() {
     useCallback(() => {
       void refresh();
       void refreshResults();
-    }, [refresh, refreshResults]),
+      void refreshClasses();
+    }, [refresh, refreshResults, refreshClasses]),
   );
 
   const learnerName = account?.displayName ?? 'Estudiante';
@@ -66,10 +65,10 @@ export default function ProfileScreen() {
       ],
     );
 
-  const onLeaveGroup = () =>
+  const onLeaveClass = (klass: AccountClass) =>
     Alert.alert(
-      'Salir del grupo',
-      'Volverás al curso base. El progreso del curso actual se conserva y puedes recuperarlo si vuelves a unirte.',
+      `Salir de ${klass.className}`,
+      'Dejarás de ver el contenido extra de esta clase. El progreso del curso base se conserva y puedes volver a unirte con el código.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -79,12 +78,12 @@ export default function ProfileScreen() {
             if (!account) {
               return;
             }
-            void (async () => {
-              await groups.clearAccountGroup(account.id);
-              clearLocation();
-              refreshGroup();
-              await Promise.all([refresh(), refreshResults()]);
-            })();
+            void leaveClass(klass).catch(() => {
+              Alert.alert(
+                'No se pudo salir',
+                'Necesitas conexión para que el maestro deje de verte en la lista.',
+              );
+            });
           },
         },
       ],
@@ -142,25 +141,50 @@ export default function ProfileScreen() {
         ))}
       </View>
 
-      {isHybrid() ? (
-        <>
-          <SectionHeading eyebrow="Grupo" title={group ? group.groupName : 'Curso base'} />
-          <AppText variant="small">
-            {group
-              ? [group.teacherName ? `Maestro: ${group.teacherName}` : null, `Curso ${group.catalogId}`]
-                  .filter(Boolean)
-                  .join(' · ')
-              : 'No estás en ningún grupo. Usas el curso base de MLO.'}
-          </AppText>
-          <View style={{ gap: spacing.sm, marginTop: spacing.md }}>
-            <SecondaryButton
-              label={group ? 'Cambiar de grupo' : 'Unirme a un grupo'}
-              onPress={() => router.push('/join-group' as Href)}
-            />
-            {group ? <SecondaryButton label="Salir del grupo" onPress={onLeaveGroup} /> : null}
-          </View>
-        </>
+      <SectionHeading
+        eyebrow="Clases"
+        title={
+          isHybrid() && classes.length > 0
+            ? `${classes.length} ${classes.length === 1 ? 'clase' : 'clases'}`
+            : 'Curso base'
+        }
+      />
+      <AppText variant="small">
+        {!isHybrid()
+          ? 'Las clases necesitan conexión. Activa EXPO_PUBLIC_DATA_MODE=hybrid y reinicia la app para unirte con el código de tu maestro.'
+          : classes.length > 0
+            ? 'Ves el contenido base y el contenido extra de estas clases.'
+            : 'No estás en ninguna clase. Usas el curso base de MLO.'}
+      </AppText>
+      {isHybrid() && classes.length > 0 ? (
+        <View style={[styles.list, { marginTop: spacing.md }]}>
+          {classes.map(klass => (
+            <View
+              key={klass.classId}
+              style={[
+                styles.settingRow,
+                { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control },
+              ]}>
+              <View style={styles.flex}>
+                <AppText weight="600">{klass.className}</AppText>
+                <AppText variant="small">
+                  {[klass.teacherName ? `Maestro: ${klass.teacherName}` : null, `Código ${klass.classCode}`]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </AppText>
+              </View>
+              <SecondaryButton label="Salir" onPress={() => onLeaveClass(klass)} />
+            </View>
+          ))}
+        </View>
       ) : null}
+      <View style={{ marginTop: spacing.md }}>
+        <SecondaryButton
+          label="Unirme a una clase"
+          disabled={!isHybrid()}
+          onPress={() => router.push('/join-class' as Href)}
+        />
+      </View>
 
       <SectionHeading eyebrow="Estilo de aprendizaje" title="¿Cómo te resulta mejor?" />
       <View style={styles.styleSelector}>

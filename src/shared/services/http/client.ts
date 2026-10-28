@@ -47,6 +47,7 @@ export interface HttpClientConfig {
 export interface HttpClient {
   get: <T>(path: string) => Promise<T>;
   post: <T>(path: string, body: unknown) => Promise<T>;
+  delete: <T>(path: string) => Promise<T>;
 }
 
 const DEFAULT_TIMEOUT_MS = 8000;
@@ -145,6 +146,7 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
   return {
     get: <T>(path: string) => request<T>(path, 'GET'),
     post: <T>(path: string, body: unknown) => request<T>(path, 'POST', body),
+    delete: <T>(path: string) => request<T>(path, 'DELETE'),
   };
 }
 

@@ -38,7 +38,7 @@ interface LessonSeed {
   position: number;
 }
 
-const units: UnitSeed[] = [
+export const units: UnitSeed[] = [
   { id: 'u1', number: 1, title: 'Introducción', description: 'Software de calidad más allá de programar.', difficulty: 'Fundamental', color: 'blue' },
   { id: 'u2', number: 2, title: 'Procesos de software', description: 'Modelos y actividades del proceso de desarrollo.', difficulty: 'Intermedio', color: 'violet' },
   { id: 'u3', number: 3, title: 'Desarrollo ágil de software', description: 'Métodos ágiles, XP y gestión de proyectos.', difficulty: 'Intermedio', color: 'green' },
@@ -177,7 +177,7 @@ function buildSimpleLessons(): LessonSeed[] {
   return result;
 }
 
-const LESSONS = [...unitOneLessons, ...buildSimpleLessons()];
+export const LESSONS = [...unitOneLessons, ...buildSimpleLessons()];
 
 function hashString(value: string): string {
   let hash = 0x811c9dc5;

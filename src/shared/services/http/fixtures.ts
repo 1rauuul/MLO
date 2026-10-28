@@ -162,8 +162,3 @@ export const lessonAllTypesFixture = {
   ],
 };
 
-export const groupFixture = {
-  schemaVersion: 2,
-  group: { id: 'g1', name: 'Grupo A', teacherName: 'Profesora Ríos' },
-  catalog: { id: 'k7f3q', title: 'Curso de prueba' },
-};

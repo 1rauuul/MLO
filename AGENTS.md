@@ -36,16 +36,22 @@ Reglas:
 - Con `DATA_MODE='local'` no se ejecuta ninguna petición HTTP. El contenido remoto se valida con
   `shared/utils/validate.ts` (`parse*Seed`) y nunca reemplaza el contenido local si falla.
 - El contrato v2 vive en `docs/api/contrato.md`: el cliente acepta `version` string o entera,
-  normaliza los códigos de grupo a mayúsculas y los campos vacíos omitidos, y descarta una
+  normaliza los códigos de clase a mayúsculas y los campos vacíos omitidos, y descarta una
   lección si su hash o sus ids no coinciden con el manifest y el curso.
 - **El arranque nunca espera a la red.** `migrateAndSeed` solo aplica contenido local;
-  `ContentSyncProvider` descarga a `remote_lessons` en segundo plano y `applyStagedContent`
-  aplica lo pendiente en el siguiente arranque o al unirse a un grupo.
+  `ContentSyncProvider` descarga a `remote_lessons` y a la caché de clases en segundo plano;
+  `applyStagedContent` aplica lo pendiente en el siguiente arranque o al unirse a una clase.
 - Contenido retirado: `units`, `lessons` y `evaluations` se archivan con `archived_at`; no se
   borran si tienen progreso asociado. Los ids de contenido remoto son globales
   (`{catalogId}-{id}`); el curso base usa ids sin prefijo y `catalog_id = 'base'`.
-- `account_group` define el curso activo por cuenta (`useActiveCatalog`); `base` es el valor
-  por defecto. Los respaldos v3 incluyen el grupo y siguen aceptando v1/v2.
+- Las clases **no cambian de catálogo**: agregan contenido extra sobre `base`.
+  `account_classes` guarda las membresías, `class_cache` el último release por clase y
+  `class_extras_cache` sus bloques/ejemplos/ejercicios. El mismo `extra_id` en varias clases
+  se deduplica y se etiqueta con los nombres de las clases.
+- La identidad del alumno es `accounts.external_key` (UUID estable, generado al registrarse).
+  Los respaldos v4 incluyen ese UUID y las clases; siguen aceptando v1/v2/v3. Al importar un
+  respaldo con otra identidad se vuelve a unir a las clases y se retira la identidad temporal
+  del dispositivo para no duplicar al alumno en la lista del docente.
 - El esquema conserva las entidades núcleo (`Lesson`, `Example`, `Exercise`, `Evaluation`,
   `Question`) y **mantiene `Exercise` y `Evaluation`/`Question` como tablas separadas**
   (feedback inmediato por reactivo vs. puntaje acumulado). La bitácora real de intentos es

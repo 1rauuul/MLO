@@ -6,16 +6,16 @@ import { ConfigError, HttpError, ParseError } from '@/shared/services/http/clien
 import { isRecord, isString } from '@/shared/utils/validate';
 
 import {
+  parseClassPreview,
+  parseClassRelease,
+  type ClassPreviewData,
+  type RemoteClassRelease,
+} from '@/shared/services/content/remote/validateClassRelease';
+import {
   REMOTE_SCHEMA_VERSION,
   validateLessonPayload,
   type RemoteLessonPayload,
 } from '@/shared/services/content/remote/validateLessonPayload';
-
-export interface GroupInfo {
-  code: string;
-  group: { id: string; name: string; teacherName: string };
-  catalog: { id: string; title: string };
-}
 
 export interface CatalogManifest {
   schemaVersion: 2;
@@ -25,31 +25,6 @@ export interface CatalogManifest {
   hash: string;
   publishedAt: string;
   lessons: { lessonId: string; unitId: string; hash: string }[];
-}
-
-export function parseGroupResponse(value: unknown, code: string): GroupInfo {
-  if (
-    !isRecord(value) ||
-    value.schemaVersion !== REMOTE_SCHEMA_VERSION ||
-    !isRecord(value.group) ||
-    !isRecord(value.catalog) ||
-    !isString(value.group.id) ||
-    !isString(value.group.name) ||
-    !isString(value.group.teacherName) ||
-    !isString(value.catalog.id) ||
-    !isString(value.catalog.title)
-  ) {
-    throw new ParseError('La respuesta del grupo no es válida.');
-  }
-  return {
-    code,
-    group: {
-      id: value.group.id,
-      name: value.group.name,
-      teacherName: value.group.teacherName,
-    },
-    catalog: { id: value.catalog.id, title: value.catalog.title },
-  };
 }
 
 function manifestVersion(value: unknown): string | null {
@@ -110,17 +85,55 @@ export function parseCatalogManifest(value: unknown, catalogId: string): Catalog
   };
 }
 
-/** El alfabeto del plan maestro es en mayúsculas; el alumno puede escribir minúsculas. */
-export function canonicalGroupCode(raw: string): string {
+/** El alfabeto del panel es en mayúsculas; el alumno puede escribir minúsculas. */
+export function canonicalClassCode(raw: string): string {
   return raw.replace(/\s+/g, '').toUpperCase();
 }
 
-export async function fetchGroup(client: HttpClient, code: string): Promise<GroupInfo> {
-  const normalized = canonicalGroupCode(code);
-  return parseGroupResponse(
-    await client.get<unknown>(`/groups/${encodeURIComponent(normalized)}`),
-    normalized,
+export function fetchClassPreview(
+  client: HttpClient,
+  code: string,
+): Promise<ClassPreviewData> {
+  const normalized = canonicalClassCode(code);
+  return client
+    .get<unknown>(`/classes/${encodeURIComponent(normalized)}`)
+    .then(value => parseClassPreview(value, normalized));
+}
+
+export function joinClassRequest(
+  client: HttpClient,
+  code: string,
+  studentKey: string,
+  studentName: string,
+): Promise<ClassPreviewData> {
+  const normalized = canonicalClassCode(code);
+  return client
+    .post<unknown>(`/classes/${encodeURIComponent(normalized)}/join`, {
+      studentKey,
+      studentName,
+    })
+    .then(value => parseClassPreview(value, normalized));
+}
+
+export function leaveClassRequest(
+  client: HttpClient,
+  code: string,
+  studentKey: string,
+): Promise<void> {
+  const normalized = canonicalClassCode(code);
+  return client.delete<void>(
+    `/classes/${encodeURIComponent(normalized)}/members/${encodeURIComponent(studentKey)}`,
   );
+}
+
+export function fetchClassRelease(
+  client: HttpClient,
+  code: string,
+): Promise<RemoteClassRelease> {
+  const normalized = canonicalClassCode(code);
+  return client
+    .get<unknown>(`/classes/${encodeURIComponent(normalized)}/release`)
+    .then(value => parseClassRelease(value, normalized));
 }
 
 export async function fetchCatalogManifest(
@@ -322,12 +335,9 @@ export async function refreshCatalog(
   return true;
 }
 
-/** Cursos en uso por cualquier cuenta local, más el curso base. */
-export async function catalogsInUse(db: SQLiteDatabase): Promise<string[]> {
-  const rows = await db.getAllAsync<{ catalog_id: string }>(
-    'SELECT DISTINCT catalog_id FROM account_group',
-  );
-  return ['base', ...rows.map(row => row.catalog_id).filter(id => id !== 'base')];
+/** Las clases no cambian de catálogo: todo el contenido base vive en `base`. */
+export async function catalogsInUse(_db: SQLiteDatabase): Promise<string[]> {
+  return ['base'];
 }
 
 export async function refreshCatalogs(
@@ -349,13 +359,6 @@ export async function refreshCatalogs(
   }
 }
 
-export type GroupError =
-  | 'not_found'
-  | 'closed'
-  | 'rate_limited'
-  | 'config'
-  | 'network'
-  | 'invalid';
 export type ContentError =
   | 'content_missing'
   | 'rate_limited'
@@ -363,16 +366,20 @@ export type ContentError =
   | 'network'
   | 'invalid';
 
-export function isGroupError(error: unknown): GroupError {
+export type ClassError =
+  | 'not_found'
+  | 'rate_limited'
+  | 'config'
+  | 'network'
+  | 'invalid';
+
+export function isClassError(error: unknown): ClassError {
   if (error instanceof ConfigError) {
     return 'config';
   }
   if (error instanceof HttpError) {
     if (error.status === 404) {
       return 'not_found';
-    }
-    if (error.status === 410) {
-      return 'closed';
     }
     if (error.status === 429) {
       return 'rate_limited';

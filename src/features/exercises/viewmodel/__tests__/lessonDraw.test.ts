@@ -3,11 +3,11 @@ import type { ExampleState } from '@/features/exercises/model/exampleStateReposi
 import type { Exercise } from '@/shared/model/entities';
 
 import { ensureLessonDraw } from '@/features/exercises/viewmodel/lessonDraw';
-import { selectExercisesByLesson } from '@/features/exercises/model/exerciseRepository';
+import { selectPracticeExercisesByLesson } from '@/features/exercises/model/exerciseRepository';
 import { selectExampleState, saveExampleState } from '@/features/exercises/model/exampleStateRepository';
 
 jest.mock('@/features/exercises/model/exerciseRepository', () => ({
-  selectExercisesByLesson: jest.fn(),
+  selectPracticeExercisesByLesson: jest.fn(),
 }));
 jest.mock('@/features/exercises/model/exampleStateRepository', () => ({
   selectExampleState: jest.fn(),
@@ -15,11 +15,11 @@ jest.mock('@/features/exercises/model/exampleStateRepository', () => ({
 }));
 jest.mock('@/shared/services/data/DataProvider', () => ({}));
 
-const mockSelectExercises = jest.mocked(selectExercisesByLesson);
+const mockSelectExercises = jest.mocked(selectPracticeExercisesByLesson);
 const mockSelectState = jest.mocked(selectExampleState);
 const mockSaveState = jest.mocked(saveExampleState);
 const repositories = {
-  exercises: { selectExercisesByLesson: mockSelectExercises },
+  exercises: { selectPracticeExercisesByLesson: mockSelectExercises },
   exampleState: { selectExampleState: mockSelectState, saveExampleState: mockSaveState },
 } as unknown as Pick<Repositories, 'exercises' | 'exampleState'>;
 

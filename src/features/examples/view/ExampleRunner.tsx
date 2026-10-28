@@ -48,6 +48,8 @@ export function ExampleRunner({
   const title = example?.title ?? exercise.prompt;
   const pairs = exercise.config.pairs ?? [];
   const label = TYPE_LABELS[exercise.type] ?? exercise.type;
+  const source = exercise.className ?? example?.className;
+  const sourceSuffix = source ? ` · ${source}` : '';
 
   const advanceLabel = isLast ? 'Ir a ejercicios' : 'Siguiente ejemplo';
   const nextAction = (
@@ -70,7 +72,7 @@ export function ExampleRunner({
         <ScreenHeader
           onBack={onBack ?? onGoExercises}
           action={nextAction}
-          eyebrow={`Ejemplo ${index + 1}/${total} · A · Demostración · ${label}`}
+          eyebrow={`Ejemplo ${index + 1}/${total} · A · Demostración · ${label}${sourceSuffix}`}
           title={title}
         />
 
@@ -142,7 +144,7 @@ export function ExampleRunner({
       <ScreenHeader
         onBack={() => setVariant('A')}
         action={nextAction}
-        eyebrow={`Ejemplo ${index + 1}/${total} · B · Acompañamiento · ${label}`}
+        eyebrow={`Ejemplo ${index + 1}/${total} · B · Acompañamiento · ${label}${sourceSuffix}`}
         title={title}
       />
 

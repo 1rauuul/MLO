@@ -10,7 +10,7 @@ import { ContentSyncProvider } from '@/shared/services/content/ContentSyncProvid
 import { DataProvider } from '@/shared/services/data/DataProvider';
 import { AppThemeProvider } from '@/shared/theme/ThemeProvider';
 import { AuthProvider, useAuth } from '@/features/auth/viewmodel/useAuth';
-import { ActiveCatalogProvider } from '@/features/groups/viewmodel/useActiveCatalog';
+import { ClassesProvider } from '@/features/classes/viewmodel/useClasses';
 import { LearnerProfileProvider } from '@/features/profile/viewmodel/useLearnerProfile';
 import { SessionProvider } from '@/features/auth/viewmodel/useSession';
 
@@ -24,7 +24,7 @@ export default function RootLayout() {
           <DataProvider>
             <ContentSyncProvider>
               <AuthProvider>
-                <ActiveCatalogProvider>
+                <ClassesProvider>
                   <SessionProvider>
                     <LearnerProfileProvider>
                       <AppThemeProvider>
@@ -35,7 +35,7 @@ export default function RootLayout() {
                       </AppThemeProvider>
                     </LearnerProfileProvider>
                   </SessionProvider>
-                </ActiveCatalogProvider>
+                </ClassesProvider>
               </AuthProvider>
             </ContentSyncProvider>
           </DataProvider>

@@ -1,3 +1,4 @@
+import * as Crypto from 'expo-crypto';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { DATABASE_VERSION, DROP_ALL_DDL, SCHEMA_DDL } from '@/shared/services/db/schema';
@@ -281,6 +282,33 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
       await db.execAsync('PRAGMA user_version = 16');
     });
     version = 16;
+  }
+
+  if (version < 17) {
+    await db.withTransactionAsync(async () => {
+      if (!(await hasColumn(db, 'accounts', 'external_key'))) {
+        await db.execAsync(`ALTER TABLE accounts ADD COLUMN external_key TEXT NOT NULL DEFAULT ''`);
+      }
+      const accounts = await db.getAllAsync<{ id: number; external_key: string }>(
+        'SELECT id, external_key FROM accounts',
+      );
+      for (const account of accounts) {
+        if (!account.external_key) {
+          await db.runAsync(
+            'UPDATE accounts SET external_key = ? WHERE id = ?',
+            Crypto.randomUUID(),
+            account.id,
+          );
+        }
+      }
+      await db.execAsync(SCHEMA_DDL);
+      await db.execAsync('DROP TABLE IF EXISTS account_group');
+      await db.execAsync(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_external_key ON accounts(external_key)',
+      );
+      await db.execAsync('PRAGMA user_version = 17');
+    });
+    version = 17;
   }
 
   await seedIfEmpty(db);

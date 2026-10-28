@@ -9,34 +9,31 @@ import { Screen } from '@/shared/components/Screen';
 import { ScreenHeader } from '@/shared/components/ScreenHeader';
 import { isHybrid } from '@/shared/services/data/dataMode';
 import { useTheme } from '@/shared/theme/ThemeProvider';
-import { useJoinGroup, type JoinError } from '@/features/groups/viewmodel/useJoinGroup';
+import { useJoinClass, type JoinClassError } from '@/features/classes/viewmodel/useJoinClass';
 
-const ERROR_MESSAGES: Record<Exclude<JoinError, null>, string> = {
+const ERROR_MESSAGES: Record<Exclude<JoinClassError, null>, string> = {
   code: 'El código debe tener 6 caracteres.',
-  not_found: 'No encontramos un grupo con ese código.',
-  closed: 'Este grupo ya no acepta nuevas uniones.',
+  not_found: 'No encontramos una clase con ese código.',
   rate_limited: 'Demasiados intentos. Espera un momento y vuelve a intentarlo.',
-  content_missing: 'El curso de este grupo todavía no está disponible.',
   config: 'La app no tiene configurado el servicio de contenido.',
   network: 'No hay conexión. Inténtalo de nuevo.',
-  invalid: 'El contenido del grupo no es válido.',
-  incomplete: 'El curso no se pudo aplicar completo. Inténtalo de nuevo.',
-  no_account: 'Inicia sesión para unirte a un grupo.',
+  invalid: 'El contenido de la clase no es válido.',
+  no_account: 'Inicia sesión para unirte a una clase.',
 };
 
-export default function JoinGroupScreen() {
+export default function JoinClassScreen() {
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
-  const { preview, phase, error, lookup, join, reset } = useJoinGroup();
+  const { preview, phase, error, lookup, join, reset } = useJoinClass();
   const [code, setCode] = useState('');
 
   if (!isHybrid()) {
     return (
       <Screen>
-        <ScreenHeader onBack={() => router.back()} eyebrow="Grupo" title="Unirme a un grupo" />
+        <ScreenHeader onBack={() => router.back()} eyebrow="Clase" title="Unirme a una clase" />
         <EmptyState
           title="No disponible"
-          message="Unirse a un grupo requiere conexión y el modo híbrido."
+          message="Unirse a una clase requiere conexión y el modo híbrido."
         />
       </Screen>
     );
@@ -44,22 +41,22 @@ export default function JoinGroupScreen() {
 
   return (
     <Screen>
-      <ScreenHeader onBack={() => router.back()} eyebrow="Grupo" title="Unirme a un grupo" />
+      <ScreenHeader onBack={() => router.back()} eyebrow="Clase" title="Unirme a una clase" />
 
       {!preview ? (
         <View style={{ gap: spacing.md }}>
           <AppText variant="small">
-            Pide a tu maestro el código de 6 caracteres del grupo.
+            Pide a tu maestro el código de 6 caracteres de la clase.
           </AppText>
           <TextInput
             value={code}
             onChangeText={value => setCode(value)}
-            autoCapitalize="none"
+            autoCapitalize="characters"
             autoCorrect={false}
             maxLength={8}
             placeholder="ABC123"
             placeholderTextColor={colors.muted}
-            accessibilityLabel="Código del grupo"
+            accessibilityLabel="Código de la clase"
             style={[
               styles.input,
               {
@@ -71,7 +68,7 @@ export default function JoinGroupScreen() {
             ]}
           />
           <PrimaryButton
-            label={phase === 'looking' ? 'Buscando…' : 'Buscar grupo'}
+            label={phase === 'looking' ? 'Buscando…' : 'Buscar clase'}
             disabled={phase === 'looking'}
             onPress={() => void lookup(code)}
           />
@@ -83,17 +80,21 @@ export default function JoinGroupScreen() {
               styles.card,
               { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card },
             ]}>
-            <AppText variant="eyebrow">{preview.group.name}</AppText>
-            <AppText weight="600">{`Maestro: ${preview.group.teacherName}`}</AppText>
-            <AppText variant="small">{`Curso: ${preview.catalog.title}`}</AppText>
+            <AppText variant="eyebrow">{preview.class.name}</AppText>
+            <AppText weight="600">{`Maestro: ${preview.class.teacherName}`}</AppText>
+            <AppText variant="small">
+              {preview.published
+                ? `Contenido publicado: versión ${preview.published.version}`
+                : 'Esta clase todavía no tiene contenido extra publicado.'}
+            </AppText>
           </View>
           <PrimaryButton
-            label={phase === 'joining' ? 'Descargando el curso…' : 'Unirme a este grupo'}
+            label={phase === 'joining' ? 'Uniéndome…' : 'Unirme a esta clase'}
             disabled={phase === 'joining'}
             onPress={() => {
               void join().then(joined => {
                 if (joined) {
-                  router.replace('/');
+                  router.back();
                 }
               });
             }}

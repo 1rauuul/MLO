@@ -47,7 +47,7 @@ jest.mock('@/shared/theme/ThemeProvider', () => ({
 jest.mock('@/shared/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }));
 jest.mock('@/features/modules/view/RichContent', () => ({ RichContent: () => null }));
 jest.mock('@/features/modules/viewmodel/useLessonContent', () => ({
-  useLessonContent: () => ({ lesson: lessonOne, examples: [], isLoading: false }),
+  useLessonContent: () => ({ lesson: lessonOne, examples: [], lessonExtras: [], isLoading: false }),
 }));
 jest.mock('@/features/exercises/viewmodel/useExerciseEngine', () => ({
   useExercisesForLesson: () => ({ exercises: [], isLoading: false }),

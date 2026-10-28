@@ -1,9 +1,10 @@
-export const DATABASE_VERSION = 16;
+export const DATABASE_VERSION = 17;
 
 export const SCHEMA_DDL = `
 CREATE TABLE IF NOT EXISTS accounts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT NOT NULL UNIQUE,
+  external_key TEXT NOT NULL UNIQUE,
   display_name TEXT NOT NULL,
   password_hash TEXT NOT NULL,
   salt TEXT NOT NULL,
@@ -42,6 +43,42 @@ CREATE TABLE IF NOT EXISTS lessons (
   catalog_id TEXT NOT NULL DEFAULT 'base',
   archived_at TEXT
 );
+
+-- Contenido publicado de las clases. Es una caché global por clase; cada
+-- cuenta decide qué clases ve mediante account_classes.
+CREATE TABLE IF NOT EXISTS class_cache (
+  class_id TEXT PRIMARY KEY NOT NULL,
+  class_code TEXT NOT NULL,
+  class_name TEXT NOT NULL,
+  teacher_name TEXT,
+  version INTEGER NOT NULL DEFAULT 0,
+  hash TEXT NOT NULL DEFAULT '',
+  published_at TEXT,
+  fetched_at TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_class_cache_code ON class_cache(class_code);
+
+CREATE TABLE IF NOT EXISTS class_extras_cache (
+  class_id TEXT NOT NULL REFERENCES class_cache(class_id) ON DELETE CASCADE,
+  extra_id TEXT NOT NULL,
+  lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  position INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (class_id, extra_id)
+);
+CREATE INDEX IF NOT EXISTS idx_class_extras_lesson ON class_extras_cache(lesson_id);
+CREATE INDEX IF NOT EXISTS idx_class_extras_class ON class_extras_cache(class_id);
+
+CREATE TABLE IF NOT EXISTS account_classes (
+  account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  class_id TEXT NOT NULL REFERENCES class_cache(class_id) ON DELETE CASCADE,
+  class_code TEXT NOT NULL,
+  joined_at TEXT NOT NULL,
+  PRIMARY KEY (account_id, class_id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_account_classes_code
+  ON account_classes(account_id, class_code);
 
 CREATE TABLE IF NOT EXISTS examples (
   id TEXT PRIMARY KEY NOT NULL,
@@ -168,16 +205,6 @@ CREATE TABLE IF NOT EXISTS remote_lessons (
   PRIMARY KEY (catalog_id, lesson_id)
 );
 
-CREATE TABLE IF NOT EXISTS account_group (
-  account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
-  group_id TEXT,
-  group_code TEXT NOT NULL,
-  group_name TEXT NOT NULL,
-  teacher_name TEXT,
-  catalog_id TEXT NOT NULL,
-  joined_at TEXT NOT NULL
-);
-
 CREATE INDEX IF NOT EXISTS idx_lessons_unit ON lessons(unit_id);
 CREATE INDEX IF NOT EXISTS idx_examples_lesson ON examples(lesson_id);
 CREATE INDEX IF NOT EXISTS idx_exercises_lesson ON exercises(lesson_id);
@@ -199,7 +226,9 @@ DROP TABLE IF EXISTS evaluation_results;
 DROP TABLE IF EXISTS module_progress;
 DROP TABLE IF EXISTS last_location;
 DROP TABLE IF EXISTS example_state;
-DROP TABLE IF EXISTS account_group;
+DROP TABLE IF EXISTS account_classes;
+DROP TABLE IF EXISTS class_extras_cache;
+DROP TABLE IF EXISTS class_cache;
 DROP TABLE IF EXISTS remote_lessons;
 DROP TABLE IF EXISTS remote_catalogs;
 DROP TABLE IF EXISTS meta;

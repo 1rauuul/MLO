@@ -105,9 +105,11 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
     answeredRef.current = false;
     (async () => {
       try {
-        const loaded = (await exerciseRepository.selectExercisesByLesson(lessonId)).filter(exercise =>
-          EXERCISE_TYPES.includes(exercise.type),
-        );
+        const loaded = (
+          account
+            ? await exerciseRepository.selectPracticeExercisesByLesson(account.id, lessonId)
+            : await exerciseRepository.selectExercisesByLesson(lessonId)
+        ).filter(exercise => EXERCISE_TYPES.includes(exercise.type));
         let drawnIds: string[];
         if (account) {
           const state = await ensureLessonDraw(
