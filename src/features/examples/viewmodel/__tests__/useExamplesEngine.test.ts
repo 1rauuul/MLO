@@ -280,6 +280,26 @@ describe('useExamplesEngine', () => {
     expect(mockSaveState).toHaveBeenCalledTimes(1);
   });
 
+  it('marca como visto el ejemplo en pantalla, incluido el último', async () => {
+    mockAccount = { id: 7 };
+    mockSelectPractice.mockResolvedValue(bank);
+    const { result } = renderHook(() => useExamplesEngine('lesson-1'));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await waitFor(() => expect(mockSaveState).toHaveBeenCalled());
+
+    const items = result.current.items.map(item => item.id);
+    expect(mockSaveState.mock.calls.at(-1)?.[3]).toMatchObject({
+      seenExampleIds: [items[0]],
+    });
+
+    act(() => result.current.next());
+
+    expect(mockSaveState.mock.calls.at(-1)?.[3]).toMatchObject({
+      seenExampleIds: items,
+    });
+  });
+
   it('redibuja con Nuevo sorteo y reinicia el índice', async () => {
     mockSelect.mockResolvedValue(bank);
     const { result } = renderHook(() => useExamplesEngine('lesson-1'));

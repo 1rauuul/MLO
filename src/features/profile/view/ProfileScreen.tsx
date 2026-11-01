@@ -1,9 +1,10 @@
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/shared/components/AppText';
 import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { Screen } from '@/shared/components/Screen';
 import { SectionHeading } from '@/shared/components/SectionHeading';
 import { Toggle } from '@/features/profile/view/Toggle';
@@ -21,14 +22,24 @@ import { isHybrid } from '@/shared/services/data/dataMode';
 
 const LEARNING_STYLES: LearningStyle[] = ['Activo', 'Reflexivo', 'Teórico', 'Pragmático'];
 
+interface DialogState {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  destructive?: boolean;
+  cancelLabel?: string | null;
+  onConfirm: () => void;
+}
+
 export default function ProfileScreen() {
   const { colors, radius, spacing } = useTheme();
   const router = useRouter();
   const { account, logout, resetProgress } = useAuth();
+  const [dialog, setDialog] = useState<DialogState | null>(null);
   const { style, setStyle, darkMode, setDarkMode, largeText, setLargeText } = useLearnerProfile();
   const { clear: clearLocation } = useSession();
   const { classes, refresh: refreshClasses, leaveClass } = useClasses();
-  const { lessonsByUnit, progressMap, refresh } = useCatalog();
+  const { lessonsByUnit, completionMap, refresh } = useCatalog();
   const { averageScore, refresh: refreshResults } = useRecentResults();
   const { exportProgress, importProgress, isBusy: backupBusy, error: backupError, message: backupMessage } =
     useProgressBackup();
@@ -43,71 +54,61 @@ export default function ProfileScreen() {
 
   const learnerName = account?.displayName ?? 'Estudiante';
   const accountUsername = account?.username ?? '';
-  const completedLessons = Object.values(progressMap).filter(Boolean).length;
+  const completedLessons = Object.values(completionMap).filter(Boolean).length;
   const totalLessons = Object.values(lessonsByUnit).reduce((total, lessons) => total + lessons.length, 0);
 
   const onResetProgress = () =>
-    Alert.alert(
-      'Reiniciar progreso',
-      'Se borrarán tus lecciones completadas y resultados. Esta acción no se puede deshacer.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Reiniciar',
-          style: 'destructive',
-          onPress: () => {
-            void resetProgress().then(() => {
-              clearLocation();
-              return Promise.all([refresh(), refreshResults()]);
-            });
-          },
-        },
-      ],
-    );
+    setDialog({
+      title: 'Reiniciar progreso',
+      message: 'Se borrarán tus lecciones completadas y resultados. Esta acción no se puede deshacer.',
+      confirmLabel: 'Reiniciar',
+      destructive: true,
+      onConfirm: () => {
+        void resetProgress().then(() => {
+          clearLocation();
+          return Promise.all([refresh(), refreshResults()]);
+        });
+      },
+    });
 
   const onLeaveClass = (klass: AccountClass) =>
-    Alert.alert(
-      `Salir de ${klass.className}`,
-      'Dejarás de ver el contenido extra de esta clase. El progreso del curso base se conserva y puedes volver a unirte con el código.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Salir',
-          style: 'destructive',
-          onPress: () => {
-            if (!account) {
-              return;
-            }
-            void leaveClass(klass).catch(() => {
-              Alert.alert(
-                'No se pudo salir',
-                'Necesitas conexión para que el maestro deje de verte en la lista.',
-              );
-            });
-          },
-        },
-      ],
-    );
+    setDialog({
+      title: `Salir de ${klass.className}`,
+      message:
+        'Dejarás de ver el contenido extra de esta clase. El progreso del curso base se conserva y puedes volver a unirte con el código.',
+      confirmLabel: 'Salir',
+      destructive: true,
+      onConfirm: () => {
+        if (!account) {
+          return;
+        }
+        void leaveClass(klass).catch(() => {
+          setDialog({
+            title: 'No se pudo salir',
+            message: 'Necesitas conexión para que el maestro deje de verte en la lista.',
+            confirmLabel: 'Entendido',
+            cancelLabel: null,
+            onConfirm: () => {},
+          });
+        });
+      },
+    });
 
   const onImportProgress = () =>
-    Alert.alert(
-      'Importar progreso',
-      'Se reemplazarán tus ejercicios, evaluaciones y lecciones completadas por los del archivo seleccionado.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Importar',
-          onPress: () => {
-            void importProgress().then(imported => {
-              if (imported) {
-                return Promise.all([refresh(), refreshResults()]);
-              }
-              return undefined;
-            });
-          },
-        },
-      ],
-    );
+    setDialog({
+      title: 'Importar progreso',
+      message:
+        'Se reemplazarán tus ejercicios, evaluaciones y lecciones completadas por los del archivo seleccionado.',
+      confirmLabel: 'Importar',
+      onConfirm: () => {
+        void importProgress().then(imported => {
+          if (imported) {
+            return Promise.all([refresh(), refreshResults()]);
+          }
+          return undefined;
+        });
+      },
+    });
 
   return (
     <Screen contentStyle={styles.content}>
@@ -262,6 +263,21 @@ export default function ProfileScreen() {
         <PrimaryButton label="Cerrar sesión" onPress={() => void logout()} />
         <SecondaryButton label="Reiniciar mi progreso" onPress={onResetProgress} />
       </View>
+
+      <ConfirmModal
+        visible={dialog !== null}
+        title={dialog?.title ?? ''}
+        message={dialog?.message ?? ''}
+        confirmLabel={dialog?.confirmLabel}
+        cancelLabel={dialog?.cancelLabel}
+        destructive={dialog?.destructive}
+        onConfirm={() => {
+          const action = dialog?.onConfirm;
+          setDialog(null);
+          action?.();
+        }}
+        onCancel={() => setDialog(null)}
+      />
     </Screen>
   );
 }

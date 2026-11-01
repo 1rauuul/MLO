@@ -86,7 +86,7 @@ const baseCatalog = {
     },
   ],
   lessonsByUnit: { u1: lessons },
-  progressMap: { 'l1.1': true },
+  completionMap: { 'l1.1': true },
   isLoading: false,
   error: null,
   refresh: mockRefreshCatalog,

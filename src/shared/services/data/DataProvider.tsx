@@ -65,6 +65,7 @@ import {
   countCompletedByUnit,
   markLessonCompleted,
   resetAccountProgress,
+  selectCompletionMap,
   selectProgressMap,
 } from '@/features/modules/model/progressRepository';
 import {
@@ -186,6 +187,8 @@ export function createRepositories(db: SQLiteDatabase) {
     progress: {
       selectProgressMap: (accountId: number, catalogId?: string) =>
         selectProgressMap(db, accountId, catalogId),
+      selectCompletionMap: (accountId: number, catalogId?: string) =>
+        selectCompletionMap(db, accountId, catalogId),
       markLessonCompleted: (accountId: number, lessonId: string) =>
         markLessonCompleted(db, accountId, lessonId),
       countCompletedByUnit: (accountId: number, unitId: string, catalogId?: string) =>

@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { ActivityView } from '@/features/exercises/view/activities/ActivityView';
 import { AppText } from '@/shared/components/AppText';
 import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
-import { ConfirmExitModal } from '@/shared/components/ConfirmExitModal';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Icon } from '@/shared/components/Icon';
 import { QuizOption } from '@/features/exercises/view/QuizOption';
@@ -15,7 +15,6 @@ import type { ActivityType, Exercise, ExerciseType, Question } from '@/shared/mo
 import { ACTIVITY_TYPE_LABELS as TYPE_LABELS } from '@/shared/utils/activityLabels';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { recommendReview } from '@/features/evaluations/viewmodel/analytics.logic';
-import { useModuleProgress } from '@/features/modules/viewmodel/useModuleProgress';
 import {
   useEvaluationEngine,
   useEvaluationForLesson,
@@ -76,7 +75,6 @@ export default function EvaluationFlow() {
     [question, lessonParam],
   );
   const record = useRecordEvaluationResult();
-  const { markCompleted } = useModuleProgress();
   const { record: recordLocation } = useSession();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
@@ -103,10 +101,7 @@ export default function EvaluationFlow() {
     recordedEvaluationRef.current = evaluation.id;
     const percent = engine.total === 0 ? 0 : Math.round((engine.correctCount / engine.total) * 100);
     void record(evaluation.id, percent, engine.correctCount, engine.total);
-    if (lessonParam) {
-      void markCompleted(lessonParam);
-    }
-  }, [engine.phase, engine.correctCount, engine.total, evaluation, record, markCompleted, lessonParam]);
+  }, [engine.phase, engine.correctCount, engine.total, evaluation, record]);
 
   if (!isLoading && (!evaluation || engine.total === 0)) {
     return (
@@ -320,10 +315,11 @@ export default function EvaluationFlow() {
         />
       </View>
 
-      <ConfirmExitModal
+      <ConfirmModal
         visible={exitGuard.visible}
         title="Salir de la evaluación"
         message="Si sales ahora perderás el progreso de esta evaluación y la próxima vez empezarás de cero."
+        cancelLabel="Continuar"
         onCancel={exitGuard.cancel}
         onConfirm={exitGuard.confirm}
       />

@@ -1,5 +1,4 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import ProfileScreen from '@/features/profile/view/ProfileScreen';
 
@@ -133,7 +132,7 @@ const baseCatalog = {
     },
   ],
   lessonsByUnit: { u1: lessons },
-  progressMap: { 'l1.1': true },
+  completionMap: { 'l1.1': true },
   error: null,
   refresh: mockRefreshCatalog,
 };
@@ -172,20 +171,22 @@ describe('ProfileScreen', () => {
   });
 
   it('reinicia progreso limpiando la ubicación de sesión', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const { getByText } = render(<ProfileScreen />);
 
     fireEvent.press(getByText('Reiniciar mi progreso'));
-
-    expect(alertSpy).toHaveBeenCalled();
-    const buttons = alertSpy.mock.calls[0]![2] as { text: string; onPress?: () => void }[];
-    const resetButton = buttons.find(button => button.text === 'Reiniciar');
-    await act(async () => {
-      resetButton?.onPress?.();
-    });
+    fireEvent.press(getByText('Reiniciar'));
 
     expect(mockResetProgress).toHaveBeenCalled();
     await waitFor(() => expect(mockClearLocation).toHaveBeenCalled());
-    alertSpy.mockRestore();
+  });
+
+  it('cancelar el reinicio no borra el progreso', () => {
+    const { getByText, queryByText } = render(<ProfileScreen />);
+
+    fireEvent.press(getByText('Reiniciar mi progreso'));
+    fireEvent.press(getByText('Cancelar'));
+
+    expect(mockResetProgress).not.toHaveBeenCalled();
+    expect(queryByText('Reiniciar')).toBeNull();
   });
 });

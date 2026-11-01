@@ -20,7 +20,7 @@ _root (Stack + Stack.Protected)
     │   │   └── [fila evaluación]   → /evaluacion?lesson=<id>
     │   └── tab Perfil
     │       ├── [Cerrar sesión]       → /login
-    │       └── [Reiniciar mi progreso] → Alert confirm
+    │       └── [Reiniciar mi progreso] → ConfirmModal (rojo)
     ├── /tema/[id]          # Hub del tema (chip de estado)
     │   ├── lección 1.1     → redirect → /lecciones/l1.1 (sin mosaicos)
     │   └── resto (1.2–1.4) → mosaicos: Lecciones · Ejemplos · Ejercicios · Evaluación

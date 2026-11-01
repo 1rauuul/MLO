@@ -9,7 +9,7 @@ import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
 interface CatalogResult {
   units: Unit[];
   lessonsByUnit: Record<string, Lesson[]>;
-  progressMap: Record<string, boolean>;
+  completionMap: Record<string, boolean>;
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -20,7 +20,7 @@ export function useCatalog(): CatalogResult {
   const { account } = useAuth();
   const [units, setUnits] = useState<Unit[]>([]);
   const [lessonsByUnit, setLessonsByUnit] = useState<Record<string, Lesson[]>>({});
-  const [progressMap, setProgressMap] = useState<Record<string, boolean>>({});
+  const [completionMap, setCompletionMap] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,12 +33,12 @@ export function useCatalog(): CatalogResult {
       for (const lesson of loadedLessons) {
         (grouped[lesson.unitId] ??= []).push(lesson);
       }
-      const loadedProgress = account
-        ? await progress.selectProgressMap(account.id, BASE_CATALOG_ID)
+      const loadedCompletion = account
+        ? await progress.selectCompletionMap(account.id, BASE_CATALOG_ID)
         : {};
       setUnits(loadedUnits);
       setLessonsByUnit(grouped);
-      setProgressMap(loadedProgress);
+      setCompletionMap(loadedCompletion);
       setError(null);
     } catch {
       setError('No se pudo cargar el catálogo de unidades.');
@@ -51,5 +51,5 @@ export function useCatalog(): CatalogResult {
     void refresh();
   }, [refresh]);
 
-  return { units, lessonsByUnit, progressMap, isLoading, error, refresh };
+  return { units, lessonsByUnit, completionMap, isLoading, error, refresh };
 }

@@ -6,7 +6,6 @@ import { useRepositories } from '@/shared/services/data/DataProvider';
 import type { Evaluation, Example, Exercise, Lesson, Unit } from '@/shared/model/entities';
 
 import { useCatalog } from '@/features/modules/viewmodel/useCatalog';
-import { useModuleProgress } from '@/features/modules/viewmodel/useModuleProgress';
 
 interface LessonHubResult {
   lesson: Lesson | null;
@@ -17,13 +16,13 @@ interface LessonHubResult {
   completed: boolean;
   isLoading: boolean;
   error: string | null;
+  refresh: () => Promise<void>;
 }
 
 export function useLessonHub(lessonId: string | null): LessonHubResult {
   const { lessons, examples: exampleRepository, exercises: exerciseRepository, evaluations } =
     useRepositories();
-  const { units } = useCatalog();
-  const { progressMap } = useModuleProgress();
+  const { units, completionMap, refresh } = useCatalog();
   const { account } = useAuth();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [examples, setExamples] = useState<Example[]>([]);
@@ -94,8 +93,9 @@ export function useLessonHub(lessonId: string | null): LessonHubResult {
     examples,
     exercises,
     evaluation,
-    completed: lesson ? !!progressMap[lesson.id] : false,
+    completed: lesson ? !!completionMap[lesson.id] : false,
     isLoading,
     error,
+    refresh,
   };
 }

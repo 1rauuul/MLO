@@ -150,6 +150,26 @@ export async function selectRecentEvaluationResults(
   }));
 }
 
+/** Mejor score por lección; `null` si la evaluación existe pero no hay resultados. */
+export async function selectEvaluationScoresByLesson(
+  db: SQLiteDatabase,
+  accountId: number,
+): Promise<Record<string, number | null>> {
+  const rows = await db.getAllAsync<{ lesson_id: string; score: number | null }>(
+    `SELECT e.lesson_id AS lesson_id, MAX(er.score) AS score
+       FROM evaluations e
+       LEFT JOIN evaluation_results er ON er.evaluation_id = e.id AND er.account_id = ?
+      WHERE e.archived_at IS NULL
+      GROUP BY e.lesson_id`,
+    accountId,
+  );
+  const map: Record<string, number | null> = {};
+  for (const row of rows) {
+    map[row.lesson_id] = row.score;
+  }
+  return map;
+}
+
 export interface EvaluationSummary {
   id: string;
   lessonId: string;

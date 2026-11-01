@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { ActivityView } from '@/features/exercises/view/activities/ActivityView';
 import { AppText } from '@/shared/components/AppText';
 import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
-import { ConfirmExitModal } from '@/shared/components/ConfirmExitModal';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Screen } from '@/shared/components/Screen';
 import { ScreenHeader } from '@/shared/components/ScreenHeader';
@@ -281,10 +281,11 @@ export default function PracticeScreen() {
         />
       ) : null}
 
-      <ConfirmExitModal
+      <ConfirmModal
         visible={exitGuard.visible}
         title="Salir de los ejercicios"
         message="Si sales ahora, la próxima vez empezarás de cero con ejercicios diferentes."
+        cancelLabel="Continuar"
         onCancel={exitGuard.cancel}
         onConfirm={exitGuard.confirm}
       />

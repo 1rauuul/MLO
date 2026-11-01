@@ -18,6 +18,20 @@ function parseStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
+export function parseExampleStatePayload(payload: string): ExampleState {
+  try {
+    const parsed = JSON.parse(payload) as Record<string, unknown>;
+    return {
+      drawExampleIds: parseStringArray(parsed.drawExampleIds),
+      drawExerciseIds: parseStringArray(parsed.drawExerciseIds),
+      seenExampleIds: parseStringArray(parsed.seenExampleIds),
+      exampleIndex: typeof parsed.exampleIndex === 'number' ? parsed.exampleIndex : 0,
+    };
+  } catch {
+    return EMPTY_EXAMPLE_STATE;
+  }
+}
+
 export async function selectExampleState(
   db: SQLiteDatabase,
   accountId: number,
@@ -28,20 +42,7 @@ export async function selectExampleState(
     accountId,
     lessonId,
   );
-  if (!row) {
-    return EMPTY_EXAMPLE_STATE;
-  }
-  try {
-    const parsed = JSON.parse(row.payload) as Record<string, unknown>;
-    return {
-      drawExampleIds: parseStringArray(parsed.drawExampleIds),
-      drawExerciseIds: parseStringArray(parsed.drawExerciseIds),
-      seenExampleIds: parseStringArray(parsed.seenExampleIds),
-      exampleIndex: typeof parsed.exampleIndex === 'number' ? parsed.exampleIndex : 0,
-    };
-  } catch {
-    return EMPTY_EXAMPLE_STATE;
-  }
+  return row ? parseExampleStatePayload(row.payload) : EMPTY_EXAMPLE_STATE;
 }
 
 export async function saveExampleState(

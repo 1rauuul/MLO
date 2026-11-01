@@ -16,7 +16,7 @@ import { useTheme } from '@/shared/theme/ThemeProvider';
 import { orderScore, type ExerciseScore } from '@/features/exercises/viewmodel/exercise.logic';
 import type { ExerciseEngine } from '@/features/exercises/viewmodel/useExerciseEngine';
 
-import { accentForText } from '@/features/exercises/view/activities/accents';
+import { accentForIndex } from '@/features/exercises/view/activities/accents';
 
 const ROW_GAP = 10;
 const FALLBACK_HEIGHT = 64;
@@ -156,13 +156,12 @@ export function OrderExercise({
     <View>
       <View>
         {engine.steps.map((step, index) => {
-          const accent = accentForText(step);
-          const state: RowState =
-            !example && engine.checked
-              ? engine.steps[index] === engine.correctOrder[index]
-                ? 'correct'
-                : 'wrong'
-              : null;
+          const accent = accentForIndex(engine.correctOrder.indexOf(step));
+          const state: RowState = engine.checked
+            ? engine.steps[index] === engine.correctOrder[index]
+              ? 'correct'
+              : 'wrong'
+            : null;
           return (
             <DraggableRow
               key={step}
@@ -172,9 +171,7 @@ export function OrderExercise({
               state={state}
               onDrop={handleDrop}
               onMeasure={measure}>
-              {example ? (
-                <Icon name="reorder" size={18} color={colors.muted} />
-              ) : null}
+              <Icon name="reorder" size={18} color={colors.muted} />
               <View style={[styles.badge, { backgroundColor: `${accent}22` }]}>
                 <AppText variant="code" color={accent} weight="700">
                   {String(index + 1).padStart(2, '0')}
@@ -183,9 +180,6 @@ export function OrderExercise({
               <AppText style={styles.flex} weight="600">
                 {step}
               </AppText>
-              {!example ? (
-                <Icon name="reorder" size={18} color={colors.muted} />
-              ) : null}
               <View style={styles.controls}>
                 <IconButton
                   accessibilityLabel={`Subir ${step}`}

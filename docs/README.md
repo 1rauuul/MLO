@@ -4,6 +4,7 @@
 
 - [`api/`](api/) — contrato del contenido publicado (borrador OpenAPI).
 - [`arquitectura/`](arquitectura/) — diagramas (ER, esquema BD, navegación) y análisis de arquitectura.
+  El modelo de datos en texto está en [`arquitectura/esquema-bd.md`](arquitectura/esquema-bd.md).
 - [`contenido/`](contenido/) — contenido teórico de la Unidad 1, tablas de ingeniería, crucigramas y plantillas.
   Incluye la [guía para agregar contenido](contenido/como-agregar-contenido.md) y los
   [requisitos del APK con contenido remoto](contenido/apk-con-contenido-remoto.md).

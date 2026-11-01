@@ -1,34 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
+import { syntheticExamples } from '@/features/examples/viewmodel/example.logic';
 import { ensureLessonDraw, splitDraw } from '@/features/exercises/viewmodel/lessonDraw';
 import type { Example, Exercise } from '@/shared/model/entities';
 import { EXERCISE_TYPES } from '@/shared/model/entities';
 import { useRepositories } from '@/shared/services/data/DataProvider';
 
 export const EXAMPLE_DRAW_COUNT = 10;
-
-/**
- * Los ejemplos independientes viven en `examples` sin una fila en `exercises`.
- * Se envuelven como Exercise para reutilizar ExampleRunner y la vista previa.
- * `order` necesita correctOrder y el contrato de ejemplos no lo lleva.
- */
-function syntheticExamples(exercises: Exercise[], examples: Example[]): Exercise[] {
-  const exerciseIds = new Set(exercises.map(exercise => exercise.id));
-  return examples
-    .filter(example => !exerciseIds.has(example.id) && example.type !== 'order')
-    .map(example => ({
-      id: example.id,
-      lessonId: example.lessonId,
-      type: example.type,
-      prompt: example.prompt,
-      instructions: '',
-      correctOrder: [],
-      config: example.config,
-      explanation: example.explanation,
-      className: example.className,
-    }));
-}
 
 export interface ExamplesEngine {
   items: Exercise[];
@@ -52,6 +31,7 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
   const [drawExerciseIds, setDrawExerciseIds] = useState<string[]>([]);
   const [index, setIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadedLessonId, setLoadedLessonId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!lessonId) {
@@ -59,6 +39,7 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
       setPool([]);
       setExamples([]);
       setIndex(0);
+      setLoadedLessonId(null);
       setIsLoading(false);
       return;
     }
@@ -105,6 +86,7 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
         setPool(loaded);
         setExamples(loadedExamples);
         setDrawExerciseIds(exerciseIds);
+        setLoadedLessonId(lessonId);
         setItems([
           ...chosenIds.map(id => byId.get(id)).filter((item): item is Exercise => Boolean(item)),
           ...independent,
@@ -145,20 +127,25 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
     [account, lessonId, exampleState],
   );
 
+  // Marca como visto el ejemplo en pantalla (incluido el último) en cada avance.
+  useEffect(() => {
+    if (!account || !lessonId || loadedLessonId !== lessonId || items.length === 0) {
+      return;
+    }
+    persist(
+      index,
+      items.slice(0, index + 1).map(item => item.id),
+      items.map(item => item.id),
+      drawExerciseIds,
+    );
+  }, [account, lessonId, loadedLessonId, items, index, drawExerciseIds, persist]);
+
   const next = useCallback(() => {
     if (index >= items.length - 1) {
       return;
     }
-    const nextIndex = index + 1;
-    const seen = items.slice(0, nextIndex).map(item => item.id);
-    setIndex(nextIndex);
-    persist(
-      nextIndex,
-      seen,
-      items.map(item => item.id),
-      drawExerciseIds,
-    );
-  }, [index, items, drawExerciseIds, persist]);
+    setIndex(index + 1);
+  }, [index, items.length]);
 
   const redraw = useCallback(() => {
     const ids = pool.map(item => item.id);
@@ -173,8 +160,7 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
     ]);
     setDrawExerciseIds(drawn.exerciseIds);
     setIndex(0);
-    persist(0, [], drawn.exampleIds, drawn.exerciseIds);
-  }, [pool, examples, persist]);
+  }, [pool, examples]);
 
   const current = items[index] ?? null;
   const examplesById = useMemo(() => new Map(examples.map(example => [example.id, example])), [examples]);

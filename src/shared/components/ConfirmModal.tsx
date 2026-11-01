@@ -4,29 +4,32 @@ import { AppText } from '@/shared/components/AppText';
 import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 
-interface ConfirmExitModalProps {
+interface ConfirmModalProps {
   visible: boolean;
   title: string;
   message: string;
   confirmLabel?: string;
-  cancelLabel?: string;
+  /** `null` oculta el botón de cancelar (diálogo informativo). */
+  cancelLabel?: string | null;
+  destructive?: boolean;
   onConfirm: () => void;
-  onCancel: () => void;
+  onCancel?: () => void;
 }
 
-export function ConfirmExitModal({
+export function ConfirmModal({
   visible,
   title,
   message,
   confirmLabel = 'Salir',
-  cancelLabel = 'Continuar',
+  cancelLabel = 'Cancelar',
+  destructive,
   onConfirm,
   onCancel,
-}: ConfirmExitModalProps) {
+}: ConfirmModalProps) {
   const { colors, radius, spacing } = useTheme();
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel ?? onConfirm}>
       <View
         style={styles.overlay}
         accessibilityViewIsModal
@@ -37,8 +40,14 @@ export function ConfirmExitModal({
             {message}
           </AppText>
           <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
-            <PrimaryButton label={confirmLabel} onPress={onConfirm} />
-            <SecondaryButton label={cancelLabel} onPress={onCancel} />
+            <PrimaryButton
+              label={confirmLabel}
+              onPress={onConfirm}
+              style={destructive ? { backgroundColor: colors.danger } : undefined}
+            />
+            {cancelLabel !== null ? (
+              <SecondaryButton label={cancelLabel} onPress={onCancel ?? onConfirm} />
+            ) : null}
           </View>
         </View>
       </View>

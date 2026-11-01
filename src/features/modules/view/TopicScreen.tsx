@@ -25,10 +25,16 @@ interface HubAction {
 export default function TopicHubScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const lessonId = id ?? null;
-  const { lesson, unit, exercises, evaluation, completed } = useLessonHub(lessonId);
+  const { lesson, unit, exercises, evaluation, completed, refresh } = useLessonHub(lessonId);
   const { record } = useSession();
   const router = useRouter();
   const { colors, radius } = useTheme();
+
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
 
   useFocusEffect(
     useCallback(() => {

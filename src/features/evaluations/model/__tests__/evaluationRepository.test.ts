@@ -3,6 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import {
   insertEvaluationResult,
   selectEvaluationByLesson,
+  selectEvaluationScoresByLesson,
   selectEvaluationSummaries,
   selectQuestions,
   selectRecentEvaluationResults,
@@ -140,6 +141,21 @@ describe('evaluationRepository', () => {
       },
     ]);
     expect(calls.getAllAsync).toHaveBeenCalledWith(expect.any(String), 7, 'base', 5);
+  });
+
+  it('selectEvaluationScoresByLesson devuelve el mejor score por lección', async () => {
+    const { db, calls } = makeDb({
+      getAllAsync: jest.fn(async () => [
+        { lesson_id: 'l1.2', score: 90 },
+        { lesson_id: 'l1.3', score: null },
+      ]),
+    });
+
+    await expect(selectEvaluationScoresByLesson(db, 7)).resolves.toEqual({
+      'l1.2': 90,
+      'l1.3': null,
+    });
+    expect(calls.getAllAsync).toHaveBeenCalledWith(expect.stringContaining('MAX(er.score)'), 7);
   });
 
   it('selectEvaluationSummaries mapea con joins', async () => {

@@ -59,7 +59,7 @@ jest.mock('@/features/modules/viewmodel/useModuleProgress', () => ({
   useModuleProgress: () => ({ markCompleted: mockMarkCompleted }),
 }));
 jest.mock('@/features/modules/viewmodel/useCatalog', () => ({
-  useCatalog: () => ({ lessonsByUnit: { u1: mockUnitLessons }, progressMap: {}, refresh: jest.fn() }),
+  useCatalog: () => ({ lessonsByUnit: { u1: mockUnitLessons }, completionMap: {}, refresh: jest.fn() }),
 }));
 jest.mock('@/features/auth/viewmodel/useSession', () => ({
   useSession: () => ({ record: jest.fn() }),

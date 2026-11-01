@@ -80,7 +80,7 @@ jest.mock('@/features/modules/viewmodel/useCatalog', () => ({
   useCatalog: () => ({
     units: [mockUnit],
     lessonsByUnit: { u1: [mockLessonA, mockLessonB] },
-    progressMap: mockProgress,
+    completionMap: mockProgress,
     isLoading: false,
     refresh: jest.fn(),
   }),

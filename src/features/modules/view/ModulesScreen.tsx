@@ -29,7 +29,7 @@ function greetingDate(): string {
 export default function ModulesScreen() {
   const { colors, radius } = useTheme();
   const { account } = useAuth();
-  const { units, lessonsByUnit, progressMap, isLoading, error, refresh } = useCatalog();
+  const { units, lessonsByUnit, completionMap, isLoading, error, refresh } = useCatalog();
   const { location, resumeHref } = useSession();
   const router = useRouter();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -76,10 +76,10 @@ export default function ModulesScreen() {
   const currentUnit =
     units.find(unit => {
       const lessons = lessonsByUnit[unit.id] ?? [];
-      return lessons.some(lesson => !progressMap[lesson.id]);
+      return lessons.some(lesson => !completionMap[lesson.id]);
     }) ?? units[0];
   const currentLessons = lessonsByUnit[currentUnit.id] ?? [];
-  const nextLesson = currentLessons.find(lesson => !progressMap[lesson.id]) ?? currentLessons[0];
+  const nextLesson = currentLessons.find(lesson => !completionMap[lesson.id]) ?? currentLessons[0];
 
   const allLessons = units.flatMap(unit => lessonsByUnit[unit.id] ?? []);
   const resumedLesson = location.lessonId
@@ -91,7 +91,7 @@ export default function ModulesScreen() {
   const canResume = resumedLesson !== null && resumedUnit !== null && resumeHref !== null;
   const heroUnit = canResume && resumedUnit ? resumedUnit : currentUnit;
   const heroLessons = lessonsByUnit[heroUnit.id] ?? [];
-  const heroDone = heroLessons.filter(lesson => progressMap[lesson.id]).length;
+  const heroDone = heroLessons.filter(lesson => completionMap[lesson.id]).length;
   const heroProgress = heroLessons.length ? Math.round((heroDone / heroLessons.length) * 100) : 0;
   const heroTitle = canResume && resumedLesson ? resumedLesson.title : heroUnit.title;
 
@@ -158,10 +158,10 @@ export default function ModulesScreen() {
       <View style={styles.list}>
         {units.map(unit => {
           const lessons = lessonsByUnit[unit.id] ?? [];
-          const done = lessons.filter(lesson => progressMap[lesson.id]).length;
+          const done = lessons.filter(lesson => completionMap[lesson.id]).length;
           const progress = lessons.length ? Math.round((done / lessons.length) * 100) : 0;
           const isExpanded = expanded === unit.id;
-          const nextLessonInUnit = lessons.find(lesson => !progressMap[lesson.id]) ?? lessons[0];
+          const nextLessonInUnit = lessons.find(lesson => !completionMap[lesson.id]) ?? lessons[0];
           return (
             <UnitCard
               key={unit.id}
@@ -180,7 +180,7 @@ export default function ModulesScreen() {
                     <SubtopicRow
                       inline
                       lesson={lesson}
-                      completed={!!progressMap[lesson.id]}
+                      completed={!!completionMap[lesson.id]}
                       onPress={() => openDestination(lesson)}
                     />
                   </View>
