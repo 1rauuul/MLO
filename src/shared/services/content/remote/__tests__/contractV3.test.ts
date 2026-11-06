@@ -13,17 +13,17 @@ const MANIFEST_FILE = 'fixtures.sha256.json';
 
 /** Valores publicados por el productor en docs/contracts/fixtures/README.md. */
 const EXPECTED_HASHES: Record<string, string> = {
-  'invalid-activity.json': '5d248f2d833b7088a13ba390e503c2823baa9e5b0633fb8f38f6ab4c62d0477a',
-  'invalid-duplicate-id.json': 'f721c922e3ab9746157ea2334c221ee8c56684437a7aa6e797a55f6aaee99384',
-  'invalid-hash.json': '508d10866ea280de427ef72c12d9c1d4ad03e7612963bd1c5c8ef84a1a0181b4',
-  'invalid-hierarchy.json': '422f591aab248764c54e7ac1117f9b52516283cd838ff9f8150ef62e4d835980',
-  'invalid-version.json': '1b9401c45ad2b2713cf0237ab0fb6f336f0938af57020a5ad34bf254616644c0',
-  'valid-course-base-ref.json': 'c76b52d56b37fb8d21e40004397e27c713566bc8dfee7cc21458572549ea7e8c',
+  'invalid-activity.json': '4aec932fcad97da49eac1a5d57956bbf0b3f59752810da08fd8d3c0b0f0992cd',
+  'invalid-duplicate-id.json': '23b3c17e83a1c212eea830103de602423d8dbbcfebb05d8eef6dd534211ed055',
+  'invalid-hash.json': 'edb9b5330bc86543f311296e1334a7978b90464f05c3912db9d053a74ea05622',
+  'invalid-hierarchy.json': 'a94fe811d7b9253944b37fde1286bcc2f1a559d013c5cd304ea88a84526db413',
+  'invalid-version.json': '89659f6e4a70c862316fbda0548235a9d23c2065967aa966e878377649dd89dd',
+  'valid-course-base-ref.json': '43438502451ef142c4fb92d3d4a9a5ed1131007588224940ad440bee00270095',
   'valid-course-empty.json': 'effbe6a0276748824f10e5df850b8ee97da5b632eb8d4fbac6d80a709c8f7438',
-  'valid-group-content.json': '6b1f655d43d5b6c4b6828336fc9d03bdbdf161e44d984e9069b90058ce3f84a7',
+  'valid-group-content.json': '9a4093dedd029db3a44aed992e0aab8f0c27add6e3f84aff719d920da9994b46',
 };
 
-const EXPECTED_AGGREGATE = 'ee48d0412722756454423690184cbb3ea1f57a8dbdba1faae49a8821fbcc999c';
+const EXPECTED_AGGREGATE = 'ef7ef257fa0b898c5c8d54d161426780aa4e80b7036c544ed3befbfb0d85ce8b';
 const EXPECTED_FILES = Object.keys(EXPECTED_HASHES).sort();
 
 interface FixturesManifest {
@@ -64,6 +64,16 @@ function loadJson(name: string): Record<string, unknown> {
   return JSON.parse(loadFixture(name).normalized) as Record<string, unknown>;
 }
 
+type JsonObject = Record<string, unknown>;
+
+function collection(fixture: JsonObject, key: string): JsonObject[] {
+  const value = fixture[key];
+  if (!Array.isArray(value)) {
+    throw new Error(`${key} no es un array`);
+  }
+  return value as JsonObject[];
+}
+
 describe('paridad de fixtures v3', () => {
   it.each(Object.entries(EXPECTED_HASHES))(
     '%s usa LF, no lleva BOM y coincide con el hash del productor',
@@ -101,6 +111,76 @@ describe('paridad de fixtures v3', () => {
 
     expect(sha256(canonicalJson(manifest.files))).toBe(EXPECTED_AGGREGATE);
   });
+});
+
+describe('estructura de la jerarquía v3', () => {
+  it('el subtema del curso agrupa al menos 2 lecciones, ejemplos, ejercicios y evaluaciones', () => {
+    const fixture = loadJson('valid-course-base-ref.json');
+
+    expect(collection(fixture, 'topics').map(topic => topic.id)).toContain('t1');
+    for (const key of ['lessons', 'examples', 'exercises', 'evaluations']) {
+      const items = collection(fixture, key).filter(item => item.topicId === 't1');
+      expect(items.length).toBeGreaterThanOrEqual(2);
+    }
+
+    for (const lesson of collection(fixture, 'lessons')) {
+      expect(lesson.topicId).toBe('t1');
+      for (const field of ['hash', 'exercises', 'examples', 'evaluations']) {
+        expect(field in lesson).toBe(false);
+      }
+    }
+
+    for (const key of ['examples', 'exercises', 'evaluations']) {
+      for (const item of collection(fixture, key)) {
+        expect(item.topicId).toBe('t1');
+        expect('lessonId' in item).toBe(false);
+      }
+    }
+  });
+
+  it('el grupo declara un subtema propio con las cuatro colecciones y recursos sobre t1', () => {
+    const fixture = loadJson('valid-group-content.json');
+
+    expect(collection(fixture, 'topics').map(topic => topic.id)).toContain('g-t1');
+    for (const key of ['lessons', 'examples', 'exercises', 'evaluations']) {
+      const items = collection(fixture, key);
+      expect(items.some(item => item.topicId === 'g-t1')).toBe(true);
+      expect(items.some(item => item.topicId === 't1')).toBe(true);
+    }
+
+    const additions = collection(fixture, 'additions');
+    expect(additions.length).toBeGreaterThan(0);
+    for (const addition of additions) {
+      expect(Object.keys(addition).sort()).toEqual(['blocks', 'lessonId']);
+    }
+  });
+
+  it.each(['valid-course-base-ref.json', 'valid-group-content.json'])(
+    'cada evaluación de %s apunta a su subtema y a ejercicios del mismo subtema',
+    name => {
+      const fixture = loadJson(name);
+      const exercises = collection(fixture, 'exercises');
+      const evaluations = collection(fixture, 'evaluations');
+
+      expect(evaluations.length).toBeGreaterThan(0);
+      for (const evaluation of evaluations) {
+        expect(typeof evaluation.topicId).toBe('string');
+        expect(evaluation.topicId).not.toBe('');
+
+        const questionIds = evaluation.questionIds;
+        expect(Array.isArray(questionIds)).toBe(true);
+        expect((questionIds as unknown[]).length).toBeGreaterThan(0);
+
+        const exerciseIds = evaluation.exerciseIds;
+        expect(Array.isArray(exerciseIds)).toBe(true);
+        for (const exerciseId of exerciseIds as unknown[]) {
+          const exercise = exercises.find(item => item.id === exerciseId);
+          expect(exercise).toBeDefined();
+          expect(exercise?.topicId).toBe(evaluation.topicId);
+        }
+      }
+    },
+  );
 });
 
 describe('assertV3Envelope', () => {
