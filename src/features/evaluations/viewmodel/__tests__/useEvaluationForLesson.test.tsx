@@ -96,6 +96,7 @@ describe('useEvaluationForLesson con id explícito', () => {
     expect(mockRepositories.evaluations.selectEvaluationById).toHaveBeenCalledWith(
       'demo-ev2',
       'demo',
+      null,
     );
     expect(mockRepositories.evaluations.selectEvaluationByLesson).not.toHaveBeenCalled();
     expect(result.current.evaluation?.id).toBe('demo-ev2');
@@ -168,8 +169,8 @@ describe('useEvaluationForLesson con id explícito', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(mockRepositories.evaluations.selectEvaluationById).not.toHaveBeenCalled();
-    expect(mockRepositories.evaluations.selectEvaluationByLesson).toHaveBeenCalledWith('l1.2');
-    expect(mockRepositories.exercises.selectExercisesByLesson).toHaveBeenCalledWith('l1.2');
+    expect(mockRepositories.evaluations.selectEvaluationByLesson).toHaveBeenCalledWith('l1.2', null);
+    expect(mockRepositories.exercises.selectExercisesByLesson).toHaveBeenCalledWith('l1.2', null);
     expect(result.current.questions.some(question => question.id === 'lesson-only')).toBe(true);
   });
 });

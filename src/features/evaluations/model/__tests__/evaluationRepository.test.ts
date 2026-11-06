@@ -66,6 +66,16 @@ describe('evaluationRepository', () => {
     expect(calls.getAllAsync).toHaveBeenCalledWith(expect.any(String), 't1', 'base');
   });
 
+  it('selectEvaluationByLesson filtra por grupo activo', async () => {
+    const { db, calls } = makeDb();
+
+    await selectEvaluationByLesson(db, 'g-lesson', 'class-demo');
+
+    const [sql, ...params] = (calls.getFirstAsync.mock.calls as unknown[][])[0] ?? [];
+    expect(String(sql)).toContain('OR group_id = ?');
+    expect(params).toEqual(['g-lesson', 'class-demo']);
+  });
+
   it('selectEvaluationById carga la evaluación y filtra por catálogo', async () => {
     const { db, calls } = makeDb({
       getFirstAsync: jest.fn(async () => ({

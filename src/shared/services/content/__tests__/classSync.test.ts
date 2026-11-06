@@ -1,113 +1,164 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { HttpClient } from '@/shared/services/http/client';
+import { HttpError } from '@/shared/services/http/client';
 
 import {
+  archiveClassCache,
   selectClassMemberships,
-  selectClassVersion,
-  storeClassRelease,
-  updateClassMetadata,
+  selectClassSyncState,
 } from '@/features/classes/model/classRepository';
+import { applyV3GroupRelease } from '@/shared/services/content/applyV3Content';
+import { fetchGroupRelease } from '@/shared/services/content/coursesV3';
 import { refreshClassContent, refreshClassRelease } from '@/shared/services/content/classSync';
-import { fetchClassPreview, fetchClassRelease } from '@/shared/services/content/remoteContent';
 
 jest.mock('@/features/classes/model/classRepository', () => ({
   selectClassMemberships: jest.fn(),
-  selectClassVersion: jest.fn(),
-  storeClassRelease: jest.fn(async () => {}),
-  updateClassMetadata: jest.fn(async () => {}),
+  selectClassSyncState: jest.fn(),
+  archiveClassCache: jest.fn(async () => {}),
 }));
-jest.mock('@/shared/services/content/remoteContent', () => ({
-  fetchClassPreview: jest.fn(),
-  fetchClassRelease: jest.fn(),
+jest.mock('@/shared/services/content/applyV3Content', () => ({
+  applyV3GroupRelease: jest.fn(async () => {}),
+}));
+jest.mock('@/shared/services/content/coursesV3', () => ({
+  fetchGroupRelease: jest.fn(),
 }));
 
 const db = {} as SQLiteDatabase;
 const client = { get: jest.fn(), post: jest.fn(), delete: jest.fn() } as unknown as HttpClient;
 
-const preview = {
-  schemaVersion: 2 as const,
-  class: { id: 'c1', name: 'Grupo A', teacherName: 'Profesora Ríos' },
-  published: {
-    version: 2,
-    hash: 'hash-2',
-    publishedAt: '2026-10-27T00:00:00.000Z',
-  },
-};
-
 const release = {
-  schemaVersion: 2 as const,
-  class: preview.class,
-  version: 2,
-  hash: 'hash-2',
-  publishedAt: '2026-10-27T00:00:00.000Z',
+  schemaVersion: 3 as const,
+  kind: 'group' as const,
+  catalogId: 'demo',
+  groupId: 'class-demo',
+  releaseId: 'class-demo-1',
+  version: 1,
+  publishedAt: '2026-11-06T00:00:00.000Z',
+  hash: 'd43b424cc358ee1665a88d2d4bfb71d0f99a76816a7017a969dfc1c238e2cac3',
+  courseRef: { version: 1, hash: 'course-hash' },
+  group: { name: 'Grupo A', visibility: 'published' as const },
+  units: [],
+  topics: [],
   lessons: [],
+  evaluations: [],
+  questions: [],
+  exercises: [],
+  examples: [],
+  additions: [],
+  references: [],
+  notices: [],
 };
 
-const mockPreview = jest.mocked(fetchClassPreview);
-const mockRelease = jest.mocked(fetchClassRelease);
-const mockStored = jest.mocked(selectClassVersion);
-const mockStore = jest.mocked(storeClassRelease);
-const mockMetadata = jest.mocked(updateClassMetadata);
+const mockFetch = jest.mocked(fetchGroupRelease);
+const mockApply = jest.mocked(applyV3GroupRelease);
+const mockState = jest.mocked(selectClassSyncState);
+const mockArchive = jest.mocked(archiveClassCache);
 const mockMemberships = jest.mocked(selectClassMemberships);
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockPreview.mockResolvedValue(preview);
-  mockRelease.mockResolvedValue(release);
-  mockStored.mockResolvedValue(null);
+  mockState.mockResolvedValue(null);
+  mockFetch.mockResolvedValue(release);
 });
 
-describe('refreshClassRelease', () => {
-  it('descarga y guarda cuando cambia la versión', async () => {
-    await expect(refreshClassRelease(db, client, 'c1', 'ABC123')).resolves.toBe(true);
-
-    expect(mockMetadata).toHaveBeenCalledWith(db, 'c1', 'ABC123', 'Grupo A', 'Profesora Ríos');
-    expect(mockStore).toHaveBeenCalledWith(db, 'ABC123', release);
-  });
-
-  it('no descarga si la versión y el hash no cambiaron', async () => {
-    mockStored.mockResolvedValue({ version: 2, hash: 'hash-2' });
-
-    await expect(refreshClassRelease(db, client, 'c1', 'ABC123')).resolves.toBe(false);
-
-    expect(mockRelease).not.toHaveBeenCalled();
-    expect(mockStore).not.toHaveBeenCalled();
-  });
-
-  it('no hace nada si la clase todavía no publicó', async () => {
-    mockPreview.mockResolvedValue({ ...preview, published: null });
-
-    await expect(refreshClassRelease(db, client, 'c1', 'ABC123')).resolves.toBe(false);
-
-    expect(mockRelease).not.toHaveBeenCalled();
-    expect(mockStore).not.toHaveBeenCalled();
-  });
-
-  it('rechaza un release que no coincide con la vista previa', async () => {
-    mockRelease.mockResolvedValue({ ...release, hash: 'otro' });
-
-    await expect(refreshClassRelease(db, client, 'c1', 'ABC123')).rejects.toThrow(
-      'no coincide con la vista previa',
+describe('refreshClassRelease v3', () => {
+  it('descarga y aplica el release de grupo', async () => {
+    await expect(refreshClassRelease(db, client, 'class-demo', 'ABC123', 'key-1', 'demo')).resolves.toBe(
+      true,
     );
-    expect(mockStore).not.toHaveBeenCalled();
+
+    expect(mockFetch).toHaveBeenCalledWith(client, 'ABC123', 'key-1', 'demo');
+    expect(mockApply).toHaveBeenCalledWith(db, release, 'class-demo');
+  });
+
+  it('no reaplica si el hash y el grupo siguen vigentes', async () => {
+    mockState.mockResolvedValue({
+      version: 1,
+      hash: release.hash,
+      archived: 0,
+      applied_hash: release.hash,
+      course_catalog_id: 'demo',
+    });
+
+    await expect(refreshClassRelease(db, client, 'class-demo', 'ABC123', 'key-1', 'demo')).resolves.toBe(
+      false,
+    );
+
+    expect(mockApply).not.toHaveBeenCalled();
+  });
+
+  it('un 404 con release v3 previo archiva el grupo sin tocarlo', async () => {
+    mockState.mockResolvedValue({
+      version: 1,
+      hash: release.hash,
+      archived: 0,
+      applied_hash: release.hash,
+      course_catalog_id: 'demo',
+    });
+    mockFetch.mockRejectedValue(new HttpError(404, ''));
+
+    await expect(refreshClassRelease(db, client, 'class-demo', 'ABC123', 'key-1', 'demo')).resolves.toBe(
+      false,
+    );
+
+    expect(mockArchive).toHaveBeenCalledWith(db, 'class-demo');
+    expect(mockApply).not.toHaveBeenCalled();
+  });
+
+  it('un 404 sin release v3 conserva la caché legacy v2', async () => {
+    mockState.mockResolvedValue({
+      version: 2,
+      hash: 'hash-v2',
+      archived: 0,
+      applied_hash: null,
+      course_catalog_id: 'base',
+    });
+    mockFetch.mockRejectedValue(new HttpError(404, ''));
+
+    await expect(refreshClassRelease(db, client, 'class-demo', 'ABC123', 'key-1', 'base')).resolves.toBe(
+      false,
+    );
+
+    expect(mockArchive).not.toHaveBeenCalled();
+  });
+
+  it('un error de red conserva la copia anterior', async () => {
+    mockFetch.mockRejectedValue(new Error('sin red'));
+
+    await expect(
+      refreshClassRelease(db, client, 'class-demo', 'ABC123', 'key-1', 'demo'),
+    ).rejects.toThrow('sin red');
+    expect(mockApply).not.toHaveBeenCalled();
+    expect(mockArchive).not.toHaveBeenCalled();
   });
 });
 
 describe('refreshClassContent', () => {
-  it('sincroniza cada membresía sin detenerse por un fallo', async () => {
+  it('sincroniza cada membresía activa sin detenerse por un fallo', async () => {
     mockMemberships.mockResolvedValue([
-      { classId: 'c1', classCode: 'ABC123' },
-      { classId: 'c2', classCode: 'DEF456' },
+      {
+        accountId: 1,
+        studentKey: 'key-1',
+        classId: 'class-demo',
+        classCode: 'ABC123',
+        courseCatalogId: 'base',
+      },
+      {
+        accountId: 1,
+        studentKey: 'key-1',
+        classId: 'class-2',
+        classCode: 'DEF456',
+        courseCatalogId: 'base',
+      },
     ]);
-    mockPreview
-      .mockResolvedValueOnce(preview)
+    mockFetch
+      .mockResolvedValueOnce(release)
       .mockRejectedValueOnce(new Error('sin red'));
-    mockRelease.mockResolvedValue(release);
 
     await expect(refreshClassContent(db, client)).resolves.toBeUndefined();
 
-    expect(mockPreview).toHaveBeenCalledTimes(2);
-    expect(mockStore).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockApply).toHaveBeenCalledTimes(1);
   });
 });

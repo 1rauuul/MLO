@@ -131,8 +131,9 @@ export async function selectCompletionMap(
         `SELECT e.extra_id AS id, e.lesson_id, e.type, e.payload
            FROM account_classes ac
            JOIN class_extras_cache e ON e.class_id = ac.class_id
+           JOIN class_cache c ON c.class_id = ac.class_id AND COALESCE(c.archived, 0) = 0
            JOIN lessons l ON l.id = e.lesson_id AND l.archived_at IS NULL
-          WHERE ac.account_id = ?`,
+          WHERE ac.account_id = ? AND ac.active = 1`,
         accountId,
       ),
       db.getAllAsync<AttemptRow>(

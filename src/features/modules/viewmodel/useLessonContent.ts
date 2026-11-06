@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/viewmodel/useAuth';
 import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
 import { useRepositories } from '@/shared/services/data/DataProvider';
 import type { Example, Lesson, LessonClassExtra } from '@/shared/model/entities';
+import { useActiveGroup } from '@/features/classes/viewmodel/useActiveGroup';
 
 interface UseLessonContentResult {
   lesson: Lesson | null;
@@ -16,6 +17,7 @@ interface UseLessonContentResult {
 export function useLessonContent(lessonId: string | null): UseLessonContentResult {
   const { lessons, examples: exampleRepository, classes } = useRepositories();
   const { account } = useAuth();
+  const groupId = useActiveGroup(BASE_CATALOG_ID);
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [examples, setExamples] = useState<Example[]>([]);
   const [lessonExtras, setLessonExtras] = useState<LessonClassExtra[]>([]);
@@ -37,8 +39,8 @@ export function useLessonContent(lessonId: string | null): UseLessonContentResul
     (async () => {
       try {
         const [loadedLesson, loadedExamples, loadedExtras] = await Promise.all([
-          lessons.selectLesson(lessonId, BASE_CATALOG_ID),
-          exampleRepository.selectExamplesByLesson(lessonId),
+          lessons.selectLesson(lessonId, BASE_CATALOG_ID, groupId),
+          exampleRepository.selectExamplesByLesson(lessonId, groupId),
           account ? classes.selectLessonExtras(account.id, lessonId) : Promise.resolve([]),
         ]);
         if (!active) {
@@ -61,7 +63,7 @@ export function useLessonContent(lessonId: string | null): UseLessonContentResul
     return () => {
       active = false;
     };
-  }, [lessons, exampleRepository, classes, account, lessonId]);
+  }, [lessons, exampleRepository, classes, account, lessonId, groupId]);
 
   return { lesson, examples, lessonExtras, isLoading, error };
 }

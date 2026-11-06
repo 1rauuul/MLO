@@ -85,10 +85,14 @@ function mapLesson(row: LessonRow): Lesson {
 export async function selectUnits(
   db: SQLiteDatabase,
   catalogId = 'base',
+  groupId: string | null = null,
 ): Promise<Unit[]> {
   const rows = await db.getAllAsync<UnitRow>(
-    'SELECT * FROM units WHERE catalog_id = ? AND archived_at IS NULL ORDER BY number',
+    `SELECT * FROM units WHERE catalog_id = ? AND archived_at IS NULL
+       AND (group_id IS NULL${groupId ? ' OR group_id = ?' : ''})
+     ORDER BY number`,
     catalogId,
+    ...(groupId ? [groupId] : []),
   );
   return rows.map(mapUnit);
 }
@@ -106,12 +110,15 @@ function mapTopic(row: TopicRow): Topic {
 export async function selectTopics(
   db: SQLiteDatabase,
   catalogId = 'base',
+  groupId: string | null = null,
 ): Promise<Topic[]> {
   const rows = await db.getAllAsync<TopicRow>(
     `SELECT id, unit_id, title, summary, position FROM topics
      WHERE catalog_id = ? AND archived_at IS NULL
+       AND (group_id IS NULL${groupId ? ' OR group_id = ?' : ''})
      ORDER BY position, id`,
     catalogId,
+    ...(groupId ? [groupId] : []),
   );
   return rows.map(mapTopic);
 }
@@ -120,12 +127,15 @@ export async function selectTopic(
   db: SQLiteDatabase,
   id: string,
   catalogId = 'base',
+  groupId: string | null = null,
 ): Promise<Topic | null> {
   const row = await db.getFirstAsync<TopicRow>(
     `SELECT id, unit_id, title, summary, position FROM topics
-     WHERE id = ? AND catalog_id = ? AND archived_at IS NULL`,
+     WHERE id = ? AND catalog_id = ? AND archived_at IS NULL
+       AND (group_id IS NULL${groupId ? ' OR group_id = ?' : ''})`,
     id,
     catalogId,
+    ...(groupId ? [groupId] : []),
   );
   return row ? mapTopic(row) : null;
 }
@@ -134,15 +144,18 @@ export async function selectLessonsByTopic(
   db: SQLiteDatabase,
   topicId: string,
   catalogId = 'base',
+  groupId: string | null = null,
 ): Promise<Lesson[]> {
   const rows = await db.getAllAsync<LessonRow>(
     `SELECT id, unit_id, topic_id, code, title, eyebrow, body, code_sample, context_title,
             context_body, synthesis, content, position
      FROM lessons
      WHERE topic_id = ? AND catalog_id = ? AND archived_at IS NULL
+       AND (group_id IS NULL${groupId ? ' OR group_id = ?' : ''})
      ORDER BY position, code, id`,
     topicId,
     catalogId,
+    ...(groupId ? [groupId] : []),
   );
   return rows.map(mapLesson);
 }
@@ -151,14 +164,17 @@ export async function selectLessonsByTopic(
 export async function selectLessons(
   db: SQLiteDatabase,
   catalogId = 'base',
+  groupId: string | null = null,
 ): Promise<Lesson[]> {
   const rows = await db.getAllAsync<LessonRow>(
     `SELECT id, unit_id, code, title, eyebrow, body, code_sample, context_title,
             context_body, synthesis, position
      FROM lessons
      WHERE catalog_id = ? AND archived_at IS NULL
+       AND (group_id IS NULL${groupId ? ' OR group_id = ?' : ''})
      ORDER BY unit_id, position`,
     catalogId,
+    ...(groupId ? [groupId] : []),
   );
   return rows.map(mapLesson);
 }
@@ -167,11 +183,14 @@ export async function selectLesson(
   db: SQLiteDatabase,
   id: string,
   catalogId = 'base',
+  groupId: string | null = null,
 ): Promise<Lesson | null> {
   const row = await db.getFirstAsync<LessonRow>(
-    'SELECT * FROM lessons WHERE id = ? AND catalog_id = ? AND archived_at IS NULL',
+    `SELECT * FROM lessons WHERE id = ? AND catalog_id = ? AND archived_at IS NULL
+       AND (group_id IS NULL${groupId ? ' OR group_id = ?' : ''})`,
     id,
     catalogId,
+    ...(groupId ? [groupId] : []),
   );
   return row ? mapLesson(row) : null;
 }

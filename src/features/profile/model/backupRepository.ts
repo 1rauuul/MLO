@@ -107,7 +107,7 @@ export async function selectProgressBackup(db: SQLiteDatabase, accountId: number
               c.teacher_name
          FROM account_classes ac
          LEFT JOIN class_cache c ON c.class_id = ac.class_id
-        WHERE ac.account_id = ?
+        WHERE ac.account_id = ? AND ac.active = 1 AND COALESCE(c.archived, 0) = 0
         ORDER BY class_name COLLATE NOCASE`,
       accountId,
     ),

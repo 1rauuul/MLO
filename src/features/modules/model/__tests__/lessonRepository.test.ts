@@ -55,6 +55,27 @@ describe('lessonRepository', () => {
     );
   });
 
+  it('selectLesson sin grupo solo devuelve contenido del curso', async () => {
+    const { db, calls } = makeDb({ getFirstAsync: jest.fn(async () => lessonRow) });
+
+    await selectLesson(db, 'l1.2');
+
+    const [sql, ...params] = (calls.getFirstAsync.mock.calls as unknown[][])[0] ?? [];
+    expect(String(sql)).toContain('group_id IS NULL');
+    expect(String(sql)).not.toContain('OR group_id = ?');
+    expect(params).toEqual(['l1.2', 'base']);
+  });
+
+  it('selectLesson con grupo activo incluye el contenido de ese grupo', async () => {
+    const { db, calls } = makeDb({ getFirstAsync: jest.fn(async () => lessonRow) });
+
+    await selectLesson(db, 'g-lesson', 'base', 'class-demo');
+
+    const [sql, ...params] = (calls.getFirstAsync.mock.calls as unknown[][])[0] ?? [];
+    expect(String(sql)).toContain('OR group_id = ?');
+    expect(params).toEqual(['g-lesson', 'base', 'class-demo']);
+  });
+
   it('selectLessons parsea synthesis sin cargar content', async () => {
     const { db, calls } = makeDb({
       getAllAsync: jest.fn(async (_sql: string) => {

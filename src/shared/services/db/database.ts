@@ -420,6 +420,70 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     version = 19;
   }
 
+  if (version < 20) {
+    await db.withTransactionAsync(async () => {
+      for (const table of ['units', 'topics', 'lessons', 'examples', 'exercises', 'evaluations']) {
+        if (!(await hasColumn(db, table, 'group_id'))) {
+          await db.execAsync(`ALTER TABLE ${table} ADD COLUMN group_id TEXT`);
+        }
+      }
+      if (!(await hasColumn(db, 'account_classes', 'course_catalog_id'))) {
+        await db.execAsync(
+          `ALTER TABLE account_classes ADD COLUMN course_catalog_id TEXT NOT NULL DEFAULT 'base'`,
+        );
+      }
+      if (!(await hasColumn(db, 'account_classes', 'active'))) {
+        await db.execAsync(
+          `ALTER TABLE account_classes ADD COLUMN active INTEGER NOT NULL DEFAULT 1`,
+        );
+      }
+      if (!(await hasColumn(db, 'class_cache', 'course_catalog_id'))) {
+        await db.execAsync(
+          `ALTER TABLE class_cache ADD COLUMN course_catalog_id TEXT NOT NULL DEFAULT 'base'`,
+        );
+      }
+      if (!(await hasColumn(db, 'class_cache', 'archived'))) {
+        await db.execAsync(
+          `ALTER TABLE class_cache ADD COLUMN archived INTEGER NOT NULL DEFAULT 0`,
+        );
+      }
+      if (!(await hasColumn(db, 'class_cache', 'release_v3'))) {
+        await db.execAsync(`ALTER TABLE class_cache ADD COLUMN release_v3 TEXT`);
+      }
+      if (!(await hasColumn(db, 'class_cache', 'applied_hash'))) {
+        await db.execAsync(`ALTER TABLE class_cache ADD COLUMN applied_hash TEXT`);
+      }
+      // DEC-06: si una cuenta tenía varias clases activas del mismo curso, se
+      // conserva la más reciente y las demás quedan inactivas (sin borrar).
+      await db.runAsync(
+        `UPDATE account_classes SET active = 0
+         WHERE active = 1 AND EXISTS (
+           SELECT 1 FROM account_classes other
+           WHERE other.account_id = account_classes.account_id
+             AND other.course_catalog_id = account_classes.course_catalog_id
+             AND other.active = 1
+             AND (
+               other.joined_at > account_classes.joined_at
+               OR (other.joined_at = account_classes.joined_at
+                   AND other.rowid > account_classes.rowid)
+             )
+         )`,
+      );
+      await db.execAsync(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_account_classes_active_course
+          ON account_classes(account_id, course_catalog_id) WHERE active = 1;
+        CREATE INDEX IF NOT EXISTS idx_units_group ON units(group_id);
+        CREATE INDEX IF NOT EXISTS idx_topics_group ON topics(group_id);
+        CREATE INDEX IF NOT EXISTS idx_lessons_group ON lessons(group_id);
+        CREATE INDEX IF NOT EXISTS idx_examples_group ON examples(group_id);
+        CREATE INDEX IF NOT EXISTS idx_exercises_group ON exercises(group_id);
+        CREATE INDEX IF NOT EXISTS idx_evaluations_group ON evaluations(group_id);
+      `);
+      await db.execAsync('PRAGMA user_version = 20');
+    });
+    version = 20;
+  }
+
   await seedIfEmpty(db);
   await syncBundledAndRemote(db);
   await db.withTransactionAsync(() => backfillLegacyTopics(db));

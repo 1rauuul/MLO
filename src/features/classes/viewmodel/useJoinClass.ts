@@ -77,9 +77,9 @@ export function useJoinClass() {
         account.externalKey,
         account.displayName,
       );
-      await classRepository.saveAccountClass(account.id, code, info);
+      await classRepository.saveAccountClass(account.id, code, info, 'base');
       try {
-        await content.refreshClass(info.class.id, code);
+        await content.refreshClass(info.class.id, code, account.externalKey, 'base');
       } catch {
         // La membresía ya quedó guardada; el contenido se sincroniza después.
       }

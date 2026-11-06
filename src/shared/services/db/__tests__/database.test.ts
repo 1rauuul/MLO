@@ -36,7 +36,7 @@ describe('migrateAndSeed', () => {
     expect(statements.some(statement => statement.sql.includes('CREATE TABLE IF NOT EXISTS class_cache'))).toBe(true);
     expect(statements.some(statement => statement.sql.includes('CREATE TABLE IF NOT EXISTS account_classes'))).toBe(true);
     expect(statements.some(statement => statement.sql.includes('DROP TABLE IF EXISTS account_group'))).toBe(true);
-    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 19')).toBe(true);
+    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 20')).toBe(true);
   });
 
   test('instalación nueva siembra directo en la última versión sin ALTERs duplicados', async () => {
@@ -58,7 +58,7 @@ describe('migrateAndSeed', () => {
     await migrateAndSeed(db);
 
     expect(statements.some(statement => statement.includes('ALTER TABLE lessons ADD COLUMN content'))).toBe(false);
-    expect(statements.some(statement => statement === 'PRAGMA user_version = 19')).toBe(true);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 20')).toBe(true);
     expect(
       statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS remote_courses')),
     ).toBe(true);
@@ -67,7 +67,7 @@ describe('migrateAndSeed', () => {
     ).toBe(true);
     expect(statements.some(statement => statement.startsWith('INSERT INTO units'))).toBe(true);
     expect(statements.findIndex(statement => statement.startsWith('INSERT INTO units'))).toBeLessThan(
-      statements.indexOf('PRAGMA user_version = 19'),
+      statements.indexOf('PRAGMA user_version = 20'),
     );
   });
 
@@ -91,7 +91,7 @@ describe('migrateAndSeed', () => {
 
     expect(statements.some(statement => statement.startsWith('INSERT INTO units'))).toBe(true);
     expect(statements.some(statement => statement.startsWith('INSERT INTO questions'))).toBe(true);
-    expect(statements.some(statement => statement === 'PRAGMA user_version = 19')).toBe(true);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 20')).toBe(true);
   });
 
   test('la instalación nueva siembra sin anidar transacciones', async () => {
@@ -157,7 +157,7 @@ describe('migrateAndSeed', () => {
 
     expect(statements.some(statement => statement.startsWith('DELETE FROM attempts'))).toBe(false);
     expect(statements.some(statement => statement.startsWith('DELETE FROM exercises'))).toBe(true);
-    expect(statements.some(statement => statement === 'PRAGMA user_version = 19')).toBe(true);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 20')).toBe(true);
   });
 
   test('no repite ALTERs salvo las columnas nuevas de attempts', async () => {
@@ -203,8 +203,20 @@ describe('migrateAndSeed', () => {
       expect.stringContaining('ALTER TABLE exercises ADD COLUMN position'),
       expect.stringContaining('ALTER TABLE evaluations ADD COLUMN position'),
       expect.stringContaining('ALTER TABLE remote_courses ADD COLUMN applied_hash'),
+      expect.stringContaining('ALTER TABLE units ADD COLUMN group_id'),
+      expect.stringContaining('ALTER TABLE topics ADD COLUMN group_id'),
+      expect.stringContaining('ALTER TABLE lessons ADD COLUMN group_id'),
+      expect.stringContaining('ALTER TABLE examples ADD COLUMN group_id'),
+      expect.stringContaining('ALTER TABLE exercises ADD COLUMN group_id'),
+      expect.stringContaining('ALTER TABLE evaluations ADD COLUMN group_id'),
+      expect.stringContaining('ALTER TABLE account_classes ADD COLUMN course_catalog_id'),
+      expect.stringContaining('ALTER TABLE account_classes ADD COLUMN active'),
+      expect.stringContaining('ALTER TABLE class_cache ADD COLUMN course_catalog_id'),
+      expect.stringContaining('ALTER TABLE class_cache ADD COLUMN archived'),
+      expect.stringContaining('ALTER TABLE class_cache ADD COLUMN release_v3'),
+      expect.stringContaining('ALTER TABLE class_cache ADD COLUMN applied_hash'),
     ]);
-    expect(statements.some(statement => statement === 'PRAGMA user_version = 19')).toBe(true);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 20')).toBe(true);
   });
 
   test('incluye la versión objetivo dentro de cada paso de migración', async () => {
@@ -237,6 +249,7 @@ describe('migrateAndSeed', () => {
       'PRAGMA user_version = 17',
       'PRAGMA user_version = 18',
       'PRAGMA user_version = 19',
+      'PRAGMA user_version = 20',
     ]);
   });
 
@@ -297,7 +310,7 @@ describe('migrateAndSeed', () => {
           ? { units: 5, lessons: 24 }
           : sql.includes('FROM meta')
             ? { value: CONTENT_HASH }
-            : { user_version: 19 },
+            : { user_version: 20 },
       getAllAsync: async () => [],
       runAsync: async () => ({ changes: 1, lastInsertRowId: 0 }),
       withTransactionAsync: async (task: () => Promise<void>) => task(),
@@ -337,7 +350,7 @@ describe('migrateAndSeed', () => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
     );
     expect(backfill?.params[1]).toBe(7);
-    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 19')).toBe(true);
+    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 20')).toBe(true);
   });
 
   test('v18 crea cursos remotos, siembra el base y conserva el progreso', async () => {
@@ -380,7 +393,7 @@ describe('migrateAndSeed', () => {
       statement.sql.startsWith('INSERT INTO account_courses'),
     );
     expect(access?.sql).toContain('FROM accounts');
-    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 19')).toBe(true);
+    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 20')).toBe(true);
 
     expect(statements.some(statement => statement.sql.startsWith('DELETE FROM attempts'))).toBe(false);
     expect(statements.some(statement => statement.sql.startsWith('DELETE FROM module_progress'))).toBe(false);
@@ -441,8 +454,59 @@ describe('migrateAndSeed', () => {
         statement.sql.startsWith("UPDATE lessons SET topic_id = 't-' || id"),
       ),
     ).toBe(true);
-    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 19')).toBe(true);
+    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 20')).toBe(true);
 
+    expect(statements.some(statement => statement.sql.startsWith('DELETE FROM attempts'))).toBe(false);
+    expect(statements.some(statement => statement.sql.startsWith('DELETE FROM module_progress'))).toBe(false);
+    expect(statements.some(statement => statement.sql.startsWith('DELETE FROM evaluation_results'))).toBe(false);
+    expect(statements.some(statement => statement.sql.startsWith('DELETE FROM lessons'))).toBe(false);
+  });
+
+  test('v20 añade grupo, archivo y membresía activa sin borrar progreso', async () => {
+    const statements: { sql: string; params: unknown[] }[] = [];
+    const db = {
+      execAsync: async (sql: string) => {
+        statements.push({ sql, params: [] });
+      },
+      getFirstAsync: async (sql: string) =>
+        sql.includes('COUNT(*)') ? { units: 5, lessons: 25 } : { user_version: 19 },
+      getAllAsync: async () => [],
+      runAsync: async (sql: string, ...params: unknown[]) => {
+        statements.push({ sql, params });
+        return { changes: 1, lastInsertRowId: 0 };
+      },
+      withTransactionAsync: async (task: () => Promise<void>) => task(),
+    } as unknown as SQLiteDatabase;
+
+    await migrateAndSeed(db);
+
+    for (const sql of [
+      'ALTER TABLE units ADD COLUMN group_id TEXT',
+      'ALTER TABLE topics ADD COLUMN group_id TEXT',
+      'ALTER TABLE lessons ADD COLUMN group_id TEXT',
+      'ALTER TABLE examples ADD COLUMN group_id TEXT',
+      'ALTER TABLE exercises ADD COLUMN group_id TEXT',
+      'ALTER TABLE evaluations ADD COLUMN group_id TEXT',
+      "ALTER TABLE account_classes ADD COLUMN course_catalog_id TEXT NOT NULL DEFAULT 'base'",
+      'ALTER TABLE account_classes ADD COLUMN active INTEGER NOT NULL DEFAULT 1',
+      "ALTER TABLE class_cache ADD COLUMN course_catalog_id TEXT NOT NULL DEFAULT 'base'",
+      'ALTER TABLE class_cache ADD COLUMN archived INTEGER NOT NULL DEFAULT 0',
+      'ALTER TABLE class_cache ADD COLUMN release_v3 TEXT',
+      'ALTER TABLE class_cache ADD COLUMN applied_hash TEXT',
+    ]) {
+      expect(statements.some(statement => statement.sql === sql)).toBe(true);
+    }
+    expect(
+      statements.some(statement =>
+        statement.sql.includes('CREATE UNIQUE INDEX IF NOT EXISTS idx_account_classes_active_course'),
+      ),
+    ).toBe(true);
+    expect(
+      statements.some(statement =>
+        statement.sql.startsWith('UPDATE account_classes SET active = 0'),
+      ),
+    ).toBe(true);
+    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 20')).toBe(true);
     expect(statements.some(statement => statement.sql.startsWith('DELETE FROM attempts'))).toBe(false);
     expect(statements.some(statement => statement.sql.startsWith('DELETE FROM module_progress'))).toBe(false);
     expect(statements.some(statement => statement.sql.startsWith('DELETE FROM evaluation_results'))).toBe(false);
@@ -597,7 +661,7 @@ describe('migrateAndSeed', () => {
           statement.params[0] === 'ev1.2-bank-q1',
       ),
     ).toBe(true);
-    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 19')).toBe(true);
+    expect(statements.some(statement => statement.sql === 'PRAGMA user_version = 20')).toBe(true);
   });
 
   test('el contenido usa upsert en vez de ignorar conflictos', async () => {
@@ -663,7 +727,7 @@ describe('migrateAndSeed', () => {
     } as unknown as SQLiteDatabase;
 
     await expect(migrateAndSeed(db)).rejects.toThrow('migration failed');
-    expect(statements.some(statement => statement === 'PRAGMA user_version = 19')).toBe(false);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 20')).toBe(false);
   });
 
   test('ejecutar el seed dos veces produce los mismos conteos', async () => {

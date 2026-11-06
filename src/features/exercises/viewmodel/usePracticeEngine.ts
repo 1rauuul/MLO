@@ -10,6 +10,7 @@ import { drawGroups } from '@/features/exercises/viewmodel/draw.logic';
 import { shuffleItems } from '@/features/exercises/viewmodel/exercise.logic';
 import { ensureLessonDraw } from '@/features/exercises/viewmodel/lessonDraw';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
+import { useActiveGroup } from '@/features/classes/viewmodel/useActiveGroup';
 import { useRepositories } from '@/shared/services/data/DataProvider';
 
 export const PRACTICE_DRAW_COUNT = 10;
@@ -84,6 +85,7 @@ function summarizeSession(order: Exercise[], results: Record<string, ExerciseSco
 export function usePracticeEngine(lessonId: string | null): PracticeEngine {
   const { exercises: exerciseRepository, attempts, exampleState } = useRepositories();
   const { account } = useAuth();
+  const groupId = useActiveGroup();
   const [items, setItems] = useState<Exercise[]>([]);
   const [order, setOrder] = useState<Exercise[]>([]);
   const [phase, setPhase] = useState<PracticePhase>('running');
@@ -107,8 +109,8 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
       try {
         const loaded = (
           account
-            ? await exerciseRepository.selectPracticeExercisesByLesson(account.id, lessonId)
-            : await exerciseRepository.selectExercisesByLesson(lessonId)
+            ? await exerciseRepository.selectPracticeExercisesByLesson(account.id, lessonId, groupId)
+            : await exerciseRepository.selectExercisesByLesson(lessonId, groupId)
         ).filter(exercise => EXERCISE_TYPES.includes(exercise.type));
         let drawnIds: string[];
         if (account) {
@@ -116,6 +118,8 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
             { exercises: exerciseRepository, exampleState },
             account.id,
             lessonId,
+            undefined,
+            groupId,
           );
           drawnIds = shuffleItems(state.drawExerciseIds, Math.random);
         } else {
@@ -156,7 +160,7 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
     return () => {
       active = false;
     };
-  }, [exerciseRepository, exampleState, lessonId, account]);
+  }, [exerciseRepository, exampleState, lessonId, account, groupId]);
 
   const summary = useMemo(() => summarizeSession(order, results), [order, results]);
 

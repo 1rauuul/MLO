@@ -42,7 +42,7 @@ export function ContentSyncProvider({ children }: { children: ReactNode }) {
       .catch(caught => warn(caught))
       .then(() => refreshCourseList(db, httpV3))
       .catch(caught => warn(caught))
-      .then(() => refreshClassContent(db, http))
+      .then(() => refreshClassContent(db, httpV3))
       .catch(caught => warn(caught));
   }, [db]);
 

@@ -40,7 +40,7 @@ export function useLessonHub(
     exercises: exerciseRepository,
     evaluations,
   } = useRepositories();
-  const { units, completionMap, refresh } = useCatalog(catalogId);
+  const { units, completionMap, activeGroupId, refresh } = useCatalog(catalogId);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [lessonsByTopic, setLessonsByTopic] = useState<Lesson[]>([]);
   const [examples, setExamples] = useState<Example[]>([]);
@@ -64,12 +64,12 @@ export function useLessonHub(
     setError(null);
     (async () => {
       try {
-        let loadedTopic = await lessons.selectTopic(topicId, catalogId);
+        let loadedTopic = await lessons.selectTopic(topicId, catalogId, activeGroupId);
         if (!loadedTopic) {
-          const legacyLesson = await lessons.selectLesson(topicId, catalogId);
+          const legacyLesson = await lessons.selectLesson(topicId, catalogId, activeGroupId);
           const resolvedId = legacyLesson?.topicId ?? (legacyLesson ? `t-${legacyLesson.id}` : null);
           if (resolvedId) {
-            loadedTopic = await lessons.selectTopic(resolvedId, catalogId);
+            loadedTopic = await lessons.selectTopic(resolvedId, catalogId, activeGroupId);
           }
         }
         if (!loadedTopic) {
@@ -84,10 +84,10 @@ export function useLessonHub(
         }
         const [loadedLessons, loadedExamples, loadedExercises, loadedEvaluations] =
           await Promise.all([
-            lessons.selectLessonsByTopic(loadedTopic.id, catalogId),
-            exampleRepository.selectExamplesByTopic(loadedTopic.id, catalogId),
-            exerciseRepository.selectExercisesByTopic(loadedTopic.id, catalogId),
-            evaluations.selectEvaluationsByTopic(loadedTopic.id, catalogId),
+            lessons.selectLessonsByTopic(loadedTopic.id, catalogId, activeGroupId),
+            exampleRepository.selectExamplesByTopic(loadedTopic.id, catalogId, activeGroupId),
+            exerciseRepository.selectExercisesByTopic(loadedTopic.id, catalogId, activeGroupId),
+            evaluations.selectEvaluationsByTopic(loadedTopic.id, catalogId, activeGroupId),
           ]);
         if (!active) {
           return;
@@ -117,6 +117,7 @@ export function useLessonHub(
     evaluations,
     topicId,
     catalogId,
+    activeGroupId,
   ]);
 
   const unit = units.find(item => item.id === topic?.unitId) ?? null;

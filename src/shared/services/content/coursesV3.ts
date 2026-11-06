@@ -3,6 +3,8 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import { ParseError, type HttpClient } from '@/shared/services/http/client';
 import { isRecord, isString } from '@/shared/utils/validate';
 
+import type { ContentBlock } from '@/shared/model/entities';
+
 import {
   assertV3Envelope,
   ContractV3Error,
@@ -44,6 +46,22 @@ export interface CourseManifest extends V3Envelope {
   questions: unknown[];
   exercises: unknown[];
   examples: unknown[];
+}
+
+export interface GroupManifest extends V3Envelope {
+  kind: 'group';
+  catalogId: string;
+  groupId: string;
+  courseRef: { version: number; hash: string };
+  group: { name: string; visibility: 'published' | 'unpublished' };
+  units: unknown[];
+  topics: unknown[];
+  lessons: unknown[];
+  evaluations: unknown[];
+  questions: unknown[];
+  exercises: unknown[];
+  examples: unknown[];
+  additions: { lessonId: string; blocks: ContentBlock[] }[];
 }
 
 export interface AccountCourses {
@@ -208,8 +226,87 @@ export function parseCourseManifest(value: unknown, catalogId: string): CourseMa
   };
 }
 
-export function fetchCourseList(client: HttpClient, studentKey: string): Promise<CourseList> {
-  return client
+export function parseGroupRelease(value: unknown, catalogId: string): GroupManifest {
+  let envelope: V3Envelope;
+  try {
+    envelope = assertV3Envelope(value);
+  } catch (error) {
+    if (error instanceof ContractV3Error) {
+      throw new ParseError(error.message);
+    }
+    throw error;
+  }
+  if (envelope.kind !== 'group') {
+    fail('kind distinto de group');
+  }
+  if (envelope.catalogId !== catalogId) {
+    fail(`catalogId no coincide con ${catalogId}`);
+  }
+  const record = value as Record<string, unknown>;
+  const groupId = nonEmpty(record.groupId, 'groupId');
+  if (
+    !isRecord(record.courseRef) ||
+    typeof record.courseRef.version !== 'number' ||
+    !Number.isInteger(record.courseRef.version) ||
+    record.courseRef.version < 1 ||
+    !isString(record.courseRef.hash) ||
+    record.courseRef.hash.trim().length === 0
+  ) {
+    fail('courseRef inválido');
+  }
+  if (
+    !isRecord(record.group) ||
+    !isString(record.group.name) ||
+    record.group.name.trim().length === 0 ||
+    (record.group.visibility !== 'published' && record.group.visibility !== 'unpublished')
+  ) {
+    fail('group inválido');
+  }
+  for (const key of [
+    'units',
+    'topics',
+    'lessons',
+    'evaluations',
+    'questions',
+    'exercises',
+    'examples',
+    'additions',
+  ]) {
+    if (!Array.isArray(record[key])) {
+      fail(`${key} no es un arreglo`);
+    }
+  }
+  const additions = (record.additions as unknown[]).map(item => {
+    if (!isRecord(item) || !isString(item.lessonId) || !Array.isArray(item.blocks)) {
+      fail('addition inválida');
+    }
+    return { lessonId: item.lessonId, blocks: item.blocks as ContentBlock[] };
+  });
+  return {
+    ...envelope,
+    kind: 'group',
+    catalogId,
+    groupId,
+    courseRef: {
+      version: record.courseRef.version,
+      hash: record.courseRef.hash,
+    },
+    group: {
+      name: record.group.name,
+      visibility: record.group.visibility,
+    },
+    units: record.units as unknown[],
+    topics: record.topics as unknown[],
+    lessons: record.lessons as unknown[],
+    evaluations: record.evaluations as unknown[],
+    questions: record.questions as unknown[],
+    exercises: record.exercises as unknown[],
+    examples: record.examples as unknown[],
+    additions,
+  };
+}
+
+export function fetchCourseList(client: HttpClient, studentKey: string): Promise<CourseList> {  return client
     .get<unknown>('/courses', { headers: { [STUDENT_KEY_HEADER]: studentKey } })
     .then(parseCourseList);
 }
@@ -224,6 +321,19 @@ export function fetchCourseManifest(
       headers: { [STUDENT_KEY_HEADER]: studentKey },
     })
     .then(value => parseCourseManifest(value, catalogId));
+}
+
+export function fetchGroupRelease(
+  client: HttpClient,
+  code: string,
+  studentKey: string,
+  catalogId: string,
+): Promise<GroupManifest> {
+  return client
+    .get<unknown>(`/classes/${encodeURIComponent(code)}/release`, {
+      headers: { [STUDENT_KEY_HEADER]: studentKey },
+    })
+    .then(value => parseGroupRelease(value, catalogId));
 }
 
 function mapCourse(row: CourseRow): RemoteCourse {

@@ -11,6 +11,9 @@ let mockAccountState: { id: number } | null = { id: 7 };
 
 jest.mock('expo-sqlite', () => ({ useSQLiteContext: () => mockDb }));
 jest.mock('@/features/auth/viewmodel/useAuth', () => ({ useAuth: () => ({ account: mockAccountState }) }));
+jest.mock('@/features/classes/viewmodel/useActiveGroup', () => ({
+  useActiveGroup: () => null,
+}));
 jest.mock('@/features/exercises/model/attemptRepository');
 jest.mock('@/features/exercises/model/exerciseRepository');
 jest.mock('@/features/exercises/model/exampleStateRepository', () => ({

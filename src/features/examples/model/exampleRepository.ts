@@ -68,10 +68,17 @@ function mapExample(row: ExampleRow): Example {
   };
 }
 
-export async function selectExamplesByLesson(db: SQLiteDatabase, lessonId: string): Promise<Example[]> {
+export async function selectExamplesByLesson(
+  db: SQLiteDatabase,
+  lessonId: string,
+  groupId: string | null = null,
+): Promise<Example[]> {
   const rows = await db.getAllAsync<ExampleRow>(
-    'SELECT * FROM examples WHERE lesson_id = ? ORDER BY position, rowid',
+    `SELECT * FROM examples WHERE lesson_id = ?
+       AND (group_id IS NULL${groupId ? ' OR group_id = ?' : ''})
+     ORDER BY position, rowid`,
     lessonId,
+    ...(groupId ? [groupId] : []),
   );
   return rows.map(mapExample);
 }
@@ -80,14 +87,17 @@ export async function selectExamplesByTopic(
   db: SQLiteDatabase,
   topicId: string,
   catalogId = 'base',
+  groupId: string | null = null,
 ): Promise<Example[]> {
   const rows = await db.getAllAsync<ExampleRow>(
     `SELECT e.* FROM examples e
      JOIN lessons l ON l.id = e.lesson_id
      WHERE e.topic_id = ? AND l.catalog_id = ? AND l.archived_at IS NULL
+       AND (e.group_id IS NULL${groupId ? ' OR e.group_id = ?' : ''})
      ORDER BY e.position, e.rowid`,
     topicId,
     catalogId,
+    ...(groupId ? [groupId] : []),
   );
   return rows.map(mapExample);
 }
@@ -97,9 +107,10 @@ export async function selectExamplesWithExtras(
   db: SQLiteDatabase,
   accountId: number,
   lessonId: string,
+  groupId: string | null = null,
 ): Promise<Example[]> {
   const [core, extras] = await Promise.all([
-    selectExamplesByLesson(db, lessonId),
+    selectExamplesByLesson(db, lessonId, groupId),
     selectExtrasByLesson(db, accountId, lessonId),
   ]);
   return [

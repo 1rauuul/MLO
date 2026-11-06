@@ -38,6 +38,7 @@ export function useEvaluationForLesson(
   lessonId: string | null,
   evaluationId: string | null = null,
   catalogId: string = BASE_CATALOG_ID,
+  groupId: string | null = null,
 ): UseEvaluationForLessonResult {
   const { evaluations, exercises: exerciseRepository } = useRepositories();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
@@ -56,9 +57,9 @@ export function useEvaluationForLesson(
     (async () => {
       try {
         const loadedEvaluation = evaluationId
-          ? await evaluations.selectEvaluationById(evaluationId, catalogId)
+          ? await evaluations.selectEvaluationById(evaluationId, catalogId, groupId)
           : lessonId
-            ? await evaluations.selectEvaluationByLesson(lessonId)
+            ? await evaluations.selectEvaluationByLesson(lessonId, groupId)
             : null;
         if (!loadedEvaluation) {
           if (active) {
@@ -73,7 +74,7 @@ export function useEvaluationForLesson(
           !evaluationId &&
           (loadedEvaluation.exerciseCount ?? 0) > 0 &&
           lessonId
-            ? exerciseRepository.selectExercisesByLesson(lessonId)
+            ? exerciseRepository.selectExercisesByLesson(lessonId, groupId)
             : Promise.resolve([] as Exercise[]),
         ]);
         const hasSelection = selected.length > 0;
@@ -114,7 +115,7 @@ export function useEvaluationForLesson(
     return () => {
       active = false;
     };
-  }, [evaluations, exerciseRepository, lessonId, evaluationId, catalogId]);
+  }, [evaluations, exerciseRepository, lessonId, evaluationId, catalogId, groupId]);
 
   return { evaluation, questions, isLoading };
 }

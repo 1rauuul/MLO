@@ -61,6 +61,9 @@ jest.mock('@/shared/hooks/useReducedMotion', () => ({ useReducedMotion: () => tr
 jest.mock('@/features/modules/viewmodel/useLessonContent', () => ({
   useLessonContent: () => ({ lesson: { id: 'lesson-2', code: '2.1', title: 'Tema 2' } }),
 }));
+jest.mock('@/features/classes/viewmodel/useActiveGroup', () => ({
+  useActiveGroup: () => null,
+}));
 jest.mock('@/features/exercises/viewmodel/usePracticeEngine', () => ({
   usePracticeEngine: () => ({ phase: 'summary', summary: lessonSummary }),
 }));

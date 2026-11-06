@@ -35,6 +35,9 @@ jest.mock('@/features/examples/model/exampleRepository', () => ({
 }));
 
 jest.mock('@/features/auth/viewmodel/useAuth', () => ({ useAuth: () => ({ account: mockAccount }) }));
+jest.mock('@/features/classes/viewmodel/useActiveGroup', () => ({
+  useActiveGroup: () => null,
+}));
 
 jest.mock('@/features/exercises/model/exampleStateRepository', () => ({
   selectExampleState: jest.fn(async () => ({
@@ -135,7 +138,7 @@ describe('useExamplesEngine', () => {
     expect(result.current.items.map(item => item.id)).toEqual(expected);
     expect(result.current.total).toBe(expected.length);
     expect(result.current.current?.id).toBe(expected[0]);
-    expect(mockSelect).toHaveBeenCalledWith({}, 'lesson-1');
+    expect(mockSelect).toHaveBeenCalledWith({}, 'lesson-1', null);
   });
 
   it('filtra a los tipos del banco de práctica', async () => {

@@ -42,6 +42,16 @@ describe('exerciseRepository', () => {
     expect(String((calls.getAllAsync.mock.calls as unknown[][])[0]?.[0])).toContain('ORDER BY position, rowid');
   });
 
+  it('selectExercisesByLesson filtra por grupo activo', async () => {
+    const { db, calls } = makeDb({ getAllAsync: jest.fn(async () => [exerciseRow]) });
+
+    await selectExercisesByLesson(db, 'l1.2', 'class-demo');
+
+    const [sql, ...params] = (calls.getAllAsync.mock.calls as unknown[][])[0] ?? [];
+    expect(String(sql)).toContain('OR group_id = ?');
+    expect(params).toEqual(['l1.2', 'class-demo']);
+  });
+
   it('selectExercisesByTopic ordena por posición editorial', async () => {
     const { db, calls } = makeDb({ getAllAsync: jest.fn(async () => [exerciseRow]) });
 

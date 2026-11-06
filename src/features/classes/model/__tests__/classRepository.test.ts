@@ -3,7 +3,11 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import {
   extraToExample,
   extraToExercise,
+  removeAccountClass,
+  saveAccountClass,
   selectAccountClasses,
+  selectActiveGroup,
+  selectClassMemberships,
   selectExtrasByLesson,
   selectLessonExtras,
   storeClassRelease,
@@ -63,6 +67,78 @@ function makeDb(overrides: Record<string, unknown> = {}) {
 }
 
 describe('classRepository', () => {
+  it('lista solo membresías activas y grupos no archivados', async () => {
+    const { db, statements } = makeDb();
+
+    await selectAccountClasses(db, 7);
+
+    expect(statements).toHaveLength(0);
+    const sql = String(
+      (db as unknown as { getAllAsync: jest.Mock }).getAllAsync.mock.calls[0]?.[0] ?? '',
+    );
+    expect(sql).toContain('ac.active = 1');
+    expect(sql).toContain('COALESCE(c.archived, 0) = 0');
+  });
+
+  it('guarda una sola membresía activa por curso y desactiva la anterior', async () => {
+    const { db, statements } = makeDb();
+
+    await saveAccountClass(
+      db,
+      7,
+      'ABC123',
+      {
+        schemaVersion: 2,
+        class: { id: 'c2', name: 'Grupo B', teacherName: 'Docente' },
+        published: null,
+      },
+      'base',
+    );
+
+    const deactivate = statements.find(statement =>
+      statement.sql.startsWith('UPDATE account_classes SET active = 0'),
+    );
+    expect(deactivate?.params).toEqual([7, 'base', 'c2']);
+    const membership = statements.find(statement =>
+      statement.sql.startsWith('INSERT INTO account_classes'),
+    );
+    expect(membership?.sql).toContain('active');
+    expect(membership?.params[3]).toBe('base');
+  });
+
+  it('salir marca inactiva la membresía sin borrarla', async () => {
+    const { db, statements } = makeDb();
+
+    await removeAccountClass(db, 7, 'c1');
+
+    expect(statements).toEqual([
+      {
+        sql: 'UPDATE account_classes SET active = 0 WHERE account_id = ? AND class_id = ?',
+        params: [7, 'c1'],
+      },
+    ]);
+  });
+
+  it('devuelve el grupo activo del curso y descarta archivados', async () => {
+    const getAllAsync = jest.fn(async () => []);
+    const getFirstAsync = jest.fn(async () => ({ class_id: 'c1' }));
+    const { db } = makeDb({ getAllAsync, getFirstAsync });
+
+    await expect(selectActiveGroup(db, 7, 'base')).resolves.toBe('c1');
+    expect(String((getFirstAsync.mock.calls as unknown[][])[0]?.[0])).toContain(
+      'COALESCE(c.archived, 0) = 0',
+    );
+  });
+
+  it('selectClassMemberships incluye identidad y curso de cada membresía activa', async () => {
+    const getAllAsync = jest.fn(async () => []);
+    const { db } = makeDb({ getAllAsync });
+
+    await selectClassMemberships(db);
+
+    expect(String((getAllAsync.mock.calls as unknown[][])[0]?.[0])).toContain('ac.active = 1');
+  });
+
   it('lista las clases de la cuenta con su metadata', async () => {
     const { db } = makeDb({
       getAllAsync: jest.fn(async () => [

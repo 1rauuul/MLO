@@ -1,4 +1,4 @@
-export const DATABASE_VERSION = 19;
+export const DATABASE_VERSION = 20;
 
 export const SCHEMA_DDL = `
 CREATE TABLE IF NOT EXISTS accounts (
@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS units (
   difficulty TEXT NOT NULL,
   color TEXT NOT NULL,
   catalog_id TEXT NOT NULL DEFAULT 'base',
+  group_id TEXT,
   archived_at TEXT
 );
 
@@ -34,6 +35,7 @@ CREATE TABLE IF NOT EXISTS topics (
   summary TEXT NOT NULL DEFAULT '',
   position INTEGER NOT NULL DEFAULT 0,
   catalog_id TEXT NOT NULL DEFAULT 'base',
+  group_id TEXT,
   archived_at TEXT
 );
 
@@ -52,6 +54,7 @@ CREATE TABLE IF NOT EXISTS lessons (
   content TEXT NOT NULL DEFAULT '[]',
   position INTEGER NOT NULL DEFAULT 0,
   catalog_id TEXT NOT NULL DEFAULT 'base',
+  group_id TEXT,
   archived_at TEXT
 );
 
@@ -65,6 +68,10 @@ CREATE TABLE IF NOT EXISTS class_cache (
   version INTEGER NOT NULL DEFAULT 0,
   hash TEXT NOT NULL DEFAULT '',
   published_at TEXT,
+  course_catalog_id TEXT NOT NULL DEFAULT 'base',
+  archived INTEGER NOT NULL DEFAULT 0,
+  release_v3 TEXT,
+  applied_hash TEXT,
   fetched_at TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_class_cache_code ON class_cache(class_code);
@@ -85,11 +92,15 @@ CREATE TABLE IF NOT EXISTS account_classes (
   account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
   class_id TEXT NOT NULL REFERENCES class_cache(class_id) ON DELETE CASCADE,
   class_code TEXT NOT NULL,
+  course_catalog_id TEXT NOT NULL DEFAULT 'base',
+  active INTEGER NOT NULL DEFAULT 1,
   joined_at TEXT NOT NULL,
   PRIMARY KEY (account_id, class_id)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_account_classes_code
   ON account_classes(account_id, class_code);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_account_classes_active_course
+  ON account_classes(account_id, course_catalog_id) WHERE active = 1;
 
 CREATE TABLE IF NOT EXISTS examples (
   id TEXT PRIMARY KEY NOT NULL,
@@ -102,7 +113,8 @@ CREATE TABLE IF NOT EXISTS examples (
   steps TEXT NOT NULL DEFAULT '[]',
   hints TEXT NOT NULL DEFAULT '[]',
   explanation TEXT NOT NULL DEFAULT '',
-  position INTEGER NOT NULL DEFAULT 0
+  position INTEGER NOT NULL DEFAULT 0,
+  group_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS exercises (
@@ -115,7 +127,8 @@ CREATE TABLE IF NOT EXISTS exercises (
   correct_order TEXT NOT NULL DEFAULT '[]',
   config TEXT NOT NULL DEFAULT '{}',
   explanation TEXT NOT NULL DEFAULT '',
-  position INTEGER NOT NULL DEFAULT 0
+  position INTEGER NOT NULL DEFAULT 0,
+  group_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS evaluations (
@@ -127,7 +140,8 @@ CREATE TABLE IF NOT EXISTS evaluations (
   question_count INTEGER NOT NULL DEFAULT 10,
   exercise_count INTEGER NOT NULL DEFAULT 5,
   archived_at TEXT,
-  position INTEGER NOT NULL DEFAULT 0
+  position INTEGER NOT NULL DEFAULT 0,
+  group_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS questions (
@@ -274,6 +288,12 @@ CREATE INDEX IF NOT EXISTS idx_examples_topic ON examples(topic_id);
 CREATE INDEX IF NOT EXISTS idx_exercises_topic ON exercises(topic_id);
 CREATE INDEX IF NOT EXISTS idx_evaluations_topic ON evaluations(topic_id);
 CREATE INDEX IF NOT EXISTS idx_evaluation_exercises_exercise ON evaluation_exercises(exercise_id);
+CREATE INDEX IF NOT EXISTS idx_units_group ON units(group_id);
+CREATE INDEX IF NOT EXISTS idx_topics_group ON topics(group_id);
+CREATE INDEX IF NOT EXISTS idx_lessons_group ON lessons(group_id);
+CREATE INDEX IF NOT EXISTS idx_examples_group ON examples(group_id);
+CREATE INDEX IF NOT EXISTS idx_exercises_group ON exercises(group_id);
+CREATE INDEX IF NOT EXISTS idx_evaluations_group ON evaluations(group_id);
 CREATE INDEX IF NOT EXISTS idx_remote_lessons_catalog ON remote_lessons(catalog_id);
 `;
 

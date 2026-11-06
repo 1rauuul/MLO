@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
+import { useActiveGroup } from '@/features/classes/viewmodel/useActiveGroup';
 import { syntheticExamples } from '@/features/examples/viewmodel/example.logic';
 import { ensureLessonDraw, splitDraw } from '@/features/exercises/viewmodel/lessonDraw';
 import type { Example, Exercise } from '@/shared/model/entities';
@@ -25,6 +26,7 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
   const { exercises: exerciseRepository, examples: exampleRepository, exampleState } =
     useRepositories();
   const { account } = useAuth();
+  const groupId = useActiveGroup();
   const [items, setItems] = useState<Exercise[]>([]);
   const [pool, setPool] = useState<Exercise[]>([]);
   const [examples, setExamples] = useState<Example[]>([]);
@@ -49,11 +51,11 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
       try {
         const [loadedExercises, loadedExamples] = await Promise.all([
           account
-            ? exerciseRepository.selectPracticeExercisesByLesson(account.id, lessonId)
-            : exerciseRepository.selectExercisesByLesson(lessonId),
+            ? exerciseRepository.selectPracticeExercisesByLesson(account.id, lessonId, groupId)
+            : exerciseRepository.selectExercisesByLesson(lessonId, groupId),
           account
-            ? exampleRepository.selectExamplesWithExtras(account.id, lessonId)
-            : exampleRepository.selectExamplesByLesson(lessonId),
+            ? exampleRepository.selectExamplesWithExtras(account.id, lessonId, groupId)
+            : exampleRepository.selectExamplesByLesson(lessonId, groupId),
         ]);
         const loaded = loadedExercises.filter(exercise => EXERCISE_TYPES.includes(exercise.type));
         const byId = new Map(loaded.map(exercise => [exercise.id, exercise]));
@@ -67,6 +69,8 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
             { exercises: exerciseRepository, exampleState },
             account.id,
             lessonId,
+            undefined,
+            groupId,
           );
           chosenIds = state.drawExampleIds.filter(id => byId.has(id));
           exerciseIds = state.drawExerciseIds;
@@ -110,7 +114,7 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
     return () => {
       active = false;
     };
-  }, [exerciseRepository, exampleRepository, exampleState, lessonId, account]);
+  }, [exerciseRepository, exampleRepository, exampleState, lessonId, account, groupId]);
 
   const persist = useCallback(
     (nextIndex: number, seen: string[], exampleIds: string[], exerciseIds: string[]) => {

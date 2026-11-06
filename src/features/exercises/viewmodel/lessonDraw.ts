@@ -34,9 +34,10 @@ export async function ensureLessonDraw(
   accountId: number,
   lessonId: string,
   count: number = LESSON_DRAW_COUNT,
+  groupId: string | null = null,
 ): Promise<ExampleState> {
   const [loaded, state] = await Promise.all([
-    repositories.exercises.selectPracticeExercisesByLesson(accountId, lessonId),
+    repositories.exercises.selectPracticeExercisesByLesson(accountId, lessonId, groupId),
     repositories.exampleState.selectExampleState(accountId, lessonId),
   ]);
   const ids = loaded.map(exercise => exercise.id);

@@ -21,6 +21,7 @@ import {
   useRecordEvaluationResult,
 } from '@/features/evaluations/viewmodel/useQuizEngine';
 import { useLessonContent } from '@/features/modules/viewmodel/useLessonContent';
+import { useActiveGroup } from '@/features/classes/viewmodel/useActiveGroup';
 import { useSession } from '@/features/auth/viewmodel/useSession';
 import { useExitGuard } from '@/shared/hooks/useExitGuard';
 
@@ -69,10 +70,13 @@ export default function EvaluationFlow() {
     evaluationId: evaluationParam,
     catalog: catalogParam,
   } = useLocalSearchParams<{ lesson?: string; evaluationId?: string; catalog?: string }>();
+  const catalogId = catalogParam ?? 'base';
+  const groupId = useActiveGroup(catalogId);
   const { evaluation, questions, isLoading } = useEvaluationForLesson(
     lessonParam ?? null,
     evaluationParam ?? null,
-    catalogParam ?? 'base',
+    catalogId,
+    groupId,
   );
   const { lesson } = useLessonContent(lessonParam ?? null);
   const engine = useEvaluationEngine(questions, lessonParam ?? null);

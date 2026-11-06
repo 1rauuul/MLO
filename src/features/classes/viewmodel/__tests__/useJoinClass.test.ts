@@ -72,8 +72,13 @@ describe('useJoinClass', () => {
       '11111111-1111-4111-8111-111111111111',
       'Ana Alumna',
     );
-    expect(mockSaveAccountClass).toHaveBeenCalledWith(1, 'ABC123', preview);
-    expect(mockRefreshClass).toHaveBeenCalledWith('c1', 'ABC123');
+    expect(mockSaveAccountClass).toHaveBeenCalledWith(1, 'ABC123', preview, 'base');
+    expect(mockRefreshClass).toHaveBeenCalledWith(
+      'c1',
+      'ABC123',
+      '11111111-1111-4111-8111-111111111111',
+      'base',
+    );
     expect(mockRefreshClasses).toHaveBeenCalled();
   });
 

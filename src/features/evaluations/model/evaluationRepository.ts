@@ -88,10 +88,14 @@ function mapQuestion(row: QuestionRow): Question {
 export async function selectEvaluationByLesson(
   db: SQLiteDatabase,
   lessonId: string,
+  groupId: string | null = null,
 ): Promise<Evaluation | null> {
   const row = await db.getFirstAsync<EvaluationRow>(
-    'SELECT * FROM evaluations WHERE lesson_id = ? AND archived_at IS NULL ORDER BY position, rowid LIMIT 1',
+    `SELECT * FROM evaluations WHERE lesson_id = ? AND archived_at IS NULL
+       AND (group_id IS NULL${groupId ? ' OR group_id = ?' : ''})
+     ORDER BY position, rowid LIMIT 1`,
     lessonId,
+    ...(groupId ? [groupId] : []),
   );
   return row ? mapEvaluation(row) : null;
 }
@@ -100,13 +104,16 @@ export async function selectEvaluationById(
   db: SQLiteDatabase,
   evaluationId: string,
   catalogId = 'base',
+  groupId: string | null = null,
 ): Promise<Evaluation | null> {
   const row = await db.getFirstAsync<EvaluationRow>(
     `SELECT e.* FROM evaluations e
      JOIN lessons l ON l.id = e.lesson_id
-     WHERE e.id = ? AND l.catalog_id = ? AND e.archived_at IS NULL AND l.archived_at IS NULL`,
+     WHERE e.id = ? AND l.catalog_id = ? AND e.archived_at IS NULL AND l.archived_at IS NULL
+       AND (e.group_id IS NULL${groupId ? ' OR e.group_id = ?' : ''})`,
     evaluationId,
     catalogId,
+    ...(groupId ? [groupId] : []),
   );
   return row ? mapEvaluation(row) : null;
 }
@@ -149,15 +156,18 @@ export async function selectEvaluationsByTopic(
   db: SQLiteDatabase,
   topicId: string,
   catalogId = 'base',
+  groupId: string | null = null,
 ): Promise<Evaluation[]> {
   const rows = await db.getAllAsync<EvaluationRow>(
     `SELECT e.* FROM evaluations e
      JOIN lessons l ON l.id = e.lesson_id
      WHERE e.topic_id = ? AND l.catalog_id = ? AND l.archived_at IS NULL
        AND e.archived_at IS NULL
+       AND (e.group_id IS NULL${groupId ? ' OR e.group_id = ?' : ''})
      ORDER BY e.position, e.rowid`,
     topicId,
     catalogId,
+    ...(groupId ? [groupId] : []),
   );
   return rows.map(mapEvaluation);
 }

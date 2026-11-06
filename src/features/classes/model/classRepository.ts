@@ -16,8 +16,11 @@ import type {
 } from '@/shared/services/content/remote/validateClassRelease';
 
 export interface ClassMembershipKey {
+  accountId: number;
+  studentKey: string;
   classId: string;
   classCode: string;
+  courseCatalogId: string;
 }
 
 export interface ClassExtraRecord {
@@ -72,7 +75,8 @@ export async function selectAccountClasses(
             c.teacher_name, COALESCE(c.version, 0) AS version, ac.joined_at
        FROM account_classes ac
        LEFT JOIN class_cache c ON c.class_id = ac.class_id
-      WHERE ac.account_id = ?
+      WHERE ac.account_id = ? AND ac.active = 1
+        AND COALESCE(c.archived, 0) = 0
       ORDER BY class_name COLLATE NOCASE`,
     accountId,
   );
@@ -86,35 +90,59 @@ export async function selectAccountClasses(
   }));
 }
 
+export async function selectJoinedClasses(
+  db: SQLiteDatabase,
+  accountId: number,
+): Promise<AccountClass[]> {
+  return selectAccountClasses(db, accountId);
+}
+
 export async function saveAccountClass(
   db: SQLiteDatabase,
   accountId: number,
   code: string,
   preview: ClassPreviewData,
+  courseCatalogId = 'base',
 ): Promise<void> {
   const now = new Date().toISOString();
   await db.withTransactionAsync(async () => {
     await db.runAsync(
       `INSERT INTO class_cache
-         (class_id, class_code, class_name, teacher_name, version, hash, published_at, fetched_at)
-       VALUES (?, ?, ?, ?, 0, '', NULL, ?)
+         (class_id, class_code, class_name, teacher_name, version, hash, published_at,
+          course_catalog_id, archived, release_v3, applied_hash, fetched_at)
+       VALUES (?, ?, ?, ?, 0, '', NULL, ?, 0, NULL, NULL, ?)
        ON CONFLICT(class_id) DO UPDATE SET
          class_code = excluded.class_code,
          class_name = excluded.class_name,
-         teacher_name = excluded.teacher_name`,
+         teacher_name = excluded.teacher_name,
+         course_catalog_id = excluded.course_catalog_id`,
       preview.class.id,
       code,
       preview.class.name,
       preview.class.teacherName,
+      courseCatalogId,
       now,
     );
+    // Una sola membresía activa por curso: la anterior queda inactiva, no se borra.
     await db.runAsync(
-      `INSERT INTO account_classes (account_id, class_id, class_code, joined_at)
-       VALUES (?, ?, ?, ?)
-       ON CONFLICT(account_id, class_id) DO UPDATE SET class_code = excluded.class_code`,
+      `UPDATE account_classes SET active = 0
+       WHERE account_id = ? AND course_catalog_id = ? AND class_id <> ? AND active = 1`,
+      accountId,
+      courseCatalogId,
+      preview.class.id,
+    );
+    await db.runAsync(
+      `INSERT INTO account_classes
+         (account_id, class_id, class_code, course_catalog_id, active, joined_at)
+       VALUES (?, ?, ?, ?, 1, ?)
+       ON CONFLICT(account_id, class_id) DO UPDATE SET
+         class_code = excluded.class_code,
+         course_catalog_id = excluded.course_catalog_id,
+         active = 1`,
       accountId,
       preview.class.id,
       code,
+      courseCatalogId,
       now,
     );
   });
@@ -126,7 +154,7 @@ export async function removeAccountClass(
   classId: string,
 ): Promise<void> {
   await db.runAsync(
-    'DELETE FROM account_classes WHERE account_id = ? AND class_id = ?',
+    'UPDATE account_classes SET active = 0 WHERE account_id = ? AND class_id = ?',
     accountId,
     classId,
   );
@@ -136,8 +164,54 @@ export async function selectClassMemberships(
   db: SQLiteDatabase,
 ): Promise<ClassMembershipKey[]> {
   return db.getAllAsync<ClassMembershipKey>(
-    'SELECT DISTINCT class_id AS classId, class_code AS classCode FROM account_classes',
+    `SELECT DISTINCT ac.account_id AS accountId, a.external_key AS studentKey,
+            ac.class_id AS classId, ac.class_code AS classCode,
+            ac.course_catalog_id AS courseCatalogId
+       FROM account_classes ac
+       JOIN accounts a ON a.id = ac.account_id
+      WHERE ac.active = 1`,
   );
+}
+
+export async function selectActiveGroup(
+  db: SQLiteDatabase,
+  accountId: number,
+  courseCatalogId: string,
+): Promise<string | null> {
+  const row = await db.getFirstAsync<{ class_id: string }>(
+    `SELECT ac.class_id FROM account_classes ac
+     JOIN class_cache c ON c.class_id = ac.class_id
+     WHERE ac.account_id = ? AND ac.course_catalog_id = ? AND ac.active = 1
+       AND COALESCE(c.archived, 0) = 0
+     LIMIT 1`,
+    accountId,
+    courseCatalogId,
+  );
+  return row?.class_id ?? null;
+}
+
+export interface ClassSyncState {
+  version: number;
+  hash: string;
+  archived: number;
+  applied_hash: string | null;
+  course_catalog_id: string;
+}
+
+export async function selectClassSyncState(
+  db: SQLiteDatabase,
+  classId: string,
+): Promise<ClassSyncState | null> {
+  return db.getFirstAsync<ClassSyncState>(
+    `SELECT version, hash, COALESCE(archived, 0) AS archived,
+            applied_hash, COALESCE(course_catalog_id, 'base') AS course_catalog_id
+       FROM class_cache WHERE class_id = ?`,
+    classId,
+  );
+}
+
+export async function archiveClassCache(db: SQLiteDatabase, classId: string): Promise<void> {
+  await db.runAsync('UPDATE class_cache SET archived = 1 WHERE class_id = ?', classId);
 }
 
 export async function selectClassVersion(
@@ -159,8 +233,9 @@ export async function storeClassRelease(
   await db.withTransactionAsync(async () => {
     await db.runAsync(
       `INSERT INTO class_cache
-         (class_id, class_code, class_name, teacher_name, version, hash, published_at, fetched_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         (class_id, class_code, class_name, teacher_name, version, hash, published_at,
+          course_catalog_id, archived, release_v3, applied_hash, fetched_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'base', 0, NULL, NULL, ?)
        ON CONFLICT(class_id) DO UPDATE SET
          class_code = excluded.class_code,
          class_name = excluded.class_name,
@@ -168,6 +243,7 @@ export async function storeClassRelease(
          version = excluded.version,
          hash = excluded.hash,
          published_at = excluded.published_at,
+         archived = 0,
          fetched_at = excluded.fetched_at`,
       release.class.id,
       code,
@@ -238,6 +314,7 @@ export async function selectExtrasByLesson(
        JOIN class_cache c ON c.class_id = e.class_id
        JOIN lessons l ON l.id = e.lesson_id AND l.archived_at IS NULL
       WHERE ac.account_id = ? AND e.lesson_id = ?
+        AND ac.active = 1 AND COALESCE(c.archived, 0) = 0
       ORDER BY c.published_at DESC, c.class_name COLLATE NOCASE, e.position`,
     accountId,
     lessonId,

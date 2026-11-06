@@ -33,6 +33,7 @@ import {
   removeAccountClass,
   saveAccountClass,
   selectAccountClasses,
+  selectActiveGroup,
   selectLessonExtras,
 } from '@/features/classes/model/classRepository';
 import { applyStagedContent } from '@/shared/services/content/remote/applyStagedContent';
@@ -115,11 +116,15 @@ export function createRepositories(db: SQLiteDatabase) {
       clearSession: () => clearSession(db),
     },
     evaluations: {
-      selectEvaluationByLesson: (lessonId: string) => selectEvaluationByLesson(db, lessonId),
-      selectEvaluationById: (evaluationId: string, catalogId?: string) =>
-        selectEvaluationById(db, evaluationId, catalogId),
-      selectEvaluationsByTopic: (topicId: string, catalogId?: string) =>
-        selectEvaluationsByTopic(db, topicId, catalogId),
+      selectEvaluationByLesson: (lessonId: string, groupId?: string | null) =>
+        selectEvaluationByLesson(db, lessonId, groupId),
+      selectEvaluationById: (
+        evaluationId: string,
+        catalogId?: string,
+        groupId?: string | null,
+      ) => selectEvaluationById(db, evaluationId, catalogId, groupId),
+      selectEvaluationsByTopic: (topicId: string, catalogId?: string, groupId?: string | null) =>
+        selectEvaluationsByTopic(db, topicId, catalogId, groupId),
       selectEvaluationExercises: (evaluationId: string) =>
         selectEvaluationExercises(db, evaluationId),
       selectSelectedExercises: (evaluationId: string) =>
@@ -138,18 +143,23 @@ export function createRepositories(db: SQLiteDatabase) {
         selectEvaluationSummaries(db, catalogId),
     },
     examples: {
-      selectExamplesByLesson: (lessonId: string) => selectExamplesByLesson(db, lessonId),
-      selectExamplesByTopic: (topicId: string, catalogId?: string) =>
-        selectExamplesByTopic(db, topicId, catalogId),
-      selectExamplesWithExtras: (accountId: number, lessonId: string) =>
-        selectExamplesWithExtras(db, accountId, lessonId),
+      selectExamplesByLesson: (lessonId: string, groupId?: string | null) =>
+        selectExamplesByLesson(db, lessonId, groupId),
+      selectExamplesByTopic: (topicId: string, catalogId?: string, groupId?: string | null) =>
+        selectExamplesByTopic(db, topicId, catalogId, groupId),
+      selectExamplesWithExtras: (accountId: number, lessonId: string, groupId?: string | null) =>
+        selectExamplesWithExtras(db, accountId, lessonId, groupId),
     },
     exercises: {
-      selectExercisesByLesson: (lessonId: string) => selectExercisesByLesson(db, lessonId),
-      selectExercisesByTopic: (topicId: string, catalogId?: string) =>
-        selectExercisesByTopic(db, topicId, catalogId),
-      selectPracticeExercisesByLesson: (accountId: number, lessonId: string) =>
-        selectPracticeExercisesByLesson(db, accountId, lessonId),
+      selectExercisesByLesson: (lessonId: string, groupId?: string | null) =>
+        selectExercisesByLesson(db, lessonId, groupId),
+      selectExercisesByTopic: (topicId: string, catalogId?: string, groupId?: string | null) =>
+        selectExercisesByTopic(db, topicId, catalogId, groupId),
+      selectPracticeExercisesByLesson: (
+        accountId: number,
+        lessonId: string,
+        groupId?: string | null,
+      ) => selectPracticeExercisesByLesson(db, accountId, lessonId, groupId),
     },
     attempts: {
       insertAttempt: (
@@ -174,13 +184,18 @@ export function createRepositories(db: SQLiteDatabase) {
       ) => saveExampleState(db, accountId, lessonId, state),
     },
     lessons: {
-      selectUnits: (catalogId?: string) => selectUnits(db, catalogId),
-      selectTopics: (catalogId?: string) => selectTopics(db, catalogId),
-      selectTopic: (id: string, catalogId?: string) => selectTopic(db, id, catalogId),
-      selectLessons: (catalogId?: string) => selectLessons(db, catalogId),
-      selectLessonsByTopic: (topicId: string, catalogId?: string) =>
-        selectLessonsByTopic(db, topicId, catalogId),
-      selectLesson: (id: string, catalogId?: string) => selectLesson(db, id, catalogId),
+      selectUnits: (catalogId?: string, groupId?: string | null) =>
+        selectUnits(db, catalogId, groupId),
+      selectTopics: (catalogId?: string, groupId?: string | null) =>
+        selectTopics(db, catalogId, groupId),
+      selectTopic: (id: string, catalogId?: string, groupId?: string | null) =>
+        selectTopic(db, id, catalogId, groupId),
+      selectLessons: (catalogId?: string, groupId?: string | null) =>
+        selectLessons(db, catalogId, groupId),
+      selectLessonsByTopic: (topicId: string, catalogId?: string, groupId?: string | null) =>
+        selectLessonsByTopic(db, topicId, catalogId, groupId),
+      selectLesson: (id: string, catalogId?: string, groupId?: string | null) =>
+        selectLesson(db, id, catalogId, groupId),
     },
     courses: {
       ensureBaseCourse: (accountId?: number) => ensureBaseCourse(db, accountId),
@@ -192,11 +207,14 @@ export function createRepositories(db: SQLiteDatabase) {
     },
     classes: {
       selectAccountClasses: (accountId: number) => selectAccountClasses(db, accountId),
+      selectActiveGroup: (accountId: number, courseCatalogId: string) =>
+        selectActiveGroup(db, accountId, courseCatalogId),
       saveAccountClass: (
         accountId: number,
         code: string,
         preview: Parameters<typeof saveAccountClass>[3],
-      ) => saveAccountClass(db, accountId, code, preview),
+        courseCatalogId?: string,
+      ) => saveAccountClass(db, accountId, code, preview, courseCatalogId),
       removeAccountClass: (accountId: number, classId: string) =>
         removeAccountClass(db, accountId, classId),
       selectLessonExtras: (accountId: number, lessonId: string) =>
@@ -209,9 +227,13 @@ export function createRepositories(db: SQLiteDatabase) {
       leaveClass: (code: string, studentKey: string) =>
         leaveClassRequest(http, code, studentKey),
       fetchClassRelease: (code: string) => fetchClassRelease(http, code),
-      refreshClass: (classId: string, code: string) =>
-        refreshClassRelease(db, http, classId, code),
-      refreshClassContent: () => refreshClassContent(db, http),
+      refreshClass: (
+        classId: string,
+        code: string,
+        studentKey?: string,
+        courseCatalogId?: string,
+      ) => refreshClassRelease(db, httpV3, classId, code, studentKey, courseCatalogId),
+      refreshClassContent: () => refreshClassContent(db, httpV3),
       refreshCatalog: (catalogId: string, force?: boolean) =>
         refreshCatalog(db, http, catalogId, force),
       applyStagedContent: (catalogId?: string) => applyStagedContent(db, catalogId),

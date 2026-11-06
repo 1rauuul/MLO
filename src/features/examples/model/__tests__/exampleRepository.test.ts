@@ -40,8 +40,17 @@ describe('exampleRepository', () => {
     expect(String((getAllAsync.mock.calls as unknown[][])[0]?.[0])).toContain('ORDER BY position, rowid');
   });
 
-  it('selectExamplesByTopic ordena por posición editorial', async () => {
+  it('selectExamplesByLesson filtra por grupo activo', async () => {
     const { db, getAllAsync } = makeDb([exampleRow]);
+
+    await selectExamplesByLesson(db, 'l1.2', 'class-demo');
+
+    const [sql, ...params] = (getAllAsync.mock.calls as unknown[][])[0] ?? [];
+    expect(String(sql)).toContain('OR group_id = ?');
+    expect(params).toEqual(['l1.2', 'class-demo']);
+  });
+
+  it('selectExamplesByTopic ordena por posición editorial', async () => {    const { db, getAllAsync } = makeDb([exampleRow]);
 
     await selectExamplesByTopic(db, 't1', 'base');
 

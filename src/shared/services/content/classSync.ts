@@ -1,19 +1,19 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import {
+  archiveClassCache,
   selectClassMemberships,
-  selectClassVersion,
-  storeClassRelease,
-  updateClassMetadata,
+  selectClassSyncState,
 } from '@/features/classes/model/classRepository';
-import { ParseError } from '@/shared/services/http/client';
+import { applyV3GroupRelease } from '@/shared/services/content/applyV3Content';
+import { fetchGroupRelease } from '@/shared/services/content/coursesV3';
+import { HttpError, ParseError } from '@/shared/services/http/client';
 import type { HttpClient } from '@/shared/services/http/client';
 
-import { fetchClassPreview, fetchClassRelease } from './remoteContent';
-
 /**
- * Descarga el último release de cada clase en la que participa cualquier
- * cuenta local. No borra la caché si la red falla: el alumno sigue sin conexión.
+ * Descarga y aplica el release v3 de cada grupo activo. Si la red falla se
+ * conserva la copia anterior; un 404 con release v3 previo archiva el grupo,
+ * sin borrar contenido ni progreso.
  */
 export async function refreshClassContent(
   db: SQLiteDatabase,
@@ -21,7 +21,14 @@ export async function refreshClassContent(
 ): Promise<void> {
   for (const membership of await selectClassMemberships(db)) {
     try {
-      await refreshClassRelease(db, client, membership.classId, membership.classCode);
+      await refreshClassRelease(
+        db,
+        client,
+        membership.classId,
+        membership.classCode,
+        membership.studentKey,
+        membership.courseCatalogId,
+      );
     } catch (caught) {
       if (__DEV__) {
         console.warn(`[classes] no se pudo actualizar ${membership.classCode}`, caught);
@@ -35,36 +42,31 @@ export async function refreshClassRelease(
   client: HttpClient,
   classId: string,
   code: string,
+  studentKey = '',
+  courseCatalogId = 'base',
 ): Promise<boolean> {
-  const preview = await fetchClassPreview(client, code);
-  if (preview.class.id !== classId) {
-    throw new ParseError('El código de la clase pertenece a otra clase.');
+  const stored = await selectClassSyncState(db, classId);
+
+  let release;
+  try {
+    release = await fetchGroupRelease(client, code, studentKey, courseCatalogId);
+  } catch (caught) {
+    if (caught instanceof HttpError && caught.status === 404) {
+      if (stored?.applied_hash) {
+        await archiveClassCache(db, classId);
+      }
+      return false;
+    }
+    throw caught;
   }
 
-  await updateClassMetadata(db, classId, code, preview.class.name, preview.class.teacherName);
-
-  if (!preview.published) {
+  if (release.groupId !== classId) {
+    throw new ParseError('El release del grupo no coincide con la membresía.');
+  }
+  if (stored && stored.archived === 0 && stored.applied_hash === release.hash) {
     return false;
   }
 
-  const stored = await selectClassVersion(db, classId);
-  if (
-    stored &&
-    stored.version === preview.published.version &&
-    stored.hash === preview.published.hash
-  ) {
-    return false;
-  }
-
-  const release = await fetchClassRelease(client, code);
-  if (
-    release.class.id !== classId ||
-    release.version !== preview.published.version ||
-    release.hash !== preview.published.hash
-  ) {
-    throw new ParseError('El release de la clase no coincide con la vista previa.');
-  }
-
-  await storeClassRelease(db, code, release);
+  await applyV3GroupRelease(db, release, classId);
   return true;
 }

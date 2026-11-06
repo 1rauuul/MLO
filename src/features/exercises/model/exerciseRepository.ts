@@ -47,10 +47,17 @@ export function mapExercise(row: ExerciseRow): Exercise {
   };
 }
 
-export async function selectExercisesByLesson(db: SQLiteDatabase, lessonId: string): Promise<Exercise[]> {
+export async function selectExercisesByLesson(
+  db: SQLiteDatabase,
+  lessonId: string,
+  groupId: string | null = null,
+): Promise<Exercise[]> {
   const rows = await db.getAllAsync<ExerciseRow>(
-    'SELECT * FROM exercises WHERE lesson_id = ? ORDER BY position, rowid',
+    `SELECT * FROM exercises WHERE lesson_id = ?
+       AND (group_id IS NULL${groupId ? ' OR group_id = ?' : ''})
+     ORDER BY position, rowid`,
     lessonId,
+    ...(groupId ? [groupId] : []),
   );
   return rows.map(mapExercise);
 }
@@ -59,14 +66,17 @@ export async function selectExercisesByTopic(
   db: SQLiteDatabase,
   topicId: string,
   catalogId = 'base',
+  groupId: string | null = null,
 ): Promise<Exercise[]> {
   const rows = await db.getAllAsync<ExerciseRow>(
     `SELECT e.* FROM exercises e
      JOIN lessons l ON l.id = e.lesson_id
      WHERE e.topic_id = ? AND l.catalog_id = ? AND l.archived_at IS NULL
+       AND (e.group_id IS NULL${groupId ? ' OR e.group_id = ?' : ''})
      ORDER BY e.position, e.rowid`,
     topicId,
     catalogId,
+    ...(groupId ? [groupId] : []),
   );
   return rows.map(mapExercise);
 }
@@ -76,9 +86,10 @@ export async function selectPracticeExercisesByLesson(
   db: SQLiteDatabase,
   accountId: number,
   lessonId: string,
+  groupId: string | null = null,
 ): Promise<Exercise[]> {
   const [core, extras] = await Promise.all([
-    selectExercisesByLesson(db, lessonId),
+    selectExercisesByLesson(db, lessonId, groupId),
     selectExtrasByLesson(db, accountId, lessonId),
   ]);
   return [
