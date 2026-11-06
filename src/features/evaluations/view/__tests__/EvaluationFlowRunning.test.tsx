@@ -36,6 +36,7 @@ function makeEngine(overrides: Partial<EvaluationEngine> = {}): EvaluationEngine
     correctCount: 0,
     outcomes: [],
     summary: { total: 0, correct: 0, accuracy: 1, byType: {} },
+    runId: 1,
     setAnswer: mockSetAnswer,
     goPrev: mockGoPrev,
     send: mockSend,

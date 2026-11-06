@@ -15,6 +15,7 @@ import type { ActivityType, Exercise, ExerciseType, Question } from '@/shared/mo
 import { ACTIVITY_TYPE_LABELS as TYPE_LABELS } from '@/shared/utils/activityLabels';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { recommendReview } from '@/features/evaluations/viewmodel/analytics.logic';
+import { summarizeAnswers } from '@/features/evaluations/viewmodel/evaluation.logic';
 import {
   useEvaluationEngine,
   useEvaluationForLesson,
@@ -86,11 +87,16 @@ export default function EvaluationFlow() {
     () => (question ? asExercise(question, lessonParam ?? '') : null),
     [question, lessonParam],
   );
+  const feedback = useMemo(
+    () => summarizeAnswers(engine.items, engine.answers),
+    [engine.items, engine.answers],
+  );
   const record = useRecordEvaluationResult();
   const { record: recordLocation } = useSession();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
-  const recordedEvaluationRef = useRef<string | null>(null);
+  // Un resultado por intento: cambia runId cuando el alumno reintenta.
+  const recordedRunRef = useRef<number | null>(null);
   const exitGuard = useExitGuard(engine.phase === 'running');
 
   useFocusEffect(
@@ -107,13 +113,13 @@ export default function EvaluationFlow() {
   );
 
   useEffect(() => {
-    if (engine.phase !== 'summary' || !evaluation || recordedEvaluationRef.current === evaluation.id) {
+    if (engine.phase !== 'summary' || !evaluation || recordedRunRef.current === engine.runId) {
       return;
     }
-    recordedEvaluationRef.current = evaluation.id;
+    recordedRunRef.current = engine.runId;
     const percent = engine.total === 0 ? 0 : Math.round((engine.correctCount / engine.total) * 100);
     void record(evaluation.id, percent, engine.correctCount, engine.total);
-  }, [engine.phase, engine.correctCount, engine.total, evaluation, record]);
+  }, [engine.phase, engine.runId, engine.correctCount, engine.total, evaluation, record]);
 
   if (!isLoading && (!evaluation || engine.total === 0)) {
     return (
@@ -193,42 +199,45 @@ export default function EvaluationFlow() {
           Repaso de reactivos
         </AppText>
         <View style={styles.list}>
-          {engine.items.map((item, index) => {
-            const ok = engine.outcomes[index] === true;
-            return (
-              <View
-                key={item.id}
-                style={[
-                  styles.review,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: ok ? colors.success : colors.danger,
-                    borderRadius: radius.control,
-                  },
-                ]}>
-                <Icon
-                  name={ok ? 'check' : 'close'}
-                  size={16}
-                  color={ok ? colors.success : colors.danger}
-                  strokeWidth={2.5}
-                />
-                <View style={styles.flex}>
-                  <AppText variant="small" weight="600">
-                    {item.prompt}
+          {feedback.map(item => (
+            <View
+              key={item.questionId}
+              style={[
+                styles.review,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: item.correct ? colors.success : colors.danger,
+                  borderRadius: radius.control,
+                },
+              ]}>
+              <Icon
+                name={item.correct ? 'check' : 'close'}
+                size={16}
+                color={item.correct ? colors.success : colors.danger}
+                strokeWidth={2.5}
+              />
+              <View style={styles.flex}>
+                <AppText variant="small" weight="600">
+                  {item.prompt}
+                </AppText>
+                {item.solution ? (
+                  <AppText variant="small" color={colors.success}>
+                    {`Respuesta correcta: ${item.solution}`}
                   </AppText>
-                  {!ok && item.explanation ? (
-                    <AppText variant="small" color={colors.muted}>
-                      {item.explanation}
-                    </AppText>
-                  ) : null}
-                </View>
+                ) : null}
+                {item.explanation ? (
+                  <AppText variant="small" color={colors.muted}>
+                    {item.explanation}
+                  </AppText>
+                ) : null}
               </View>
-            );
-          })}
+            </View>
+          ))}
         </View>
 
         <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
           <PrimaryButton label="Volver a Módulos" onPress={() => router.navigate('/')} />
+          <SecondaryButton label="Reintentar evaluación" onPress={engine.restart} />
           {recommendation === 'lesson' && lessonParam ? (
             <SecondaryButton
               label="Repasar la lección"

@@ -1,5 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import type { AttemptSummary } from '@/features/evaluations/viewmodel/analytics.logic';
+import type { EvaluationEngine } from '@/features/evaluations/viewmodel/useQuizEngine';
 
 import type { PracticeSummary } from '@/features/exercises/viewmodel/usePracticeEngine';
 
@@ -25,6 +26,56 @@ const practiceSummary: AttemptSummary = {
   byType: { order: { total: 3, correct: 0 }, fill: { total: 1, correct: 1 } },
 };
 let mockEvaluationSummary = noneSummary;
+
+const evaluationItems = [
+  {
+    id: 'q1',
+    evaluationId: 'evaluation-2',
+    orderIndex: 0,
+    type: 'mcq' as const,
+    config: {},
+    prompt: 'Reactivo acertado',
+    options: ['a', 'b'],
+    answer: 0,
+    explanation: 'Explica el acierto',
+  },
+  {
+    id: 'q2',
+    evaluationId: 'evaluation-2',
+    orderIndex: 1,
+    type: 'mcq' as const,
+    config: {},
+    prompt: 'Reactivo errado',
+    options: ['a', 'b'],
+    answer: 1,
+    explanation: 'Explica el error',
+  },
+];
+
+const makeEvaluationEngine = (): EvaluationEngine => ({
+  index: 0,
+  total: 2,
+  items: evaluationItems,
+  question: evaluationItems[0]!,
+  phase: 'summary',
+  answers: [
+    { type: 'mcq', chosen: 0 },
+    { type: 'mcq', chosen: 0 },
+  ],
+  answer: null,
+  canSend: false,
+  isLast: false,
+  correctCount: 1,
+  outcomes: [true, false],
+  summary: mockEvaluationSummary,
+  runId: 1,
+  setAnswer: jest.fn(),
+  goPrev: jest.fn(),
+  send: jest.fn(),
+  restart: jest.fn(),
+});
+
+let mockEvaluationEngine = makeEvaluationEngine();
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ lesson: 'lesson-2' }),
@@ -76,14 +127,7 @@ jest.mock('@/features/evaluations/viewmodel/useQuizEngine', () => ({
     questions: [],
     isLoading: false,
   }),
-  useEvaluationEngine: () => ({
-    phase: 'summary',
-    total: 4,
-    correctCount: 3,
-    summary: mockEvaluationSummary,
-    items: [],
-    outcomes: [],
-  }),
+  useEvaluationEngine: () => ({ ...mockEvaluationEngine, summary: mockEvaluationSummary }),
   useRecordEvaluationResult: () => mockRecord,
 }));
 jest.mock('@/features/exercises/view/activities/ActivityView', () => ({ ActivityView: () => null }));
@@ -95,6 +139,7 @@ beforeEach(() => {
   mockRecord.mockClear();
   mockMarkCompleted.mockClear();
   mockEvaluationSummary = noneSummary;
+  mockEvaluationEngine = makeEvaluationEngine();
 });
 
 it('keeps the lesson recommendation and shows no exit button in the exercise summary', () => {
@@ -124,6 +169,34 @@ it('shows no review action for an evaluation result with no recommendation', () 
 
   expect(queryByRole('button', { name: 'Repasar la lección' })).toBeNull();
   expect(queryByRole('button', { name: 'Resolver ejercicios' })).toBeNull();
+});
+
+it('muestra aciertos, errores, respuesta correcta y explicación por reactivo', () => {
+  const { getByText } = render(<EvaluationFlow />);
+
+  expect(getByText('Reactivo acertado')).toBeTruthy();
+  expect(getByText('Reactivo errado')).toBeTruthy();
+  expect(getByText('Respuesta correcta: a')).toBeTruthy();
+  expect(getByText('Respuesta correcta: b')).toBeTruthy();
+  expect(getByText('Explica el acierto')).toBeTruthy();
+  expect(getByText('Explica el error')).toBeTruthy();
+});
+
+it('permite reintentar la evaluación desde el resultado', () => {
+  const { getByRole } = render(<EvaluationFlow />);
+
+  fireEvent.press(getByRole('button', { name: 'Reintentar evaluación' }));
+  expect(mockEvaluationEngine.restart).toHaveBeenCalledTimes(1);
+});
+
+it('registra un resultado nuevo en cada intento', () => {
+  const { rerender } = render(<EvaluationFlow />);
+  expect(mockRecord).toHaveBeenCalledTimes(1);
+
+  mockEvaluationEngine = { ...makeEvaluationEngine(), runId: 2 };
+  rerender(<EvaluationFlow />);
+
+  expect(mockRecord).toHaveBeenCalledTimes(2);
 });
 
 it('routes the practice recommendation to exercises in the module group', () => {

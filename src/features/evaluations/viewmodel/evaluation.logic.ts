@@ -1,4 +1,5 @@
-import type { Question } from '@/shared/model/entities';
+import type { ActivityType, Question } from '@/shared/model/entities';
+import { BLANK_PATTERN } from '@/shared/utils/exerciseRules';
 
 import {
   crosswordCells,
@@ -51,6 +52,54 @@ export function isAnswerCorrect(question: Question, answer: EvaluationAnswer): b
     case 'crossword':
       return isCrosswordCorrect(question.config, answer.letters);
   }
+}
+
+// Solución legible de cada tipo de reactivo, usando el contenido vigente.
+export function describeCorrectAnswer(question: Question): string {
+  switch (question.type) {
+    case 'mcq':
+      return question.options[question.answer] ?? '';
+    case 'order':
+      return question.options.join(' → ');
+    case 'fill':
+      return (question.config.sentences ?? [])
+        .map(sentence => sentence.replace(BLANK_PATTERN, (_, answer: string) => answer))
+        .join(' ');
+    case 'match':
+      return (question.config.pairs ?? []).map(pair => `${pair.left} → ${pair.right}`).join(' · ');
+    case 'crossword':
+      return (question.config.crossword?.entries ?? [])
+        .map(entry => entry.word.toUpperCase())
+        .join(' · ');
+  }
+}
+
+export interface AnswerFeedback {
+  questionId: string;
+  prompt: string;
+  type: ActivityType;
+  correct: boolean;
+  solution: string;
+  explanation: string;
+}
+
+// Retroalimentación por reactivo al terminar; no depende de resultados guardados
+// porque DEC-08 conserva solo los agregados por intento.
+export function summarizeAnswers(
+  questions: Question[],
+  answers: (EvaluationAnswer | null)[],
+): AnswerFeedback[] {
+  return questions.map((question, index) => {
+    const answer = answers[index] ?? null;
+    return {
+      questionId: question.id,
+      prompt: question.prompt,
+      type: question.type,
+      correct: answer ? isAnswerCorrect(question, answer) : false,
+      solution: describeCorrectAnswer(question),
+      explanation: question.explanation,
+    };
+  });
 }
 
 // Baraja las opciones de una pregunta mcq y reajusta el índice correcto,

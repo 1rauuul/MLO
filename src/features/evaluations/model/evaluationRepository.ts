@@ -191,6 +191,7 @@ export async function insertEvaluationResult(
   correctCount: number,
   totalCount: number,
 ): Promise<void> {
+  // Cada intento agrega una fila; los resultados anteriores nunca se sobrescriben.
   await db.runAsync(
     'INSERT INTO evaluation_results (account_id, evaluation_id, score, correct_count, total_count, created_at) VALUES (?, ?, ?, ?, ?, ?)',
     accountId,

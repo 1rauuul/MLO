@@ -5,6 +5,7 @@ import {
   isAnswerComplete,
   isAnswerCorrect,
   shuffleQuestionOptions,
+  summarizeAnswers,
 } from '@/features/evaluations/viewmodel/evaluation.logic';
 
 const base = { evaluationId: 'ev', orderIndex: 0, prompt: '', explanation: '' };
@@ -147,6 +148,54 @@ describe('isAnswerCorrect', () => {
         letters: { '0-0': 'A', '0-1': 'X' },
       }),
     ).toBe(false);
+  });
+});
+
+describe('summarizeAnswers', () => {
+  it('presenta solución y explicación de los cinco tipos, acertados o errados', () => {
+    const typed = [mcqQuestion, orderQuestion, fillQuestion, matchQuestion, crosswordQuestion].map(
+      question => ({ ...question, explanation: `Explica ${question.type}` }),
+    );
+    const feedback = summarizeAnswers(typed, [
+      { type: 'mcq', chosen: 0 },
+      { type: 'order', steps: ['b', 'a', 'c'] },
+      {
+        type: 'fill',
+        ordered: ['El {{uno}} y {{dos}}.'],
+        assignment: ['uno', 'dos'],
+      },
+      { type: 'match', rights: ['1', '2'], assignment: [0, 1] },
+      { type: 'crossword', letters: { '0-0': 'A', '0-1': 'B' } },
+    ]);
+
+    expect(feedback.map(item => item.correct)).toEqual([false, false, true, true, true]);
+    expect(feedback.map(item => item.solution)).toEqual([
+      'b',
+      'a → b → c',
+      'El uno y dos.',
+      'a → 1 · b → 2',
+      'AB',
+    ]);
+    expect(feedback.map(item => item.explanation)).toEqual([
+      'Explica mcq',
+      'Explica order',
+      'Explica fill',
+      'Explica match',
+      'Explica crossword',
+    ]);
+  });
+
+  it('marca como errado un reactivo sin respuesta y conserva la solución', () => {
+    const [feedback] = summarizeAnswers([mcqQuestion], [null]);
+
+    expect(feedback).toEqual({
+      questionId: 'mcq',
+      prompt: '',
+      type: 'mcq',
+      correct: false,
+      solution: 'b',
+      explanation: '',
+    });
   });
 });
 

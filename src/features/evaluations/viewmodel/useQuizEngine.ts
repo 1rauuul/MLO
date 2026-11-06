@@ -10,8 +10,10 @@ import {
   buildEvaluationPool,
   isAnswerComplete,
   isAnswerCorrect,
+  shuffleQuestionOptions,
   type EvaluationAnswer,
 } from '@/features/evaluations/viewmodel/evaluation.logic';
+import { shuffleItems } from '@/features/exercises/viewmodel/exercise.logic';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
 
 interface UseEvaluationForLessonResult {
@@ -158,25 +160,33 @@ export interface EvaluationEngine {
   correctCount: number;
   outcomes: (boolean | null)[];
   summary: AttemptSummary;
+  /** Sube en cada reintento para distinguir el intento al guardar el resultado. */
+  runId: number;
   setAnswer: (answer: EvaluationAnswer) => void;
   goPrev: () => void;
   send: () => void;
   restart: () => void;
 }
 
-export function useEvaluationEngine(questions: Question[], lessonId: string | null): EvaluationEngine {
+export function useEvaluationEngine(
+  questions: Question[],
+  lessonId: string | null,
+  random: () => number = Math.random,
+): EvaluationEngine {
   const { attempts } = useRepositories();
   const { account } = useAuth();
   const usable = useMemo(
     () => questions.filter(question => ACTIVITY_TYPES.includes(question.type)),
     [questions],
   );
+  const [items, setItems] = useState<Question[]>(usable);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<(EvaluationAnswer | null)[]>([]);
   const [correctCount, setCorrectCount] = useState(0);
   const [outcomes, setOutcomes] = useState<(boolean | null)[]>([]);
   const [phase, setPhase] = useState<'running' | 'summary'>('running');
   const [summary, setSummary] = useState<AttemptSummary>(summarizeAttempts([]));
+  const [runId, setRunId] = useState(0);
 
   const refreshSummary = useCallback(async () => {
     if (!account || !lessonId) {
@@ -188,16 +198,21 @@ export function useEvaluationEngine(questions: Question[], lessonId: string | nu
   }, [attempts, account, lessonId]);
 
   const restart = useCallback(() => {
+    const next = shuffleItems(usable, random).map(question =>
+      shuffleQuestionOptions(question, random),
+    );
+    setItems(next);
     setIndex(0);
-    setAnswers(usable.map(() => null));
+    setAnswers(next.map(() => null));
     setCorrectCount(0);
-    setOutcomes(usable.map(() => null));
+    setOutcomes(next.map(() => null));
     setPhase('running');
-  }, [usable]);
+    setRunId(current => current + 1);
+  }, [usable, random]);
 
   useEffect(() => {
     restart();
-  }, [usable, restart]);
+  }, [restart]);
 
   const setAnswer = useCallback(
     (answer: EvaluationAnswer) => {
@@ -215,14 +230,14 @@ export function useEvaluationEngine(questions: Question[], lessonId: string | nu
   }, []);
 
   const grade = useCallback(() => {
-    const results = usable.map((question, i) => {
+    const results = items.map((question, i) => {
       const answer = answers[i];
       return answer ? isAnswerCorrect(question, answer) : false;
     });
     setOutcomes(results);
     setCorrectCount(results.filter(Boolean).length);
     if (account && lessonId) {
-      usable.forEach((question, i) => {
+      items.forEach((question, i) => {
         if (answers[i]) {
           void attempts.insertAttempt(
             account.id,
@@ -238,37 +253,38 @@ export function useEvaluationEngine(questions: Question[], lessonId: string | nu
     }
     void refreshSummary();
     setPhase('summary');
-  }, [usable, answers, attempts, account, lessonId, refreshSummary]);
+  }, [items, answers, attempts, account, lessonId, refreshSummary]);
 
   const send = useCallback(() => {
-    const question = usable[index];
+    const question = items[index];
     const answer = answers[index] ?? null;
     if (!question || !isAnswerComplete(question, answer)) {
       return;
     }
-    if (index < usable.length - 1) {
+    if (index < items.length - 1) {
       setIndex(current => current + 1);
       return;
     }
     grade();
-  }, [usable, answers, index, grade]);
+  }, [items, answers, index, grade]);
 
-  const question = usable[index] ?? null;
+  const question = items[index] ?? null;
   const answer = answers[index] ?? null;
 
   return {
     index,
-    total: usable.length,
-    items: usable,
+    total: items.length,
+    items,
     question,
     phase,
     answers,
     answer,
     canSend: question ? isAnswerComplete(question, answer) : false,
-    isLast: index >= usable.length - 1,
+    isLast: index >= items.length - 1,
     correctCount,
     outcomes,
     summary,
+    runId,
     setAnswer,
     goPrev,
     send,

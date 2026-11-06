@@ -69,12 +69,52 @@ describe('useEvaluationEngine', () => {
     expect(result.current.answer).toEqual({ type: 'mcq', chosen: 1 });
   });
 
+  it('reintenta con nuevo orden y registra otro intento sin borrar el anterior', async () => {
+    // El primer intento baraja; el reintento cae en el orden original.
+    let calls = 0;
+    const random = () => (calls++ < 3 ? 0 : 0.9);
+    const { result } = renderHook(() => useEvaluationEngine(questions, 'l1.2', random));
+    const firstOrder = result.current.items.map(question => question.id);
+
+    act(() => result.current.setAnswer({ type: 'mcq', chosen: result.current.items[0]!.answer }));
+    act(() => result.current.send());
+    act(() => result.current.setAnswer({ type: 'mcq', chosen: result.current.items[1]!.answer }));
+    await act(async () => {
+      result.current.send();
+    });
+
+    expect(result.current.phase).toBe('summary');
+    expect(mockInsertAttempt).toHaveBeenCalledTimes(2);
+    const firstRunId = result.current.runId;
+
+    act(() => result.current.restart());
+
+    expect(result.current.phase).toBe('running');
+    expect(result.current.runId).toBe(firstRunId + 1);
+    expect(result.current.items.map(question => question.id)).not.toEqual(firstOrder);
+
+    act(() => result.current.setAnswer({ type: 'mcq', chosen: result.current.items[0]!.answer }));
+    act(() => result.current.send());
+    act(() => result.current.setAnswer({ type: 'mcq', chosen: result.current.items[1]!.answer }));
+    await act(async () => {
+      result.current.send();
+    });
+
+    expect(result.current.phase).toBe('summary');
+    expect(mockInsertAttempt).toHaveBeenCalledTimes(4);
+  });
+
   it('califica en el último reactivo y registra los intentos', async () => {
     const { result } = renderHook(() => useEvaluationEngine(questions, 'l1.2'));
 
-    act(() => result.current.setAnswer({ type: 'mcq', chosen: 1 }));
+    act(() => result.current.setAnswer({ type: 'mcq', chosen: result.current.items[0]!.answer }));
     act(() => result.current.send());
-    act(() => result.current.setAnswer({ type: 'mcq', chosen: 1 }));
+    act(() =>
+      result.current.setAnswer({
+        type: 'mcq',
+        chosen: result.current.items[1]!.answer === 0 ? 1 : 0,
+      }),
+    );
     await act(async () => {
       result.current.send();
     });

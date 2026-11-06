@@ -282,6 +282,7 @@ const makeEvaluationEngine = (answered: boolean): EvaluationEngine => ({
   correctCount: 0,
   outcomes: [answered],
   summary: noneSummary,
+  runId: 1,
   setAnswer: jest.fn(),
   goPrev: jest.fn(),
   send: jest.fn(),
