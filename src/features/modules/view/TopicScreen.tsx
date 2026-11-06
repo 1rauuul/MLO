@@ -102,9 +102,19 @@ export default function TopicHubScreen() {
     );
   }
 
-  const go = (pathname: '/ejemplos' | '/ejercicios' | '/evaluacion') => {
+  const go = (
+    pathname: '/ejemplos' | '/ejercicios' | '/evaluacion',
+    evaluationId?: string,
+  ) => {
     if (contextLesson) {
-      router.push({ pathname, params: { lesson: contextLesson } });
+      router.push({
+        pathname,
+        params: {
+          lesson: contextLesson,
+          ...(evaluationId ? { evaluationId } : {}),
+          ...(evaluationId && activeCatalogId ? { catalog: activeCatalogId } : {}),
+        },
+      });
     }
   };
 
@@ -219,7 +229,7 @@ export default function TopicHubScreen() {
                 key={evaluation.id}
                 label="Evaluación"
                 detail={evaluation.title}
-                onPress={() => go('/evaluacion')}
+                onPress={() => go('/evaluacion', evaluation.id)}
               />
             ))}
           </View>

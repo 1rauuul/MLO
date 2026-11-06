@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
 import TopicScreen from '@/features/modules/view/TopicScreen';
 import { parseCourseManifest } from '@/shared/services/content/coursesV3';
@@ -43,9 +43,10 @@ const exercises = release.exercises as unknown as Exercise[];
 const evaluations = release.evaluations as unknown as Evaluation[];
 
 let mockHub: Record<string, unknown> = {};
+const mockPush = jest.fn();
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn() }),
   useFocusEffect: jest.fn(),
   useLocalSearchParams: () => ({ id: 'demo-t1' }),
 }));
@@ -98,12 +99,13 @@ function makeHub(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
+  mockPush.mockClear();
   makeHub();
 });
 
 describe('TopicScreen v3', () => {
   it('muestra las dos lecciones y las actividades del fixture en orden', () => {
-    const { getByText, getAllByRole } = render(<TopicScreen />);
+    const { getByText, getAllByRole, getByLabelText } = render(<TopicScreen />);
 
     expect(getByText('Subtema con varias actividades')).toBeTruthy();
     expect(getByText('Primera lección')).toBeTruthy();
@@ -126,6 +128,12 @@ describe('TopicScreen v3', () => {
       'Evaluación: Evaluación uno',
       'Evaluación: Evaluación dos',
     ]);
+
+    fireEvent.press(getByLabelText('Evaluación: Evaluación dos'));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/evaluacion',
+      params: { lesson: 'demo-l1.1', evaluationId: 'demo-ev2', catalog: 'demo' },
+    });
   });
 
   it('respeta el orden de posición aunque los ids no sean alfabéticos', () => {

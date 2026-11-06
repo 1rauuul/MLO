@@ -3,6 +3,8 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import {
   insertEvaluationResult,
   selectEvaluationByLesson,
+  selectEvaluationById,
+  selectSelectedExercises,
   selectEvaluationScoresByLesson,
   selectEvaluationSummaries,
   selectEvaluationsByTopic,
@@ -62,6 +64,52 @@ describe('evaluationRepository', () => {
       'ORDER BY e.position, e.rowid',
     );
     expect(calls.getAllAsync).toHaveBeenCalledWith(expect.any(String), 't1', 'base');
+  });
+
+  it('selectEvaluationById carga la evaluación y filtra por catálogo', async () => {
+    const { db, calls } = makeDb({
+      getFirstAsync: jest.fn(async () => ({
+        id: 'demo-ev2',
+        lesson_id: 'demo-l1.1',
+        title: 'Evaluación dos',
+        description: '',
+      })),
+    });
+
+    await expect(selectEvaluationById(db, 'demo-ev2', 'demo')).resolves.toEqual({
+      id: 'demo-ev2',
+      lessonId: 'demo-l1.1',
+      title: 'Evaluación dos',
+      description: '',
+      questionCount: 10,
+      exerciseCount: 5,
+    });
+    expect(calls.getFirstAsync).toHaveBeenCalledWith(expect.stringContaining('l.catalog_id = ?'), 'demo-ev2', 'demo');
+  });
+
+  it('selectSelectedExercises usa la selección explícita ordenada', async () => {
+    const { db, calls } = makeDb({
+      getAllAsync: jest.fn(async () => [
+        {
+          id: 'demo-fill1',
+          lesson_id: 'demo-l1.1',
+          type: 'fill',
+          prompt: 'Completa',
+          instructions: '',
+          correct_order: '[]',
+          config: '{"sentences":["El {{requisito}}"],"bank":["requisito"]}',
+          explanation: '',
+        },
+      ]),
+    });
+
+    const exercises = await selectSelectedExercises(db, 'demo-ev2');
+
+    expect(exercises).toHaveLength(1);
+    expect(exercises[0]?.id).toBe('demo-fill1');
+    expect(String((calls.getAllAsync.mock.calls as unknown[][])[0]?.[0])).toContain(
+      'ORDER BY e.position, e.id',
+    );
   });
 
   it('selectEvaluationByLesson devuelve null sin fila', async () => {

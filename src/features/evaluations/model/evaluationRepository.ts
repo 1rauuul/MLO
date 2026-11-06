@@ -4,9 +4,11 @@ import type {
   ActivityType,
   Evaluation,
   EvaluationResult,
+  Exercise,
   ExerciseConfig,
   Question,
 } from '@/shared/model/entities';
+import { mapExercise } from '@/features/exercises/model/exerciseRepository';
 
 interface EvaluationRow {
   id: string;
@@ -92,6 +94,47 @@ export async function selectEvaluationByLesson(
     lessonId,
   );
   return row ? mapEvaluation(row) : null;
+}
+
+export async function selectEvaluationById(
+  db: SQLiteDatabase,
+  evaluationId: string,
+  catalogId = 'base',
+): Promise<Evaluation | null> {
+  const row = await db.getFirstAsync<EvaluationRow>(
+    `SELECT e.* FROM evaluations e
+     JOIN lessons l ON l.id = e.lesson_id
+     WHERE e.id = ? AND l.catalog_id = ? AND e.archived_at IS NULL AND l.archived_at IS NULL`,
+    evaluationId,
+    catalogId,
+  );
+  return row ? mapEvaluation(row) : null;
+}
+
+interface SelectedExerciseRow {
+  id: string;
+  lesson_id: string;
+  topic_id?: string;
+  type: Exercise['type'];
+  prompt: string;
+  instructions: string;
+  correct_order: string;
+  config: string;
+  explanation: string;
+}
+
+export async function selectSelectedExercises(
+  db: SQLiteDatabase,
+  evaluationId: string,
+): Promise<Exercise[]> {
+  const rows = await db.getAllAsync<SelectedExerciseRow>(
+    `SELECT e.* FROM evaluation_exercises ee
+     JOIN exercises e ON e.id = ee.exercise_id
+     WHERE ee.evaluation_id = ?
+     ORDER BY e.position, e.id`,
+    evaluationId,
+  );
+  return rows.map(mapExercise);
 }
 
 export async function selectQuestions(db: SQLiteDatabase, evaluationId: string): Promise<Question[]> {

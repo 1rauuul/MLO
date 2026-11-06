@@ -64,8 +64,16 @@ function McqQuestion({
 }
 
 export default function EvaluationFlow() {
-  const { lesson: lessonParam } = useLocalSearchParams<{ lesson?: string }>();
-  const { evaluation, questions, isLoading } = useEvaluationForLesson(lessonParam ?? null);
+  const {
+    lesson: lessonParam,
+    evaluationId: evaluationParam,
+    catalog: catalogParam,
+  } = useLocalSearchParams<{ lesson?: string; evaluationId?: string; catalog?: string }>();
+  const { evaluation, questions, isLoading } = useEvaluationForLesson(
+    lessonParam ?? null,
+    evaluationParam ?? null,
+    catalogParam ?? 'base',
+  );
   const { lesson } = useLessonContent(lessonParam ?? null);
   const engine = useEvaluationEngine(questions, lessonParam ?? null);
   const question = engine.question;

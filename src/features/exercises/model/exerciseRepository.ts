@@ -15,7 +15,7 @@ interface ExerciseRow {
   explanation: string;
 }
 
-function mapExercise(row: ExerciseRow): Exercise {
+export function mapExercise(row: ExerciseRow): Exercise {
   let correctOrder: string[] = [];
   try {
     const parsed: unknown = JSON.parse(row.correct_order);

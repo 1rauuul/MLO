@@ -117,6 +117,42 @@ describe('applyV3Release', () => {
     ).toBe(true);
   });
 
+  it('una evaluación con exerciseIds vacío queda solo de preguntas', async () => {
+    const release = loadRelease(X03_DIR, 'manifest-topics.json', 'demo');
+    const { db, statements } = makeDb();
+    const onlyQuestions = {
+      ...release,
+      evaluations: (release.evaluations as unknown as Record<string, unknown>[]).map(
+        evaluation =>
+          evaluation.id === 'demo-ev2'
+            ? { ...evaluation, exerciseIds: [] }
+            : evaluation,
+      ),
+    };
+
+    await applyV3Release(db, onlyQuestions, 'demo');
+
+    const evaluation = statements.find(
+      statement =>
+        statement.sql.startsWith('INSERT INTO evaluations') &&
+        statement.params[0] === 'demo-ev2',
+    );
+    expect(evaluation?.params[6]).toBe(0);
+    expect(
+      statements.some(
+        statement =>
+          statement.sql.startsWith('INSERT INTO evaluation_exercises') &&
+          statement.params[0] === 'demo-ev2',
+      ),
+    ).toBe(false);
+    const deleteSelection = statements.find(
+      statement =>
+        statement.sql.startsWith('DELETE FROM evaluation_exercises') &&
+        statement.params[0] === 'demo-ev2',
+    );
+    expect(deleteSelection).toBeDefined();
+  });
+
   it('el ejemplo embebido hereda la posición del ejercicio', async () => {
     const release = loadRelease(X03_DIR, 'manifest-topics.json', 'demo');
     const { db, statements } = makeDb();

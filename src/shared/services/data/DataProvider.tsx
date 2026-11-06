@@ -15,9 +15,11 @@ import {
 import {
   insertEvaluationResult,
   selectEvaluationByLesson,
+  selectEvaluationById,
   selectEvaluationExercises,
   selectEvaluationSummaries,
   selectEvaluationsByTopic,
+  selectSelectedExercises,
   selectQuestions,
   selectRecentEvaluationResults,
 } from '@/features/evaluations/model/evaluationRepository';
@@ -114,10 +116,14 @@ export function createRepositories(db: SQLiteDatabase) {
     },
     evaluations: {
       selectEvaluationByLesson: (lessonId: string) => selectEvaluationByLesson(db, lessonId),
+      selectEvaluationById: (evaluationId: string, catalogId?: string) =>
+        selectEvaluationById(db, evaluationId, catalogId),
       selectEvaluationsByTopic: (topicId: string, catalogId?: string) =>
         selectEvaluationsByTopic(db, topicId, catalogId),
       selectEvaluationExercises: (evaluationId: string) =>
         selectEvaluationExercises(db, evaluationId),
+      selectSelectedExercises: (evaluationId: string) =>
+        selectSelectedExercises(db, evaluationId),
       selectQuestions: (evaluationId: string) => selectQuestions(db, evaluationId),
       insertEvaluationResult: (
         accountId: number,

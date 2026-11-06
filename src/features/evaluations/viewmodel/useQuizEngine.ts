@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Evaluation, Exercise, Question } from '@/shared/model/entities';
 import { useRepositories } from '@/shared/services/data/DataProvider';
 import { ACTIVITY_TYPES, EXERCISE_TYPES } from '@/shared/model/entities';
+import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
 
 import { summarizeAttempts, type AttemptSummary } from '@/features/evaluations/viewmodel/analytics.logic';
 import {
@@ -33,14 +34,18 @@ function questionFromExercise(exercise: Exercise, evaluationId: string): Questio
   };
 }
 
-export function useEvaluationForLesson(lessonId: string | null): UseEvaluationForLessonResult {
+export function useEvaluationForLesson(
+  lessonId: string | null,
+  evaluationId: string | null = null,
+  catalogId: string = BASE_CATALOG_ID,
+): UseEvaluationForLessonResult {
   const { evaluations, exercises: exerciseRepository } = useRepositories();
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!lessonId) {
+    if (!lessonId && !evaluationId) {
       setEvaluation(null);
       setQuestions([]);
       setIsLoading(false);
@@ -50,24 +55,42 @@ export function useEvaluationForLesson(lessonId: string | null): UseEvaluationFo
     setIsLoading(true);
     (async () => {
       try {
-        const loadedEvaluation = await evaluations.selectEvaluationByLesson(lessonId);
-        const [exercises, bankQuestions] = await Promise.all([
-          exerciseRepository.selectExercisesByLesson(lessonId),
-          loadedEvaluation
-            ? evaluations.selectQuestions(loadedEvaluation.id)
-            : Promise.resolve([] as Question[]),
+        const loadedEvaluation = evaluationId
+          ? await evaluations.selectEvaluationById(evaluationId, catalogId)
+          : lessonId
+            ? await evaluations.selectEvaluationByLesson(lessonId)
+            : null;
+        if (!loadedEvaluation) {
+          if (active) {
+            setEvaluation(null);
+            setQuestions([]);
+          }
+          return;
+        }
+        const [selected, bankQuestions, lessonExercises] = await Promise.all([
+          evaluations.selectSelectedExercises(loadedEvaluation.id),
+          evaluations.selectQuestions(loadedEvaluation.id),
+          !evaluationId &&
+          (loadedEvaluation.exerciseCount ?? 0) > 0 &&
+          lessonId
+            ? exerciseRepository.selectExercisesByLesson(lessonId)
+            : Promise.resolve([] as Exercise[]),
         ]);
-        const evaluationId = loadedEvaluation?.id ?? `bank-${lessonId}`;
+        const hasSelection = selected.length > 0;
+        const sourceExercises = hasSelection ? selected : lessonExercises;
+        const exerciseCount = hasSelection
+          ? selected.length
+          : loadedEvaluation.exerciseCount ?? 0;
         const questionPool = bankQuestions.filter(question => ACTIVITY_TYPES.includes(question.type));
-        const exercisePool = exercises
+        const exercisePool = sourceExercises
           .filter(exercise => EXERCISE_TYPES.includes(exercise.type))
-          .map(exercise => questionFromExercise(exercise, evaluationId));
+          .map(exercise => questionFromExercise(exercise, loadedEvaluation.id));
         const { mixed } = buildEvaluationPool(
           questionPool,
           exercisePool,
           Math.random,
-          loadedEvaluation?.questionCount,
-          loadedEvaluation?.exerciseCount,
+          loadedEvaluation.questionCount,
+          exerciseCount,
         );
         if (!active) {
           return;
@@ -91,7 +114,7 @@ export function useEvaluationForLesson(lessonId: string | null): UseEvaluationFo
     return () => {
       active = false;
     };
-  }, [evaluations, exerciseRepository, lessonId]);
+  }, [evaluations, exerciseRepository, lessonId, evaluationId, catalogId]);
 
   return { evaluation, questions, isLoading };
 }
