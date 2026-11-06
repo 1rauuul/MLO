@@ -344,19 +344,27 @@ export async function refreshCatalogs(
   db: SQLiteDatabase,
   client: HttpClient,
   mode: DataMode = isHybrid() ? 'hybrid' : 'local',
-): Promise<void> {
+): Promise<boolean> {
   if (mode !== 'hybrid') {
-    return;
+    return false;
   }
+  let changed = false;
   for (const catalogId of await catalogsInUse(db)) {
     try {
-      await refreshCatalog(db, client, catalogId);
+      const baseline = await db.getFirstAsync<{ catalog_id: string }>(
+        'SELECT catalog_id FROM remote_catalogs WHERE catalog_id = ?',
+        catalogId,
+      );
+      if ((await refreshCatalog(db, client, catalogId)) && baseline) {
+        changed = true;
+      }
     } catch (caught) {
       if (__DEV__) {
         console.warn(`[content] no se pudo actualizar ${catalogId}`, caught);
       }
     }
   }
+  return changed;
 }
 
 export type ContentError =

@@ -1,7 +1,10 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { applyLessonPayload } from '@/shared/services/db/seed';
-import { applyStagedContent } from '@/shared/services/content/remote/applyStagedContent';
+import {
+  applyStagedContent,
+  hasPendingContent,
+} from '@/shared/services/content/remote/applyStagedContent';
 import { validateLessonPayload } from '@/shared/services/content/remote/validateLessonPayload';
 import { lessonFixture } from '@/shared/services/http/fixtures';
 
@@ -10,12 +13,31 @@ const payload = validateLessonPayload(lessonFixture, {
   lessonId: 'k7f3q-l1.2',
 });
 
-function makeDb() {
+interface StagedRow {
+  catalog_id: string;
+  lesson_id: string;
+  hash: string;
+  payload: string;
+}
+
+function makeDb(options: { rows?: StagedRow[] } = {}) {
   const statements: { sql: string; params: unknown[] }[] = [];
-  let failOn: string | null = null;
+  let failOn: { needle: string; value?: string } | null = null;
+  const rows = options.rows ?? [
+    {
+      catalog_id: 'k7f3q',
+      lesson_id: 'k7f3q-l1.2',
+      hash: 'lesson-hash',
+      payload: JSON.stringify(payload),
+    },
+  ];
   const db = {
     runAsync: jest.fn(async (sql: string, ...params: unknown[]) => {
-      if (failOn && sql.includes(failOn)) {
+      if (
+        failOn &&
+        sql.includes(failOn.needle) &&
+        (failOn.value === undefined || params.includes(failOn.value))
+      ) {
         throw new Error('foreign key failed');
       }
       statements.push({ sql, params });
@@ -23,14 +45,7 @@ function makeDb() {
     }),
     getAllAsync: jest.fn(async (sql: string) => {
       if (sql.includes('FROM remote_lessons')) {
-        return [
-          {
-            catalog_id: 'k7f3q',
-            lesson_id: 'k7f3q-l1.2',
-            hash: 'lesson-hash',
-            payload: JSON.stringify(payload),
-          },
-        ];
+        return rows;
       }
       if (sql.includes('FROM remote_catalogs')) {
         return [{ catalog_id: 'k7f3q' }];
@@ -42,9 +57,21 @@ function makeDb() {
         ? { lesson_ids: JSON.stringify(['k7f3q-l1.2']) }
         : null,
     ),
-    withTransactionAsync: jest.fn(async (task: () => Promise<void>) => task()),
+    withTransactionAsync: jest.fn(async (task: () => Promise<void>) => {
+      const before = statements.length;
+      try {
+        return await task();
+      } catch (error) {
+        statements.length = before;
+        throw error;
+      }
+    }),
   } as unknown as SQLiteDatabase;
-  return { db, statements, fail: (table: string) => (failOn = table) };
+  return {
+    db,
+    statements,
+    fail: (needle: string, value?: string) => (failOn = { needle, value }),
+  };
 }
 
 describe('applyLessonPayload', () => {
@@ -130,9 +157,11 @@ describe('applyStagedContent', () => {
     expect(
       statements.some(statement => statement.sql.startsWith('UPDATE lessons SET archived_at')),
     ).toBe(true);
-    expect(statements.some(statement => statement.sql.includes('DELETE FROM module_progress'))).toBe(
-      false,
-    );
+    expect(
+      statements.filter(statement =>
+        /DELETE FROM (module_progress|attempts|evaluation_results)/.test(statement.sql),
+      ),
+    ).toEqual([]);
   });
 
   it('archiva las lecciones retiradas también en el curso base', async () => {
@@ -152,5 +181,84 @@ describe('applyStagedContent', () => {
     const result = await applyStagedContent(db, 'k7f3q');
 
     expect(result.failed).toEqual(['k7f3q-l1.2']);
+  });
+
+  it('un fallo no marca applied_hash ni archiva: conserva la copia anterior', async () => {
+    const { db, statements, fail } = makeDb();
+    fail('INSERT INTO examples');
+
+    await applyStagedContent(db, 'k7f3q');
+
+    expect(
+      statements.some(statement => statement.sql.startsWith('UPDATE remote_lessons SET applied_hash')),
+    ).toBe(false);
+    expect(
+      statements.some(statement => statement.sql.startsWith('UPDATE lessons SET archived_at')),
+    ).toBe(false);
+  });
+
+  it('no aplica parcialmente si la segunda lección falla', async () => {
+    const second = {
+      ...payload,
+      lesson: { ...payload.lesson, id: 'k7f3q-l2' },
+    };
+    const { db, statements, fail } = makeDb({
+      rows: [
+        {
+          catalog_id: 'k7f3q',
+          lesson_id: 'k7f3q-l1.2',
+          hash: 'hash-1',
+          payload: JSON.stringify(payload),
+        },
+        {
+          catalog_id: 'k7f3q',
+          lesson_id: 'k7f3q-l2',
+          hash: 'hash-2',
+          payload: JSON.stringify(second),
+        },
+      ],
+    });
+    fail('INSERT INTO lessons', 'k7f3q-l2');
+
+    const result = await applyStagedContent(db, 'k7f3q');
+
+    expect(result.failed).toEqual(['k7f3q-l2']);
+    expect(
+      statements.some(
+        statement =>
+          statement.sql.startsWith('INSERT INTO lessons') &&
+          statement.params[0] === 'k7f3q-l1.2',
+      ),
+    ).toBe(false);
+    expect(
+      statements.some(statement => statement.sql.startsWith('UPDATE remote_lessons SET applied_hash')),
+    ).toBe(false);
+  });
+});
+
+describe('hasPendingContent', () => {
+  function pendingDb(found: 'base' | 'course' | 'class' | null) {
+    return {
+      getFirstAsync: jest.fn(async (sql: string) => {
+        if (sql.includes('FROM remote_lessons')) {
+          return found === 'base' ? { present: 1 } : null;
+        }
+        if (sql.includes('FROM remote_courses')) {
+          return found === 'course' ? { present: 1 } : null;
+        }
+        if (sql.includes('FROM class_cache')) {
+          return found === 'class' ? { present: 1 } : null;
+        }
+        return null;
+      }),
+    } as unknown as SQLiteDatabase;
+  }
+
+  it.each(['base', 'course', 'class'] as const)('detecta pendientes de %s', async kind => {
+    await expect(hasPendingContent(pendingDb(kind))).resolves.toBe(true);
+  });
+
+  it('sin pendientes devuelve false', async () => {
+    await expect(hasPendingContent(pendingDb(null))).resolves.toBe(false);
   });
 });

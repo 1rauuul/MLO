@@ -10,7 +10,12 @@ import {
 } from '@/features/classes/model/classRepository';
 import { applyV3GroupRelease } from '@/shared/services/content/applyV3Content';
 import { fetchGroupRelease } from '@/shared/services/content/coursesV3';
-import { refreshClassContent, refreshClassRelease } from '@/shared/services/content/classSync';
+import {
+  applyStagedClassReleases,
+  refreshClassContent,
+  refreshClassRelease,
+  stageClassRelease,
+} from '@/shared/services/content/classSync';
 
 jest.mock('@/features/classes/model/classRepository', () => ({
   selectClassMemberships: jest.fn(),
@@ -22,6 +27,7 @@ jest.mock('@/shared/services/content/applyV3Content', () => ({
 }));
 jest.mock('@/shared/services/content/coursesV3', () => ({
   fetchGroupRelease: jest.fn(),
+  parseGroupRelease: jest.requireActual('@/shared/services/content/coursesV3').parseGroupRelease,
 }));
 
 const db = {} as SQLiteDatabase;
@@ -160,5 +166,69 @@ describe('refreshClassContent', () => {
 
     expect(mockFetch).toHaveBeenCalledTimes(2);
     expect(mockApply).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('stageClassRelease y applyStagedClassReleases', () => {
+  it('guarda el release sin aplicarlo y detecta el cambio', async () => {
+    mockState.mockResolvedValue({
+      version: 1,
+      hash: 'hash-anterior',
+      archived: 0,
+      applied_hash: 'hash-anterior',
+      course_catalog_id: 'demo',
+      release_v3: '{}',
+    });
+    const runAsync = jest.fn(async (_sql: string, ..._params: unknown[]) => ({
+      changes: 1,
+      lastInsertRowId: 0,
+    }));
+    const stageDb = { runAsync } as unknown as SQLiteDatabase;
+
+    await expect(
+      stageClassRelease(stageDb, client, 'class-demo', 'ABC123', 'key-1', 'demo'),
+    ).resolves.toEqual({ changed: true, initial: false });
+
+    expect(mockApply).not.toHaveBeenCalled();
+    const update = runAsync.mock.calls.find(call =>
+      String(call[0]).includes('UPDATE class_cache'),
+    );
+    expect(update?.[2]).toBe(release.version);
+    expect(update?.[6]).toContain('"kind":"group"');
+  });
+
+  it('no reescribe si el release ya está aplicado', async () => {
+    mockState.mockResolvedValue({
+      version: 1,
+      hash: release.hash,
+      archived: 0,
+      applied_hash: release.hash,
+      course_catalog_id: 'demo',
+      release_v3: JSON.stringify(release),
+    });
+    const runAsync = jest.fn(async (_sql: string, ..._params: unknown[]) => ({
+      changes: 1,
+      lastInsertRowId: 0,
+    }));
+    const stageDb = { runAsync } as unknown as SQLiteDatabase;
+
+    await expect(
+      stageClassRelease(stageDb, client, 'class-demo', 'ABC123', 'key-1', 'demo'),
+    ).resolves.toEqual({ changed: false, initial: false });
+    expect(runAsync).not.toHaveBeenCalled();
+  });
+
+  it('aplica los releases v3 pendientes de la caché', async () => {
+    const getAllAsync = jest.fn(async () => [
+      {
+        class_id: 'class-demo',
+        course_catalog_id: 'demo',
+        release_v3: JSON.stringify(release),
+      },
+    ]);
+    const applyDb = { getAllAsync } as unknown as SQLiteDatabase;
+
+    await expect(applyStagedClassReleases(applyDb)).resolves.toEqual({ failed: [] });
+    expect(mockApply).toHaveBeenCalledWith(applyDb, release, 'class-demo');
   });
 });

@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
+import { ContentUpdateNotice } from '@/shared/components/ContentUpdateNotice';
 import { DATABASE_NAME, migrateAndSeed } from '@/shared/services/db/database';
 import { ContentSyncProvider } from '@/shared/services/content/ContentSyncProvider';
 import { DataProvider } from '@/shared/services/data/DataProvider';
@@ -32,6 +33,7 @@ export default function RootLayout() {
                         <ErrorBoundary>
                           <RootNavigator />
                         </ErrorBoundary>
+                        <ContentUpdateNotice />
                       </AppThemeProvider>
                     </LearnerProfileProvider>
                   </SessionProvider>

@@ -568,8 +568,19 @@ export async function applyLessonPayload(
   db: SQLiteDatabase,
   payload: RemoteLessonPayload,
 ): Promise<void> {
+  await db.withTransactionAsync(() => applyLessonPayloadInTransaction(db, payload));
+}
+
+/**
+ * Variante sin transacción propia: permite aplicar varias lecciones en un solo
+ * snapshot atómico desde `applyStagedContent`.
+ */
+export async function applyLessonPayloadInTransaction(
+  db: SQLiteDatabase,
+  payload: RemoteLessonPayload,
+): Promise<void> {
   const now = new Date().toISOString();
-  await db.withTransactionAsync(async () => {
+  {
     const { unit, lesson, evaluation } = payload;
 
     await db.runAsync(
@@ -674,7 +685,7 @@ export async function applyLessonPayload(
         );
       }
     }
-  });
+  }
 }
 
 async function deleteMissing(

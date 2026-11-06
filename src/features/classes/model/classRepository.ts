@@ -196,6 +196,7 @@ export interface ClassSyncState {
   archived: number;
   applied_hash: string | null;
   course_catalog_id: string;
+  release_v3?: string | null;
 }
 
 export async function selectClassSyncState(
@@ -204,7 +205,8 @@ export async function selectClassSyncState(
 ): Promise<ClassSyncState | null> {
   return db.getFirstAsync<ClassSyncState>(
     `SELECT version, hash, COALESCE(archived, 0) AS archived,
-            applied_hash, COALESCE(course_catalog_id, 'base') AS course_catalog_id
+            applied_hash, COALESCE(course_catalog_id, 'base') AS course_catalog_id,
+            release_v3
        FROM class_cache WHERE class_id = ?`,
     classId,
   );

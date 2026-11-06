@@ -25,6 +25,7 @@ import { useLessonContent } from '@/features/modules/viewmodel/useLessonContent'
 import { useActiveGroup } from '@/features/classes/viewmodel/useActiveGroup';
 import { useSession } from '@/features/auth/viewmodel/useSession';
 import { useExitGuard } from '@/shared/hooks/useExitGuard';
+import { useBlockContentUpdates } from '@/shared/hooks/useContentUpdatesGate';
 
 function asExercise(question: Question, lessonId: string): Exercise {
   return {
@@ -98,6 +99,8 @@ export default function EvaluationFlow() {
   // Un resultado por intento: cambia runId cuando el alumno reintenta.
   const recordedRunRef = useRef<number | null>(null);
   const exitGuard = useExitGuard(engine.phase === 'running');
+  // Un contenido nuevo no debe reemplazar los reactivos de una evaluación abierta.
+  useBlockContentUpdates(engine.phase === 'running');
 
   useFocusEffect(
     useCallback(() => {

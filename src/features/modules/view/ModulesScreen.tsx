@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText } from '@/shared/components/AppText';
 import { SecondaryButton } from '@/shared/components/Buttons';
 import { Chevron } from '@/shared/components/Chevron';
+import { ContentUpdateButton } from '@/shared/components/ContentUpdateNotice';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Screen } from '@/shared/components/Screen';
 import { SectionHeading } from '@/shared/components/SectionHeading';
@@ -355,6 +356,8 @@ export default function ModulesScreen() {
       </View>
 
       <Bibliography references={references ?? []} />
+
+      <ContentUpdateButton style={styles.syncButton} />
     </Screen>
   );
 }
@@ -404,4 +407,5 @@ const styles = StyleSheet.create({
   subtopics: { marginTop: 6 },
   divider: { height: 1 },
   explore: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
+  syncButton: { marginTop: 18 },
 });

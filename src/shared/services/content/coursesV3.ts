@@ -461,18 +461,19 @@ export async function selectCourse(
 /**
  * Descarga la lista autorizada y los manifiestos v3 no-base. Toda la escritura
  * ocurre al final: si la red o el parseo fallan, la caché anterior queda igual.
+ * Devuelve si cambió algún curso no-base respecto a la última sincronización.
  */
 export async function refreshCourseList(
   db: SQLiteDatabase,
   client: HttpClient,
-): Promise<void> {
+): Promise<boolean> {
   const account = await db.getFirstAsync<{ id: number; external_key: string }>(
     `SELECT a.id, a.external_key FROM auth_session s
      JOIN accounts a ON a.id = s.account_id
      WHERE s.id = 1`,
   );
   if (!account || !account.external_key) {
-    return;
+    return false;
   }
 
   const list = await fetchCourseList(client, account.external_key);
@@ -486,6 +487,28 @@ export async function refreshCourseList(
       await fetchCourseManifest(client, course.catalogId, account.external_key),
     );
   }
+
+  const synced = await hasCourseSync(db, account.id);
+  const previous = new Map(
+    (
+      await db.getAllAsync<{ catalog_id: string; version: string; hash: string }>(
+        `SELECT rc.catalog_id, rc.version, rc.hash
+           FROM account_courses ac
+           JOIN remote_courses rc ON rc.catalog_id = ac.catalog_id
+          WHERE ac.account_id = ? AND rc.catalog_id != ?`,
+        account.id,
+        BASE_CATALOG_ID,
+      )
+    ).map(row => [row.catalog_id, row]),
+  );
+  const remoteCourses = list.courses.filter(course => course.catalogId !== BASE_CATALOG_ID);
+  const changed =
+    synced &&
+    (remoteCourses.length !== previous.size ||
+      remoteCourses.some(course => {
+        const before = previous.get(course.catalogId);
+        return !before || before.version !== course.version || before.hash !== course.hash;
+      }));
 
   const now = new Date().toISOString();
   await db.withTransactionAsync(async () => {
@@ -556,4 +579,5 @@ export async function refreshCourseList(
       now,
     );
   });
+  return changed;
 }
