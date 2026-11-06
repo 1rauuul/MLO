@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { selectExercisesByLesson } from '@/features/exercises/model/exerciseRepository';
+import { selectExercisesByLesson, selectExercisesByTopic } from '@/features/exercises/model/exerciseRepository';
 
 function makeDb(overrides: Record<string, jest.Mock> = {}) {
   const calls = {
@@ -39,6 +39,16 @@ describe('exerciseRepository', () => {
       explanation: 'porque',
     });
     expect(calls.getAllAsync).toHaveBeenCalledWith(expect.any(String), 'l1.2');
+    expect(String((calls.getAllAsync.mock.calls as unknown[][])[0]?.[0])).toContain('ORDER BY position, rowid');
+  });
+
+  it('selectExercisesByTopic ordena por posición editorial', async () => {
+    const { db, calls } = makeDb({ getAllAsync: jest.fn(async () => [exerciseRow]) });
+
+    await selectExercisesByTopic(db, 't1', 'base');
+
+    expect(String((calls.getAllAsync.mock.calls as unknown[][])[0]?.[0])).toContain('ORDER BY e.position, e.rowid');
+    expect(calls.getAllAsync).toHaveBeenCalledWith(expect.any(String), 't1', 'base');
   });
 
   it('tolera correct_order y config inválidos', async () => {

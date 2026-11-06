@@ -6,6 +6,7 @@ import type { Example, ExerciseConfig, ExerciseType } from '@/shared/model/entit
 interface ExampleRow {
   id: string;
   lesson_id: string;
+  topic_id?: string;
   type: ExerciseType;
   title: string;
   prompt: string;
@@ -56,6 +57,7 @@ function mapExample(row: ExampleRow): Example {
   return {
     id: row.id,
     lessonId: row.lesson_id,
+    topicId: row.topic_id ?? undefined,
     type: row.type,
     title: row.title,
     prompt: row.prompt,
@@ -68,8 +70,24 @@ function mapExample(row: ExampleRow): Example {
 
 export async function selectExamplesByLesson(db: SQLiteDatabase, lessonId: string): Promise<Example[]> {
   const rows = await db.getAllAsync<ExampleRow>(
-    'SELECT * FROM examples WHERE lesson_id = ? ORDER BY rowid',
+    'SELECT * FROM examples WHERE lesson_id = ? ORDER BY position, rowid',
     lessonId,
+  );
+  return rows.map(mapExample);
+}
+
+export async function selectExamplesByTopic(
+  db: SQLiteDatabase,
+  topicId: string,
+  catalogId = 'base',
+): Promise<Example[]> {
+  const rows = await db.getAllAsync<ExampleRow>(
+    `SELECT e.* FROM examples e
+     JOIN lessons l ON l.id = e.lesson_id
+     WHERE e.topic_id = ? AND l.catalog_id = ? AND l.archived_at IS NULL
+     ORDER BY e.position, e.rowid`,
+    topicId,
+    catalogId,
   );
   return rows.map(mapExample);
 }

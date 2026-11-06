@@ -11,6 +11,7 @@ import type {
 interface EvaluationRow {
   id: string;
   lesson_id: string;
+  topic_id?: string;
   title: string;
   description: string;
   question_count?: number;
@@ -42,6 +43,7 @@ function mapEvaluation(row: EvaluationRow): Evaluation {
   return {
     id: row.id,
     lessonId: row.lesson_id,
+    topicId: row.topic_id ?? undefined,
     title: row.title,
     description: row.description,
     questionCount: row.question_count ?? 10,
@@ -86,7 +88,7 @@ export async function selectEvaluationByLesson(
   lessonId: string,
 ): Promise<Evaluation | null> {
   const row = await db.getFirstAsync<EvaluationRow>(
-    'SELECT * FROM evaluations WHERE lesson_id = ? AND archived_at IS NULL ORDER BY rowid LIMIT 1',
+    'SELECT * FROM evaluations WHERE lesson_id = ? AND archived_at IS NULL ORDER BY position, rowid LIMIT 1',
     lessonId,
   );
   return row ? mapEvaluation(row) : null;
@@ -98,6 +100,34 @@ export async function selectQuestions(db: SQLiteDatabase, evaluationId: string):
     evaluationId,
   );
   return rows.map(mapQuestion);
+}
+
+export async function selectEvaluationsByTopic(
+  db: SQLiteDatabase,
+  topicId: string,
+  catalogId = 'base',
+): Promise<Evaluation[]> {
+  const rows = await db.getAllAsync<EvaluationRow>(
+    `SELECT e.* FROM evaluations e
+     JOIN lessons l ON l.id = e.lesson_id
+     WHERE e.topic_id = ? AND l.catalog_id = ? AND l.archived_at IS NULL
+       AND e.archived_at IS NULL
+     ORDER BY e.position, e.rowid`,
+    topicId,
+    catalogId,
+  );
+  return rows.map(mapEvaluation);
+}
+
+export async function selectEvaluationExercises(
+  db: SQLiteDatabase,
+  evaluationId: string,
+): Promise<string[]> {
+  const rows = await db.getAllAsync<{ exercise_id: string }>(
+    'SELECT exercise_id FROM evaluation_exercises WHERE evaluation_id = ? ORDER BY rowid',
+    evaluationId,
+  );
+  return rows.map(row => row.exercise_id);
 }
 
 export async function insertEvaluationResult(

@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { selectExamplesByLesson } from '@/features/examples/model/exampleRepository';
+import { selectExamplesByLesson, selectExamplesByTopic } from '@/features/examples/model/exampleRepository';
 
 function makeDb(rows: unknown[]) {
   const getAllAsync = jest.fn(async () => rows);
@@ -37,6 +37,16 @@ describe('exampleRepository', () => {
       explanation: 'explica',
     });
     expect(getAllAsync).toHaveBeenCalledWith(expect.any(String), 'l1.2');
+    expect(String((getAllAsync.mock.calls as unknown[][])[0]?.[0])).toContain('ORDER BY position, rowid');
+  });
+
+  it('selectExamplesByTopic ordena por posición editorial', async () => {
+    const { db, getAllAsync } = makeDb([exampleRow]);
+
+    await selectExamplesByTopic(db, 't1', 'base');
+
+    expect(String((getAllAsync.mock.calls as unknown[][])[0]?.[0])).toContain('ORDER BY e.position, e.rowid');
+    expect(getAllAsync).toHaveBeenCalledWith(expect.any(String), 't1', 'base');
   });
 
   it('tolera JSON inválido en steps/hints/config', async () => {

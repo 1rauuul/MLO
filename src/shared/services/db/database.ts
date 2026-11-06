@@ -2,6 +2,10 @@ import * as Crypto from 'expo-crypto';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { DATABASE_VERSION, DROP_ALL_DDL, SCHEMA_DDL } from '@/shared/services/db/schema';
+import {
+  applyStoredV3Content,
+  backfillLegacyTopics,
+} from '@/shared/services/content/applyV3Content';
 import { applyStagedContent } from '@/shared/services/content/remote/applyStagedContent';
 
 import {
@@ -44,10 +48,12 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     await db.withTransactionAsync(async () => {
       await db.execAsync(SCHEMA_DDL);
       await writeSeedDatabase(db);
+      await backfillLegacyTopics(db);
       await saveContentHash(db);
       await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
     });
     await applyStagedContent(db);
+    await applyStoredV3Content(db);
     return;
   }
 
@@ -55,6 +61,8 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     await db.execAsync(SCHEMA_DDL);
     await seedIfEmpty(db);
     await syncBundledAndRemote(db);
+    await db.withTransactionAsync(() => backfillLegacyTopics(db));
+    await applyStoredV3Content(db);
     return;
   }
 
@@ -362,8 +370,60 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     version = 18;
   }
 
+  if (version < 19) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS topics (
+          id TEXT PRIMARY KEY NOT NULL,
+          unit_id TEXT NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          summary TEXT NOT NULL DEFAULT '',
+          position INTEGER NOT NULL DEFAULT 0,
+          catalog_id TEXT NOT NULL DEFAULT 'base',
+          archived_at TEXT
+        );
+        CREATE TABLE IF NOT EXISTS evaluation_exercises (
+          evaluation_id TEXT NOT NULL REFERENCES evaluations(id) ON DELETE CASCADE,
+          exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+          PRIMARY KEY (evaluation_id, exercise_id)
+        );
+      `);
+      for (const table of ['lessons', 'examples', 'exercises', 'evaluations']) {
+        if (!(await hasColumn(db, table, 'topic_id'))) {
+          await db.execAsync(`ALTER TABLE ${table} ADD COLUMN topic_id TEXT`);
+        }
+      }
+      // Conserva el orden v2 actual: rowid era el orden de lectura anterior.
+      for (const table of ['examples', 'exercises', 'evaluations']) {
+        if (!(await hasColumn(db, table, 'position'))) {
+          await db.execAsync(
+            `ALTER TABLE ${table} ADD COLUMN position INTEGER NOT NULL DEFAULT 0`,
+          );
+          await db.runAsync(`UPDATE ${table} SET position = rowid`);
+        }
+      }
+      if (!(await hasColumn(db, 'remote_courses', 'applied_hash'))) {
+        await db.execAsync(`ALTER TABLE remote_courses ADD COLUMN applied_hash TEXT`);
+      }
+      await db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_topics_unit ON topics(unit_id);
+        CREATE INDEX IF NOT EXISTS idx_topics_catalog ON topics(catalog_id);
+        CREATE INDEX IF NOT EXISTS idx_lessons_topic ON lessons(topic_id);
+        CREATE INDEX IF NOT EXISTS idx_examples_topic ON examples(topic_id);
+        CREATE INDEX IF NOT EXISTS idx_exercises_topic ON exercises(topic_id);
+        CREATE INDEX IF NOT EXISTS idx_evaluations_topic ON evaluations(topic_id);
+        CREATE INDEX IF NOT EXISTS idx_evaluation_exercises_exercise ON evaluation_exercises(exercise_id);
+      `);
+      await backfillLegacyTopics(db);
+      await db.execAsync('PRAGMA user_version = 19');
+    });
+    version = 19;
+  }
+
   await seedIfEmpty(db);
   await syncBundledAndRemote(db);
+  await db.withTransactionAsync(() => backfillLegacyTopics(db));
+  await applyStoredV3Content(db);
 }
 
 // Primero el contenido incluido; después lo remoto ya validado, sin red.

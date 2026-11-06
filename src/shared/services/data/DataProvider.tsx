@@ -15,12 +15,15 @@ import {
 import {
   insertEvaluationResult,
   selectEvaluationByLesson,
+  selectEvaluationExercises,
   selectEvaluationSummaries,
+  selectEvaluationsByTopic,
   selectQuestions,
   selectRecentEvaluationResults,
 } from '@/features/evaluations/model/evaluationRepository';
 import {
   selectExamplesByLesson,
+  selectExamplesByTopic,
   selectExamplesWithExtras,
 } from '@/features/examples/model/exampleRepository';
 import { insertAttempt, selectAttemptsByLesson } from '@/features/exercises/model/attemptRepository';
@@ -44,6 +47,7 @@ import {
 } from '@/shared/services/content/remoteContent';
 import { http, httpV3 } from '@/shared/services/http/client';
 import { refreshCourseList } from '@/shared/services/content/coursesV3';
+import { applyStoredV3Content } from '@/shared/services/content/applyV3Content';
 import {
   ensureBaseCourse,
   loadAccountCourses,
@@ -55,11 +59,15 @@ import {
 } from '@/features/exercises/model/exampleStateRepository';
 import {
   selectExercisesByLesson,
+  selectExercisesByTopic,
   selectPracticeExercisesByLesson,
 } from '@/features/exercises/model/exerciseRepository';
 import {
   selectLesson,
   selectLessons,
+  selectLessonsByTopic,
+  selectTopic,
+  selectTopics,
   selectUnits,
 } from '@/features/modules/model/lessonRepository';
 import {
@@ -106,6 +114,10 @@ export function createRepositories(db: SQLiteDatabase) {
     },
     evaluations: {
       selectEvaluationByLesson: (lessonId: string) => selectEvaluationByLesson(db, lessonId),
+      selectEvaluationsByTopic: (topicId: string, catalogId?: string) =>
+        selectEvaluationsByTopic(db, topicId, catalogId),
+      selectEvaluationExercises: (evaluationId: string) =>
+        selectEvaluationExercises(db, evaluationId),
       selectQuestions: (evaluationId: string) => selectQuestions(db, evaluationId),
       insertEvaluationResult: (
         accountId: number,
@@ -121,11 +133,15 @@ export function createRepositories(db: SQLiteDatabase) {
     },
     examples: {
       selectExamplesByLesson: (lessonId: string) => selectExamplesByLesson(db, lessonId),
+      selectExamplesByTopic: (topicId: string, catalogId?: string) =>
+        selectExamplesByTopic(db, topicId, catalogId),
       selectExamplesWithExtras: (accountId: number, lessonId: string) =>
         selectExamplesWithExtras(db, accountId, lessonId),
     },
     exercises: {
       selectExercisesByLesson: (lessonId: string) => selectExercisesByLesson(db, lessonId),
+      selectExercisesByTopic: (topicId: string, catalogId?: string) =>
+        selectExercisesByTopic(db, topicId, catalogId),
       selectPracticeExercisesByLesson: (accountId: number, lessonId: string) =>
         selectPracticeExercisesByLesson(db, accountId, lessonId),
     },
@@ -153,7 +169,11 @@ export function createRepositories(db: SQLiteDatabase) {
     },
     lessons: {
       selectUnits: (catalogId?: string) => selectUnits(db, catalogId),
+      selectTopics: (catalogId?: string) => selectTopics(db, catalogId),
+      selectTopic: (id: string, catalogId?: string) => selectTopic(db, id, catalogId),
       selectLessons: (catalogId?: string) => selectLessons(db, catalogId),
+      selectLessonsByTopic: (topicId: string, catalogId?: string) =>
+        selectLessonsByTopic(db, topicId, catalogId),
       selectLesson: (id: string, catalogId?: string) => selectLesson(db, id, catalogId),
     },
     courses: {
@@ -161,6 +181,7 @@ export function createRepositories(db: SQLiteDatabase) {
       loadAccountCourses: (accountId?: number) => loadAccountCourses(db, accountId),
       selectCourse: (accountId: number, catalogId: string) =>
         selectCourse(db, accountId, catalogId),
+      applyStoredContent: (catalogId?: string) => applyStoredV3Content(db, catalogId),
       refreshCourseList: () => refreshCourseList(db, httpV3),
     },
     classes: {

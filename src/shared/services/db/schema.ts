@@ -1,4 +1,4 @@
-export const DATABASE_VERSION = 18;
+export const DATABASE_VERSION = 19;
 
 export const SCHEMA_DDL = `
 CREATE TABLE IF NOT EXISTS accounts (
@@ -27,9 +27,20 @@ CREATE TABLE IF NOT EXISTS units (
   archived_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS topics (
+  id TEXT PRIMARY KEY NOT NULL,
+  unit_id TEXT NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  summary TEXT NOT NULL DEFAULT '',
+  position INTEGER NOT NULL DEFAULT 0,
+  catalog_id TEXT NOT NULL DEFAULT 'base',
+  archived_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS lessons (
   id TEXT PRIMARY KEY NOT NULL,
   unit_id TEXT NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+  topic_id TEXT,
   code TEXT NOT NULL,
   title TEXT NOT NULL,
   eyebrow TEXT NOT NULL,
@@ -83,34 +94,40 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_account_classes_code
 CREATE TABLE IF NOT EXISTS examples (
   id TEXT PRIMARY KEY NOT NULL,
   lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+  topic_id TEXT,
   type TEXT NOT NULL,
   title TEXT NOT NULL,
   prompt TEXT NOT NULL,
   config TEXT NOT NULL DEFAULT '{}',
   steps TEXT NOT NULL DEFAULT '[]',
   hints TEXT NOT NULL DEFAULT '[]',
-  explanation TEXT NOT NULL DEFAULT ''
+  explanation TEXT NOT NULL DEFAULT '',
+  position INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS exercises (
   id TEXT PRIMARY KEY NOT NULL,
   lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+  topic_id TEXT,
   type TEXT NOT NULL,
   prompt TEXT NOT NULL,
   instructions TEXT NOT NULL,
   correct_order TEXT NOT NULL DEFAULT '[]',
   config TEXT NOT NULL DEFAULT '{}',
-  explanation TEXT NOT NULL DEFAULT ''
+  explanation TEXT NOT NULL DEFAULT '',
+  position INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS evaluations (
   id TEXT PRIMARY KEY NOT NULL,
   lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+  topic_id TEXT,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   question_count INTEGER NOT NULL DEFAULT 10,
   exercise_count INTEGER NOT NULL DEFAULT 5,
-  archived_at TEXT
+  archived_at TEXT,
+  position INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS questions (
@@ -123,6 +140,12 @@ CREATE TABLE IF NOT EXISTS questions (
   options TEXT NOT NULL DEFAULT '[]',
   answer INTEGER NOT NULL,
   explanation TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS evaluation_exercises (
+  evaluation_id TEXT NOT NULL REFERENCES evaluations(id) ON DELETE CASCADE,
+  exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+  PRIMARY KEY (evaluation_id, exercise_id)
 );
 
 CREATE TABLE IF NOT EXISTS attempts (
@@ -218,6 +241,7 @@ CREATE TABLE IF NOT EXISTS remote_courses (
   empty INTEGER NOT NULL DEFAULT 1,
   is_base INTEGER NOT NULL DEFAULT 0,
   manifest TEXT,
+  applied_hash TEXT,
   fetched_at TEXT NOT NULL
 );
 
@@ -242,13 +266,21 @@ CREATE INDEX IF NOT EXISTS idx_eval_results_account ON evaluation_results(accoun
 CREATE INDEX IF NOT EXISTS idx_attempts_account_lesson ON attempts(account_id, lesson_id);
 CREATE INDEX IF NOT EXISTS idx_attempts_account_type ON attempts(account_id, item_type);
 CREATE INDEX IF NOT EXISTS idx_units_catalog ON units(catalog_id);
+CREATE INDEX IF NOT EXISTS idx_topics_unit ON topics(unit_id);
+CREATE INDEX IF NOT EXISTS idx_topics_catalog ON topics(catalog_id);
 CREATE INDEX IF NOT EXISTS idx_lessons_catalog ON lessons(catalog_id);
+CREATE INDEX IF NOT EXISTS idx_lessons_topic ON lessons(topic_id);
+CREATE INDEX IF NOT EXISTS idx_examples_topic ON examples(topic_id);
+CREATE INDEX IF NOT EXISTS idx_exercises_topic ON exercises(topic_id);
+CREATE INDEX IF NOT EXISTS idx_evaluations_topic ON evaluations(topic_id);
+CREATE INDEX IF NOT EXISTS idx_evaluation_exercises_exercise ON evaluation_exercises(exercise_id);
 CREATE INDEX IF NOT EXISTS idx_remote_lessons_catalog ON remote_lessons(catalog_id);
 `;
 
 export const DROP_ALL_DDL = `
 DROP TABLE IF EXISTS attempts;
 DROP TABLE IF EXISTS auth_session;
+DROP TABLE IF EXISTS evaluation_exercises;
 DROP TABLE IF EXISTS account_courses;
 DROP TABLE IF EXISTS remote_courses;
 DROP TABLE IF EXISTS evaluation_results;
@@ -267,6 +299,7 @@ DROP TABLE IF EXISTS evaluations;
 DROP TABLE IF EXISTS exercises;
 DROP TABLE IF EXISTS examples;
 DROP TABLE IF EXISTS lessons;
+DROP TABLE IF EXISTS topics;
 DROP TABLE IF EXISTS units;
 DROP TABLE IF EXISTS accounts;
 `;

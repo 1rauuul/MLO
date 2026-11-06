@@ -50,9 +50,19 @@ export interface Unit {
   color: UnitColor;
 }
 
+/** Subtema: agrupa N lecciones, ejemplos, ejercicios y evaluaciones. */
+export interface Topic {
+  id: string;
+  unitId: string;
+  title: string;
+  summary: string;
+  position: number;
+}
+
 export interface Lesson {
   id: string;
   unitId: string;
+  topicId?: string;
   code: string;
   title: string;
   eyebrow: string;
@@ -73,6 +83,7 @@ export interface ExampleStep {
 export interface Example {
   id: string;
   lessonId: string;
+  topicId?: string;
   type: ExerciseType;
   title: string;
   prompt: string;
@@ -87,6 +98,7 @@ export interface Example {
 export interface Exercise {
   id: string;
   lessonId: string;
+  topicId?: string;
   type: ExerciseType;
   prompt: string;
   instructions: string;
@@ -118,6 +130,7 @@ export interface AccountClass {
 export interface Evaluation {
   id: string;
   lessonId: string;
+  topicId?: string;
   title: string;
   description: string;
   questionCount?: number;

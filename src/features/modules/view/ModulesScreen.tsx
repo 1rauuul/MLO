@@ -8,9 +8,9 @@ import { Chevron } from '@/shared/components/Chevron';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Screen } from '@/shared/components/Screen';
 import { SectionHeading } from '@/shared/components/SectionHeading';
-import { SubtopicRow } from '@/features/modules/view/SubtopicRow';
+import { TopicRow } from '@/features/modules/view/TopicRow';
 import { UnitCard } from '@/features/modules/view/UnitCard';
-import type { Lesson } from '@/shared/model/entities';
+import type { Lesson, Topic } from '@/shared/model/entities';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { initials } from '@/features/auth/viewmodel/auth.logic';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
@@ -86,7 +86,7 @@ export default function ModulesScreen() {
     refresh: refreshCourses,
     isLoading: coursesLoading,
   } = useCourses();
-  const { units, lessonsByUnit, completionMap, isLoading, error, refresh } = useCatalog(
+  const { units, topics, lessonsByUnit, completionMap, isLoading, error, refresh } = useCatalog(
     coursesLoading ? '' : activeCatalogId,
   );
   const { location, resumeHref } = useSession();
@@ -103,13 +103,6 @@ export default function ModulesScreen() {
   const learnerName = account?.displayName ?? 'Estudiante';
   const activeCourse = courses.find(course => course.catalogId === activeCatalogId);
   const isBaseCourse = activeCatalogId === BASE_CATALOG_ID;
-  const openDestination = (lesson: Lesson) => {
-    if (lesson.code === '1.1') {
-      router.push({ pathname: '/lecciones/[id]', params: { id: lesson.id } });
-    } else {
-      router.push({ pathname: '/tema/[id]', params: { id: lesson.id } });
-    }
-  };
   const coursePicker = (
     <CoursePicker
       courses={courses}
@@ -172,15 +165,32 @@ export default function ModulesScreen() {
     );
   }
 
-  const currentUnit =
-    units.find(unit => {
-      const lessons = lessonsByUnit[unit.id] ?? [];
-      return lessons.some(lesson => !completionMap[lesson.id]);
-    }) ?? units[0];
-  const currentLessons = lessonsByUnit[currentUnit.id] ?? [];
-  const nextLesson = currentLessons.find(lesson => !completionMap[lesson.id]) ?? currentLessons[0];
-
   const allLessons = units.flatMap(unit => lessonsByUnit[unit.id] ?? []);
+  const lessonsForTopic = (topicId: string) =>
+    allLessons.filter(lesson => (lesson.topicId ?? `t-${lesson.id}`) === topicId);
+  const catalogTopics: Topic[] =
+    (topics ?? []).length > 0
+      ? topics ?? []
+      : allLessons.map(lesson => ({
+          id: lesson.topicId ?? `t-${lesson.id}`,
+          unitId: lesson.unitId,
+          title: lesson.title,
+          summary: '',
+          position: lesson.position,
+        }));
+  const topicsByUnit: Record<string, Topic[]> = {};
+  for (const topic of catalogTopics) {
+    (topicsByUnit[topic.unitId] ??= []).push(topic);
+  }
+  const currentTopic =
+    catalogTopics.find(topic =>
+      lessonsForTopic(topic.id).some(lesson => !completionMap[lesson.id]),
+    ) ?? catalogTopics[0] ?? null;
+  const nextLesson = currentTopic
+    ? lessonsForTopic(currentTopic.id).find(lesson => !completionMap[lesson.id]) ??
+      lessonsForTopic(currentTopic.id)[0]
+    : undefined;
+
   const resumedLesson = location.lessonId
     ? allLessons.find(lesson => lesson.id === location.lessonId) ?? null
     : null;
@@ -188,19 +198,49 @@ export default function ModulesScreen() {
     ? units.find(unit => unit.id === resumedLesson.unitId) ?? null
     : null;
   const canResume = resumedLesson !== null && resumedUnit !== null && resumeHref !== null;
-  const heroUnit = canResume && resumedUnit ? resumedUnit : currentUnit;
-  const heroLessons = lessonsByUnit[heroUnit.id] ?? [];
+  const resumedTopic = resumedLesson
+    ? catalogTopics.find(
+        topic => topic.id === (resumedLesson.topicId ?? `t-${resumedLesson.id}`),
+      ) ?? null
+    : null;
+  const heroUnit =
+    (canResume && resumedUnit ? resumedUnit : null) ??
+    (currentTopic ? units.find(unit => unit.id === currentTopic.unitId) : null) ??
+    units[0];
+  const heroTopic = canResume && resumedTopic ? resumedTopic : currentTopic;
+  const heroLessons = heroTopic ? lessonsForTopic(heroTopic.id) : [];
   const heroDone = heroLessons.filter(lesson => completionMap[lesson.id]).length;
   const heroProgress = heroLessons.length ? Math.round((heroDone / heroLessons.length) * 100) : 0;
-  const heroTitle = canResume && resumedLesson ? resumedLesson.title : heroUnit.title;
+  const heroTitle =
+    canResume && resumedLesson
+      ? resumedLesson.title
+      : heroTopic?.title ?? heroUnit.title;
+
+  const openTopic = (topic: Topic) => {
+    router.push({ pathname: '/tema/[id]', params: { id: topic.id } });
+  };
+  const openLesson = (lesson: Lesson) => {
+    if (lesson.code === '1.1') {
+      router.push({ pathname: '/lecciones/[id]', params: { id: lesson.id } });
+    } else {
+      router.push({
+        pathname: '/tema/[id]',
+        params: { id: lesson.topicId ?? `t-${lesson.id}` },
+      });
+    }
+  };
 
   const handleContinue = () => {
     if (canResume && resumeHref) {
       router.push(resumeHref);
       return;
     }
+    if (heroTopic) {
+      openTopic(heroTopic);
+      return;
+    }
     if (nextLesson) {
-      openDestination(nextLesson);
+      openLesson(nextLesson);
     }
   };
 
@@ -238,7 +278,7 @@ export default function ModulesScreen() {
           {heroTitle}
         </AppText>
         <AppText variant="small" color="#E6ECFF">
-          {`${heroDone} de ${heroLessons.length} subtemas · ${heroProgress}%`}
+          {`${heroDone} de ${heroLessons.length} lecciones · ${heroProgress}%`}
         </AppText>
         <Pressable
           accessibilityRole="button"
@@ -258,40 +298,50 @@ export default function ModulesScreen() {
 
       <View style={styles.list}>
         {units.map(unit => {
+          const unitTopics = topicsByUnit[unit.id] ?? [];
           const lessons = lessonsByUnit[unit.id] ?? [];
           const done = lessons.filter(lesson => completionMap[lesson.id]).length;
           const progress = lessons.length ? Math.round((done / lessons.length) * 100) : 0;
           const isExpanded = expanded === unit.id;
-          const nextLessonInUnit = lessons.find(lesson => !completionMap[lesson.id]) ?? lessons[0];
+          const nextTopicInUnit =
+            unitTopics.find(topic =>
+              lessonsForTopic(topic.id).some(lesson => !completionMap[lesson.id]),
+            ) ?? unitTopics[0];
           return (
             <UnitCard
               key={unit.id}
               unit={unit}
-              subtopicCount={lessons.length}
+              subtopicCount={unitTopics.length}
               progress={progress}
               expanded={isExpanded}
               onToggle={() => setExpanded(isExpanded ? null : unit.id)}>
-              <AppText variant="eyebrow">{`Objetos de aprendizaje · ${lessons.length} subtemas`}</AppText>
+              <AppText variant="eyebrow">{`Objetos de aprendizaje · ${unitTopics.length} subtemas`}</AppText>
               <View style={styles.subtopics}>
-                {lessons.map((lesson, index) => (
-                  <View key={lesson.id}>
-                    {index > 0 ? (
-                      <View style={[styles.divider, { backgroundColor: colors.line }]} />
-                    ) : null}
-                    <SubtopicRow
-                      inline
-                      lesson={lesson}
-                      completed={!!completionMap[lesson.id]}
-                      onPress={() => openDestination(lesson)}
-                    />
-                  </View>
-                ))}
+                {unitTopics.map((topic, index) => {
+                  const topicLessons = lessonsForTopic(topic.id);
+                  const topicDone =
+                    topicLessons.length > 0 &&
+                    topicLessons.every(lesson => completionMap[lesson.id]);
+                  return (
+                    <View key={topic.id}>
+                      {index > 0 ? (
+                        <View style={[styles.divider, { backgroundColor: colors.line }]} />
+                      ) : null}
+                      <TopicRow
+                        topic={topic}
+                        lessonCount={topicLessons.length}
+                        completed={topicDone}
+                        onPress={() => openTopic(topic)}
+                      />
+                    </View>
+                  );
+                })}
               </View>
-              {nextLessonInUnit ? (
+              {nextTopicInUnit ? (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Explorar subtemas"
-                  onPress={() => openDestination(nextLessonInUnit)}
+                  onPress={() => openTopic(nextTopicInUnit)}
                   style={styles.explore}>
                   <AppText variant="small" color={colors.primary} weight="700">
                     Explorar subtemas

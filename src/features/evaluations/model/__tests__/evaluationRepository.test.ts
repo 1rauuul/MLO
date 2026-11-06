@@ -5,6 +5,7 @@ import {
   selectEvaluationByLesson,
   selectEvaluationScoresByLesson,
   selectEvaluationSummaries,
+  selectEvaluationsByTopic,
   selectQuestions,
   selectRecentEvaluationResults,
 } from '@/features/evaluations/model/evaluationRepository';
@@ -21,7 +22,7 @@ function makeDb(overrides: Record<string, jest.Mock> = {}) {
 
 describe('evaluationRepository', () => {
   it('selectEvaluationByLesson mapea la evaluación', async () => {
-    const { db } = makeDb({
+    const { db, calls } = makeDb({
       getFirstAsync: jest.fn(async () => ({
         id: 'ev1.2',
         lesson_id: 'l1.2',
@@ -38,6 +39,29 @@ describe('evaluationRepository', () => {
       questionCount: 10,
       exerciseCount: 5,
     });
+    expect(String((calls.getFirstAsync.mock.calls as unknown[][])[0]?.[0])).toContain(
+      'ORDER BY position, rowid LIMIT 1',
+    );
+  });
+
+  it('selectEvaluationsByTopic ordena por posición editorial', async () => {
+    const { db, calls } = makeDb({
+      getAllAsync: jest.fn(async () => [
+        {
+          id: 'ev1',
+          lesson_id: 'l1.1',
+          title: 'Ev',
+          description: 'd',
+        },
+      ]),
+    });
+
+    await selectEvaluationsByTopic(db, 't1', 'base');
+
+    expect(String((calls.getAllAsync.mock.calls as unknown[][])[0]?.[0])).toContain(
+      'ORDER BY e.position, e.rowid',
+    );
+    expect(calls.getAllAsync).toHaveBeenCalledWith(expect.any(String), 't1', 'base');
   });
 
   it('selectEvaluationByLesson devuelve null sin fila', async () => {

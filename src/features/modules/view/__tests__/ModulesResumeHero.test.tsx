@@ -140,5 +140,5 @@ it('falls back to the first incomplete lesson without a stored location', () => 
   const { getByRole } = render(<ModulesScreen />);
 
   fireEvent.press(getByRole('button', { name: 'Continuar unidad' }));
-  expect(mockPush).toHaveBeenCalledWith({ pathname: '/tema/[id]', params: { id: 'lesson-2' } });
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/tema/[id]', params: { id: 't-lesson-2' } });
 });

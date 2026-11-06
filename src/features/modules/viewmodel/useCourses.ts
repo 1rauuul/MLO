@@ -57,6 +57,11 @@ export function useCourses(): CoursesResult {
         ? await repository.selectCourse(account.id, catalogId)
         : catalogId === BASE_CATALOG_ID;
       if (changed) {
+        try {
+          await repository.applyStoredContent(catalogId);
+        } catch {
+          // La selección se mantiene; el release se reintenta en el próximo arranque.
+        }
         setActiveCatalogId(catalogId);
       }
     },

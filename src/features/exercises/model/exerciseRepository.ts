@@ -6,6 +6,7 @@ import type { Exercise, ExerciseConfig, ExerciseType } from '@/shared/model/enti
 interface ExerciseRow {
   id: string;
   lesson_id: string;
+  topic_id?: string;
   type: ExerciseType;
   prompt: string;
   instructions: string;
@@ -36,6 +37,7 @@ function mapExercise(row: ExerciseRow): Exercise {
   return {
     id: row.id,
     lessonId: row.lesson_id,
+    topicId: row.topic_id ?? undefined,
     type: row.type,
     prompt: row.prompt,
     instructions: row.instructions,
@@ -47,8 +49,24 @@ function mapExercise(row: ExerciseRow): Exercise {
 
 export async function selectExercisesByLesson(db: SQLiteDatabase, lessonId: string): Promise<Exercise[]> {
   const rows = await db.getAllAsync<ExerciseRow>(
-    'SELECT * FROM exercises WHERE lesson_id = ? ORDER BY rowid',
+    'SELECT * FROM exercises WHERE lesson_id = ? ORDER BY position, rowid',
     lessonId,
+  );
+  return rows.map(mapExercise);
+}
+
+export async function selectExercisesByTopic(
+  db: SQLiteDatabase,
+  topicId: string,
+  catalogId = 'base',
+): Promise<Exercise[]> {
+  const rows = await db.getAllAsync<ExerciseRow>(
+    `SELECT e.* FROM exercises e
+     JOIN lessons l ON l.id = e.lesson_id
+     WHERE e.topic_id = ? AND l.catalog_id = ? AND l.archived_at IS NULL
+     ORDER BY e.position, e.rowid`,
+    topicId,
+    catalogId,
   );
   return rows.map(mapExercise);
 }

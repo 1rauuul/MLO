@@ -1,42 +1,61 @@
 import { useEffect, useState } from 'react';
 
-import { useAuth } from '@/features/auth/viewmodel/useAuth';
-import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
 import { useRepositories } from '@/shared/services/data/DataProvider';
-import type { Evaluation, Example, Exercise, Lesson, Unit } from '@/shared/model/entities';
+import type {
+  Evaluation,
+  Example,
+  Exercise,
+  Lesson,
+  Topic,
+  Unit,
+} from '@/shared/model/entities';
 
+import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
 import { useCatalog } from '@/features/modules/viewmodel/useCatalog';
 
-interface LessonHubResult {
-  lesson: Lesson | null;
+interface TopicHubResult {
+  topic: Topic | null;
   unit: Unit | null;
+  lessons: Lesson[];
   examples: Example[];
   exercises: Exercise[];
-  evaluation: Evaluation | null;
+  evaluations: Evaluation[];
   completed: boolean;
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
 }
 
-export function useLessonHub(lessonId: string | null): LessonHubResult {
-  const { lessons, examples: exampleRepository, exercises: exerciseRepository, evaluations } =
-    useRepositories();
-  const { units, completionMap, refresh } = useCatalog();
-  const { account } = useAuth();
-  const [lesson, setLesson] = useState<Lesson | null>(null);
+/**
+ * Hub de subtema. Acepta un id de subtema o, por compatibilidad con enlaces
+ * antiguos, un id de lección: en ese caso resuelve su `topicId` (o `t-<id>`).
+ */
+export function useLessonHub(
+  topicId: string | null,
+  catalogId: string = BASE_CATALOG_ID,
+): TopicHubResult {
+  const {
+    lessons,
+    examples: exampleRepository,
+    exercises: exerciseRepository,
+    evaluations,
+  } = useRepositories();
+  const { units, completionMap, refresh } = useCatalog(catalogId);
+  const [topic, setTopic] = useState<Topic | null>(null);
+  const [lessonsByTopic, setLessonsByTopic] = useState<Lesson[]>([]);
   const [examples, setExamples] = useState<Example[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
+  const [evaluationsByTopic, setEvaluationsByTopic] = useState<Evaluation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!lessonId) {
-      setLesson(null);
+    if (!topicId) {
+      setTopic(null);
+      setLessonsByTopic([]);
       setExamples([]);
       setExercises([]);
-      setEvaluation(null);
+      setEvaluationsByTopic([]);
       setIsLoading(false);
       return;
     }
@@ -45,27 +64,42 @@ export function useLessonHub(lessonId: string | null): LessonHubResult {
     setError(null);
     (async () => {
       try {
-        const [loadedLesson, loadedExamples, loadedExercises, loadedEvaluation] =
+        let loadedTopic = await lessons.selectTopic(topicId, catalogId);
+        if (!loadedTopic) {
+          const legacyLesson = await lessons.selectLesson(topicId, catalogId);
+          const resolvedId = legacyLesson?.topicId ?? (legacyLesson ? `t-${legacyLesson.id}` : null);
+          if (resolvedId) {
+            loadedTopic = await lessons.selectTopic(resolvedId, catalogId);
+          }
+        }
+        if (!loadedTopic) {
+          if (active) {
+            setTopic(null);
+            setLessonsByTopic([]);
+            setExamples([]);
+            setExercises([]);
+            setEvaluationsByTopic([]);
+          }
+          return;
+        }
+        const [loadedLessons, loadedExamples, loadedExercises, loadedEvaluations] =
           await Promise.all([
-            lessons.selectLesson(lessonId, BASE_CATALOG_ID),
-            account
-              ? exampleRepository.selectExamplesWithExtras(account.id, lessonId)
-              : exampleRepository.selectExamplesByLesson(lessonId),
-            account
-              ? exerciseRepository.selectPracticeExercisesByLesson(account.id, lessonId)
-              : exerciseRepository.selectExercisesByLesson(lessonId),
-            evaluations.selectEvaluationByLesson(lessonId),
+            lessons.selectLessonsByTopic(loadedTopic.id, catalogId),
+            exampleRepository.selectExamplesByTopic(loadedTopic.id, catalogId),
+            exerciseRepository.selectExercisesByTopic(loadedTopic.id, catalogId),
+            evaluations.selectEvaluationsByTopic(loadedTopic.id, catalogId),
           ]);
         if (!active) {
           return;
         }
-        setLesson(loadedLesson);
+        setTopic(loadedTopic);
+        setLessonsByTopic(loadedLessons);
         setExamples(loadedExamples);
         setExercises(loadedExercises);
-        setEvaluation(loadedEvaluation);
+        setEvaluationsByTopic(loadedEvaluations);
       } catch {
         if (active) {
-          setError('No se pudo cargar el tema.');
+          setError('No se pudo cargar el subtema.');
         }
       } finally {
         if (active) {
@@ -81,19 +115,23 @@ export function useLessonHub(lessonId: string | null): LessonHubResult {
     exampleRepository,
     exerciseRepository,
     evaluations,
-    lessonId,
-    account,
+    topicId,
+    catalogId,
   ]);
 
-  const unit = units.find(item => item.id === lesson?.unitId) ?? null;
+  const unit = units.find(item => item.id === topic?.unitId) ?? null;
+  const completed =
+    lessonsByTopic.length > 0 &&
+    lessonsByTopic.every(lesson => !!completionMap[lesson.id]);
 
   return {
-    lesson,
+    topic,
     unit,
+    lessons: lessonsByTopic,
     examples,
     exercises,
-    evaluation,
-    completed: lesson ? !!completionMap[lesson.id] : false,
+    evaluations: evaluationsByTopic,
+    completed,
     isLoading,
     error,
     refresh,

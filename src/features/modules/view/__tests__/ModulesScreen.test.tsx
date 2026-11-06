@@ -89,6 +89,10 @@ const baseCatalog = {
       color: 'blue',
     },
   ],
+  topics: [
+    { id: 't-l1.1', unitId: 'u1', title: 'Subtema A', summary: '', position: 0 },
+    { id: 't-l1.2', unitId: 'u1', title: 'Subtema B', summary: '', position: 1 },
+  ],
   lessonsByUnit: { u1: lessons },
   completionMap: { 'l1.1': true },
   isLoading: false,
@@ -147,6 +151,7 @@ describe('ModulesScreen', () => {
 
     expect(getByText('Hola, Valentina Ríos')).toBeTruthy();
     expect(getByText('Introducción')).toBeTruthy();
+    expect(getByText('2 subtemas')).toBeTruthy();
   });
 
   it('navega al continuar', () => {
