@@ -85,6 +85,27 @@ jest.mock('@/features/modules/viewmodel/useCatalog', () => ({
     refresh: jest.fn(),
   }),
 }));
+jest.mock('@/features/modules/viewmodel/useCourses', () => ({
+  useCourses: () => ({
+    courses: [
+      {
+        catalogId: 'base',
+        title: 'Ingeniería de Software',
+        status: 'published',
+        usesBase: false,
+        version: '7',
+        hash: 'hash-base',
+        publishedAt: '2026-11-05T00:00:00.000Z',
+        empty: false,
+      },
+    ],
+    activeCatalogId: 'base',
+    selectCourse: jest.fn(),
+    refresh: jest.fn(),
+    isLoading: false,
+    error: null,
+  }),
+}));
 jest.mock('@/features/auth/viewmodel/useSession', () => ({
   useSession: () => ({
     location: mockLocation,

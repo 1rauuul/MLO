@@ -311,6 +311,57 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     version = 17;
   }
 
+  if (version < 18) {
+    await db.withTransactionAsync(async () => {
+      const now = new Date().toISOString();
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS remote_courses (
+          catalog_id TEXT PRIMARY KEY NOT NULL,
+          title TEXT NOT NULL,
+          status TEXT NOT NULL,
+          uses_base INTEGER NOT NULL DEFAULT 0,
+          version TEXT NOT NULL DEFAULT '',
+          hash TEXT NOT NULL DEFAULT '',
+          published_at TEXT,
+          empty INTEGER NOT NULL DEFAULT 1,
+          is_base INTEGER NOT NULL DEFAULT 0,
+          manifest TEXT,
+          fetched_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS account_courses (
+          account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+          catalog_id TEXT NOT NULL REFERENCES remote_courses(catalog_id) ON DELETE CASCADE,
+          active INTEGER NOT NULL DEFAULT 0,
+          added_at TEXT NOT NULL,
+          PRIMARY KEY (account_id, catalog_id)
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_account_courses_active
+          ON account_courses(account_id) WHERE active = 1;
+      `);
+      // El curso base empaquetado existe desde el primer arranque; las cuentas
+      // existentes lo reciben activo sin tocar su progreso.
+      await db.runAsync(
+        `INSERT INTO remote_courses
+           (catalog_id, title, status, uses_base, version, hash, published_at, empty, is_base, manifest, fetched_at)
+         VALUES ('base', 'Contenido base', 'published', 0, '', '', NULL, 0, 1, NULL, ?)
+         ON CONFLICT(catalog_id) DO NOTHING`,
+        now,
+      );
+      await db.runAsync(
+        `INSERT INTO account_courses (account_id, catalog_id, active, added_at)
+         SELECT a.id, 'base', 1, ?
+         FROM accounts a
+         WHERE NOT EXISTS (
+           SELECT 1 FROM account_courses ac
+           WHERE ac.account_id = a.id AND ac.active = 1
+         )`,
+        now,
+      );
+      await db.execAsync('PRAGMA user_version = 18');
+    });
+    version = 18;
+  }
+
   await seedIfEmpty(db);
   await syncBundledAndRemote(db);
 }

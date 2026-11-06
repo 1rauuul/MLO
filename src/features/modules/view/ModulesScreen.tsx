@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/shared/components/AppText';
 import { SecondaryButton } from '@/shared/components/Buttons';
@@ -14,7 +14,9 @@ import type { Lesson } from '@/shared/model/entities';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { initials } from '@/features/auth/viewmodel/auth.logic';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
+import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
 import { useCatalog } from '@/features/modules/viewmodel/useCatalog';
+import { useCourses, type CoursesResult } from '@/features/modules/viewmodel/useCourses';
 import { useSession } from '@/features/auth/viewmodel/useSession';
 
 function greetingDate(): string {
@@ -26,21 +28,81 @@ function greetingDate(): string {
   return formatted.toUpperCase();
 }
 
+function CoursePicker({
+  courses,
+  activeCatalogId,
+  onSelect,
+}: {
+  courses: CoursesResult['courses'];
+  activeCatalogId: string;
+  onSelect: (catalogId: string) => void;
+}) {
+  const { colors, radius } = useTheme();
+  return (
+    <View style={styles.coursePicker}>
+      <AppText variant="eyebrow">Mis cursos</AppText>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.courseChips}>
+        {courses.map(course => {
+          const selected = course.catalogId === activeCatalogId;
+          return (
+            <Pressable
+              key={course.catalogId}
+              accessibilityRole="button"
+              accessibilityLabel={`Curso ${course.title}`}
+              accessibilityState={{ selected }}
+              onPress={() => onSelect(course.catalogId)}
+              style={[
+                styles.courseChip,
+                {
+                  backgroundColor: selected ? colors.primary : colors.card,
+                  borderColor: selected ? colors.primary : colors.line,
+                  borderRadius: radius.pill,
+                },
+              ]}>
+              <AppText
+                variant="small"
+                color={selected ? colors.onPrimary : colors.text}
+                weight={selected ? '700' : undefined}>
+                {course.title}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
 export default function ModulesScreen() {
   const { colors, radius } = useTheme();
   const { account } = useAuth();
-  const { units, lessonsByUnit, completionMap, isLoading, error, refresh } = useCatalog();
+  const {
+    courses,
+    activeCatalogId,
+    selectCourse,
+    refresh: refreshCourses,
+    isLoading: coursesLoading,
+  } = useCourses();
+  const { units, lessonsByUnit, completionMap, isLoading, error, refresh } = useCatalog(
+    coursesLoading ? '' : activeCatalogId,
+  );
   const { location, resumeHref } = useSession();
   const router = useRouter();
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
+      void refreshCourses();
       void refresh();
-    }, [refresh]),
+    }, [refreshCourses, refresh]),
   );
 
   const learnerName = account?.displayName ?? 'Estudiante';
+  const activeCourse = courses.find(course => course.catalogId === activeCatalogId);
+  const isBaseCourse = activeCatalogId === BASE_CATALOG_ID;
   const openDestination = (lesson: Lesson) => {
     if (lesson.code === '1.1') {
       router.push({ pathname: '/lecciones/[id]', params: { id: lesson.id } });
@@ -48,20 +110,57 @@ export default function ModulesScreen() {
       router.push({ pathname: '/tema/[id]', params: { id: lesson.id } });
     }
   };
+  const coursePicker = (
+    <CoursePicker
+      courses={courses}
+      activeCatalogId={activeCatalogId}
+      onSelect={catalogId => void selectCourse(catalogId)}
+    />
+  );
 
-  if (units.length === 0) {
+  if (!coursesLoading && courses.length === 0) {
     return (
       <Screen contentStyle={styles.content}>
+        {coursePicker}
         <EmptyState
-          loading={isLoading && !error}
-          title={error ? 'No se pudo cargar' : isLoading ? 'Cargando catálogo' : 'Sin contenido'}
-          message={
-            error ??
-            (isLoading
-              ? 'Preparando las unidades del curso.'
-              : 'No hay unidades disponibles en este dispositivo.')
-          }
+          title="Sin cursos habilitados"
+          message="No tienes cursos disponibles."
         />
+        <SecondaryButton
+          label="Reintentar"
+          onPress={() => {
+            void refreshCourses();
+            void refresh();
+          }}
+          style={styles.retry}
+        />
+      </Screen>
+    );
+  }
+
+  if (units.length === 0) {
+    const title = error
+      ? 'No se pudo cargar'
+      : isLoading
+        ? 'Cargando catálogo'
+        : !isBaseCourse && activeCourse?.empty
+          ? 'Sin contenido'
+          : !isBaseCourse
+            ? 'Contenido en preparación'
+            : 'Sin contenido';
+    const message =
+      error ??
+      (isLoading
+        ? 'Preparando las unidades del curso.'
+        : !isBaseCourse && activeCourse?.empty
+          ? 'Este curso aún no tiene contenido publicado.'
+          : !isBaseCourse
+            ? 'Este curso todavía no tiene unidades disponibles.'
+            : 'No hay unidades disponibles en este dispositivo.');
+    return (
+      <Screen contentStyle={styles.content}>
+        {coursePicker}
+        <EmptyState loading={isLoading && !error} title={title} message={message} />
         {!isLoading ? (
           <SecondaryButton
             label="Reintentar"
@@ -122,6 +221,8 @@ export default function ModulesScreen() {
           </AppText>
         </Pressable>
       </View>
+
+      {coursePicker}
 
       <View
         style={[
@@ -247,6 +348,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   retry: { marginTop: 12 },
+  coursePicker: { gap: 8, marginBottom: 18 },
+  courseChips: { gap: 8, paddingRight: 8 },
+  courseChip: {
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
   list: { gap: 12 },
   subtopics: { marginTop: 6 },
   divider: { height: 1 },

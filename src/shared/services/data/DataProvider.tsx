@@ -42,7 +42,13 @@ import {
   leaveClassRequest,
   refreshCatalog,
 } from '@/shared/services/content/remoteContent';
-import { http } from '@/shared/services/http/client';
+import { http, httpV3 } from '@/shared/services/http/client';
+import { refreshCourseList } from '@/shared/services/content/coursesV3';
+import {
+  ensureBaseCourse,
+  loadAccountCourses,
+  selectCourse,
+} from '@/features/modules/model/courseRepository';
 import {
   saveExampleState,
   selectExampleState,
@@ -149,6 +155,13 @@ export function createRepositories(db: SQLiteDatabase) {
       selectUnits: (catalogId?: string) => selectUnits(db, catalogId),
       selectLessons: (catalogId?: string) => selectLessons(db, catalogId),
       selectLesson: (id: string, catalogId?: string) => selectLesson(db, id, catalogId),
+    },
+    courses: {
+      ensureBaseCourse: (accountId?: number) => ensureBaseCourse(db, accountId),
+      loadAccountCourses: (accountId?: number) => loadAccountCourses(db, accountId),
+      selectCourse: (accountId: number, catalogId: string) =>
+        selectCourse(db, accountId, catalogId),
+      refreshCourseList: () => refreshCourseList(db, httpV3),
     },
     classes: {
       selectAccountClasses: (accountId: number) => selectAccountClasses(db, accountId),

@@ -3,9 +3,10 @@ import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
 import { refreshClassContent } from '@/shared/services/content/classSync';
+import { refreshCourseList } from '@/shared/services/content/coursesV3';
 import { refreshCatalogs } from '@/shared/services/content/remoteContent';
 import { isHybrid } from '@/shared/services/data/dataMode';
-import { apiBaseUrl, http } from '@/shared/services/http/client';
+import { apiBaseUrl, http, httpV3 } from '@/shared/services/http/client';
 
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 
@@ -32,13 +33,17 @@ export function ContentSyncProvider({ children }: { children: ReactNode }) {
       return;
     }
     lastRefreshRef.current = now;
+    const warn = (caught: unknown) => {
+      if (__DEV__) {
+        console.warn('[content] no se pudo sincronizar', caught);
+      }
+    };
     void refreshCatalogs(db, http)
+      .catch(caught => warn(caught))
+      .then(() => refreshCourseList(db, httpV3))
+      .catch(caught => warn(caught))
       .then(() => refreshClassContent(db, http))
-      .catch(caught => {
-        if (__DEV__) {
-          console.warn('[content] no se pudo sincronizar', caught);
-        }
-      });
+      .catch(caught => warn(caught));
   }, [db]);
 
   useEffect(() => {

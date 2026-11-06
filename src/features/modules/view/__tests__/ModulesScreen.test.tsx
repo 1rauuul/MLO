@@ -5,8 +5,11 @@ import ModulesScreen from '@/features/modules/view/ModulesScreen';
 const mockPush = jest.fn();
 const mockNavigate = jest.fn();
 const mockRefreshCatalog = jest.fn(async () => {});
+const mockSelectCourse = jest.fn(async () => {});
+const mockRefreshCourses = jest.fn(async () => {});
 
 let mockCatalog: Record<string, unknown> = {};
+let mockCourses: Record<string, unknown> = {};
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, navigate: mockNavigate, back: jest.fn() }),
@@ -21,6 +24,7 @@ jest.mock('@/features/auth/viewmodel/useAuth', () => ({
   }),
 }));
 jest.mock('@/features/modules/viewmodel/useCatalog', () => ({ useCatalog: () => mockCatalog }));
+jest.mock('@/features/modules/viewmodel/useCourses', () => ({ useCourses: () => mockCourses }));
 jest.mock('@/features/auth/viewmodel/useSession', () => ({
   useSession: () => ({
     location: { unitId: null, lessonId: null, lessonCode: null, section: null },
@@ -96,9 +100,45 @@ function makeCatalog(overrides: Record<string, unknown>) {
   mockCatalog = { ...baseCatalog, ...overrides };
 }
 
+const courseList = [
+  {
+    catalogId: 'base',
+    title: 'Ingeniería de Software',
+    status: 'published',
+    usesBase: false,
+    version: '7',
+    hash: 'hash-base',
+    publishedAt: '2026-11-05T00:00:00.000Z',
+    empty: false,
+  },
+  {
+    catalogId: 'demo',
+    title: 'Curso vacío (demo)',
+    status: 'published',
+    usesBase: false,
+    version: '1',
+    hash: 'hash-demo',
+    publishedAt: '2026-11-06T00:00:00.000Z',
+    empty: true,
+  },
+];
+
+function makeCourses(overrides: Record<string, unknown>) {
+  mockCourses = {
+    courses: courseList,
+    activeCatalogId: 'base',
+    selectCourse: mockSelectCourse,
+    refresh: mockRefreshCourses,
+    isLoading: false,
+    error: null,
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   makeCatalog({});
+  makeCourses({});
 });
 
 describe('ModulesScreen', () => {
@@ -143,5 +183,48 @@ describe('ModulesScreen', () => {
     expect(getByText('Sin contenido')).toBeTruthy();
     fireEvent.press(getByText('Reintentar'));
     expect(mockRefreshCatalog).toHaveBeenCalled();
+  });
+
+  it('muestra el selector de cursos y cambia el curso activo', () => {
+    const { getByText, getByLabelText } = render(<ModulesScreen />);
+
+    expect(getByText('Mis cursos')).toBeTruthy();
+    fireEvent.press(getByLabelText('Curso Curso vacío (demo)'));
+
+    expect(mockSelectCourse).toHaveBeenCalledWith('demo');
+  });
+
+  it('muestra sin cursos habilitados cuando la cuenta sincronizó sin acceso', () => {
+    makeCatalog({ units: [] });
+    makeCourses({ courses: [], activeCatalogId: '', isLoading: false });
+
+    const { getByText, queryByText } = render(<ModulesScreen />);
+
+    expect(getByText('Sin cursos habilitados')).toBeTruthy();
+    expect(getByText('No tienes cursos disponibles.')).toBeTruthy();
+    expect(queryByText('Introducción')).toBeNull();
+  });
+
+  it('muestra el estado vacío de un curso no-base sin contenido', () => {
+    makeCatalog({ units: [] });
+    makeCourses({ activeCatalogId: 'demo' });
+
+    const { getByText } = render(<ModulesScreen />);
+
+    expect(getByText('Sin contenido')).toBeTruthy();
+    expect(getByText('Este curso aún no tiene contenido publicado.')).toBeTruthy();
+  });
+
+  it('muestra contenido en preparación para un curso no-base con metadata', () => {
+    makeCatalog({ units: [] });
+    makeCourses({
+      activeCatalogId: 'demo',
+      courses: [{ ...courseList[1], empty: false }, courseList[0]],
+    });
+
+    const { getByText } = render(<ModulesScreen />);
+
+    expect(getByText('Contenido en preparación')).toBeTruthy();
+    expect(getByText('Este curso todavía no tiene unidades disponibles.')).toBeTruthy();
   });
 });

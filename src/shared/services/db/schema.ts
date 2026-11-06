@@ -1,4 +1,4 @@
-export const DATABASE_VERSION = 17;
+export const DATABASE_VERSION = 18;
 
 export const SCHEMA_DDL = `
 CREATE TABLE IF NOT EXISTS accounts (
@@ -205,6 +205,33 @@ CREATE TABLE IF NOT EXISTS remote_lessons (
   PRIMARY KEY (catalog_id, lesson_id)
 );
 
+-- Descubrimiento de cursos v3. El manifiesto v3 se guarda como JSON para X-03;
+-- el contenido v2 sigue viviendo en units/lessons/remote_lessons.
+CREATE TABLE IF NOT EXISTS remote_courses (
+  catalog_id TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL,
+  status TEXT NOT NULL,
+  uses_base INTEGER NOT NULL DEFAULT 0,
+  version TEXT NOT NULL DEFAULT '',
+  hash TEXT NOT NULL DEFAULT '',
+  published_at TEXT,
+  empty INTEGER NOT NULL DEFAULT 1,
+  is_base INTEGER NOT NULL DEFAULT 0,
+  manifest TEXT,
+  fetched_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS account_courses (
+  account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  catalog_id TEXT NOT NULL REFERENCES remote_courses(catalog_id) ON DELETE CASCADE,
+  active INTEGER NOT NULL DEFAULT 0,
+  added_at TEXT NOT NULL,
+  PRIMARY KEY (account_id, catalog_id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_account_courses_active
+  ON account_courses(account_id) WHERE active = 1;
+
 CREATE INDEX IF NOT EXISTS idx_lessons_unit ON lessons(unit_id);
 CREATE INDEX IF NOT EXISTS idx_examples_lesson ON examples(lesson_id);
 CREATE INDEX IF NOT EXISTS idx_exercises_lesson ON exercises(lesson_id);
@@ -222,6 +249,8 @@ CREATE INDEX IF NOT EXISTS idx_remote_lessons_catalog ON remote_lessons(catalog_
 export const DROP_ALL_DDL = `
 DROP TABLE IF EXISTS attempts;
 DROP TABLE IF EXISTS auth_session;
+DROP TABLE IF EXISTS account_courses;
+DROP TABLE IF EXISTS remote_courses;
 DROP TABLE IF EXISTS evaluation_results;
 DROP TABLE IF EXISTS module_progress;
 DROP TABLE IF EXISTS last_location;

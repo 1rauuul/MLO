@@ -45,9 +45,9 @@ export interface HttpClientConfig {
 }
 
 export interface HttpClient {
-  get: <T>(path: string) => Promise<T>;
-  post: <T>(path: string, body: unknown) => Promise<T>;
-  delete: <T>(path: string) => Promise<T>;
+  get: <T>(path: string, options?: HttpRequestOptions) => Promise<T>;
+  post: <T>(path: string, body: unknown, options?: HttpRequestOptions) => Promise<T>;
+  delete: <T>(path: string, options?: HttpRequestOptions) => Promise<T>;
 }
 
 const DEFAULT_TIMEOUT_MS = 8000;
@@ -144,9 +144,12 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
   }
 
   return {
-    get: <T>(path: string) => request<T>(path, 'GET'),
-    post: <T>(path: string, body: unknown) => request<T>(path, 'POST', body),
-    delete: <T>(path: string) => request<T>(path, 'DELETE'),
+    get: <T>(path: string, options?: HttpRequestOptions) =>
+      request<T>(path, 'GET', undefined, options?.headers),
+    post: <T>(path: string, body: unknown, options?: HttpRequestOptions) =>
+      request<T>(path, 'POST', body, options?.headers),
+    delete: <T>(path: string, options?: HttpRequestOptions) =>
+      request<T>(path, 'DELETE', undefined, options?.headers),
   };
 }
 
@@ -154,4 +157,14 @@ export function apiBaseUrl(): string {
   return (process.env.EXPO_PUBLIC_API_URL ?? '').trim().replace(/\/+$/, '');
 }
 
+/** La base v2 sigue vigente; v3 vive en el mismo host, una versión al lado. */
+export function apiV3BaseUrl(): string {
+  const base = apiBaseUrl();
+  if (!base) {
+    return '';
+  }
+  return base.endsWith('/v2') ? `${base.slice(0, -3)}v3` : `${base}/api/mlo/v3`;
+}
+
 export const http = createHttpClient({ baseUrl: apiBaseUrl() });
+export const httpV3 = createHttpClient({ baseUrl: apiV3BaseUrl() });
