@@ -10,6 +10,7 @@ import { Screen } from '@/shared/components/Screen';
 import { SectionHeading } from '@/shared/components/SectionHeading';
 import { TopicRow } from '@/features/modules/view/TopicRow';
 import { UnitCard } from '@/features/modules/view/UnitCard';
+import { Bibliography } from '@/features/modules/view/Bibliography';
 import type { Lesson, Topic } from '@/shared/model/entities';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { initials } from '@/features/auth/viewmodel/auth.logic';
@@ -86,9 +87,8 @@ export default function ModulesScreen() {
     refresh: refreshCourses,
     isLoading: coursesLoading,
   } = useCourses();
-  const { units, topics, lessonsByUnit, completionMap, isLoading, error, refresh } = useCatalog(
-    coursesLoading ? '' : activeCatalogId,
-  );
+  const { units, topics, lessonsByUnit, completionMap, references, isLoading, error, refresh } =
+    useCatalog(coursesLoading ? '' : activeCatalogId);
   const { location, resumeHref } = useSession();
   const router = useRouter();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -354,12 +354,7 @@ export default function ModulesScreen() {
         })}
       </View>
 
-      <View style={[styles.source, { borderTopColor: colors.line }]}>
-        <AppText variant="eyebrow">Fuente</AppText>
-        <AppText variant="small">
-          Sommerville, I. (2011). Ingeniería de software (9.ª ed.). Pearson Educación.
-        </AppText>
-      </View>
+      <Bibliography references={references ?? []} />
     </Screen>
   );
 }
@@ -409,5 +404,4 @@ const styles = StyleSheet.create({
   subtopics: { marginTop: 6 },
   divider: { height: 1 },
   explore: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
-  source: { marginTop: 28, paddingTop: 14, borderTopWidth: 1, gap: 4 },
 });

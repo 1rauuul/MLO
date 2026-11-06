@@ -6,12 +6,17 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import {
   applyStoredV3Content,
+  applyV3GroupRelease,
   applyV3Release,
 } from '@/shared/services/content/applyV3Content';
-import { parseCourseManifest } from '@/shared/services/content/coursesV3';
+import {
+  parseCourseManifest,
+  parseGroupRelease,
+} from '@/shared/services/content/coursesV3';
 
 const X03_DIR = join(__dirname, '..', 'remote', '__fixtures__', 'v3', 'x03');
 const X02_DIR = join(__dirname, '..', 'remote', '__fixtures__', 'v3', 'x02');
+const X05_DIR = join(__dirname, '..', 'remote', '__fixtures__', 'v3', 'x05');
 
 function loadRelease(dir: string, file: string, catalogId: string) {
   const raw = JSON.parse(readFileSync(join(dir, file), 'utf8')) as unknown;
@@ -246,8 +251,160 @@ describe('applyV3Release', () => {
   });
 });
 
-describe('applyStoredV3Content', () => {
-  it('aplica el manifiesto guardado y salta el que ya tiene applied_hash', async () => {
+describe('referencias APA 7 (X-05)', () => {
+  it('el fixture x05 conserva el hash LF del productor', () => {
+    const text = readFileSync(join(X05_DIR, 'references-release.json'))
+      .toString('utf8')
+      .replace(/^\uFEFF/, '')
+      .replace(/\r\n/g, '\n');
+
+    expect(createHash('sha256').update(text, 'utf8').digest('hex')).toBe(
+      '2c6355a639ec34f264e2b608ac72bf185e89e317f0dff8f6ecc80cccb1aa4d3f',
+    );
+  });
+
+  it('persiste las referencias del curso y las asocia a los cinco tipos', async () => {
+    const release = loadRelease(X05_DIR, 'references-release.json', 'demo');
+    const { db, statements } = makeDb();
+
+    await applyV3Release(db, release, 'demo');
+
+    const references = statements.filter(statement =>
+      statement.sql.startsWith('INSERT INTO content_references'),
+    );
+    expect(references.map(statement => statement.params)).toEqual([
+      [
+        'demo-ref-apa-1',
+        'demo',
+        '',
+        'Sommerville, I. (2016). Software Engineering (10.ª ed.). Pearson. https://doi.org/10.1000/182',
+        'https://doi.org/10.1000/182',
+      ],
+      [
+        'demo-ref-apa-2',
+        'demo',
+        '',
+        'Pressman, R. S., & Maxim, B. R. (s. f.). Software Engineering: A Practitioner\'s Approach. McGraw-Hill. https://example.org/pressman',
+        'https://example.org/pressman',
+      ],
+    ]);
+    expect(
+      statements.some(
+        statement =>
+          statement.sql.startsWith('DELETE FROM content_references') &&
+          statement.params[0] === 'demo' &&
+          statement.params[1] === '',
+      ),
+    ).toBe(true);
+
+    const links = new Map<string, string>();
+    for (const statement of statements) {
+      for (const prefix of [
+        'INSERT INTO lessons',
+        'INSERT INTO evaluations',
+        'INSERT INTO questions',
+        'INSERT INTO exercises',
+        'INSERT INTO examples',
+      ]) {
+        if (statement.sql.startsWith(prefix)) {
+          links.set(prefix, statement.params[statement.params.length - 1] as string);
+        }
+      }
+    }
+    const expected: Record<string, string[]> = {
+      'INSERT INTO lessons': ['demo-ref-apa-1'],
+      'INSERT INTO evaluations': ['demo-ref-apa-2'],
+      'INSERT INTO questions': ['demo-ref-apa-1'],
+      'INSERT INTO exercises': ['demo-ref-apa-1'],
+      'INSERT INTO examples': ['demo-ref-apa-2'],
+    };
+    for (const [prefix, ids] of Object.entries(expected)) {
+      expect(links.get(prefix)).toBeDefined();
+      expect(JSON.parse(links.get(prefix) as string) as string[]).toEqual(ids);
+    }
+  });
+
+  it('persiste las referencias del grupo con su propio ámbito', async () => {
+    const { db, statements } = makeDb();
+    const raw = {
+      schemaVersion: 3,
+      kind: 'group',
+      catalogId: 'demo',
+      groupId: 'g1',
+      releaseId: 'demo-g1',
+      version: 1,
+      publishedAt: '2026-11-06T00:00:00.000Z',
+      hash: 'a'.repeat(64),
+      courseRef: { version: 1, hash: 'b'.repeat(64) },
+      group: { name: 'Grupo Uno', visibility: 'published' },
+      units: [
+        {
+          id: 'g-u1',
+          number: 1,
+          title: 'Unidad',
+          description: '',
+          difficulty: 'Fundamental',
+          color: 'blue',
+          position: 0,
+        },
+      ],
+      topics: [{ id: 'g-t1', unitId: 'g-u1', title: 'Subtema', position: 0 }],
+      lessons: [
+        {
+          id: 'g-l1',
+          topicId: 'g-t1',
+          code: '1',
+          title: 'Lección',
+          eyebrow: '',
+          body: '',
+          content: [],
+          position: 0,
+          referenceIds: ['g-ref'],
+        },
+      ],
+      evaluations: [],
+      questions: [],
+      exercises: [],
+      examples: [],
+      additions: [],
+      references: [{ id: 'g-ref', text: 'Grupo, A. (2024). Contenido del grupo.' }],
+      notices: [],
+    };
+    const release = parseGroupRelease(raw, 'demo');
+
+    await applyV3GroupRelease(db, release, 'g1');
+
+    const reference = statements.find(statement =>
+      statement.sql.startsWith('INSERT INTO content_references'),
+    );
+    expect(reference?.params).toEqual([
+      'g-ref',
+      'demo',
+      'g1',
+      'Grupo, A. (2024). Contenido del grupo.',
+      null,
+    ]);
+    const lesson = statements.find(statement => statement.sql.startsWith('INSERT INTO lessons'));
+    expect(JSON.parse(lesson?.params[lesson.params.length - 1] as string)).toEqual(['g-ref']);
+  });
+
+  it('rechaza un referenceId que no existe en el release', () => {
+    const raw = JSON.parse(
+      readFileSync(join(X05_DIR, 'references-release.json'), 'utf8'),
+    ) as Record<string, unknown>;
+    const lessons = raw.lessons as Record<string, unknown>[];
+    const broken = {
+      ...raw,
+      lessons: [{ ...lessons[0], referenceIds: ['demo-ref-inexistente'] }],
+    };
+
+    expect(() => parseCourseManifest(broken, 'demo')).toThrow(
+      'Contrato v3 inválido: lessons referencia inexistente: demo-ref-inexistente',
+    );
+  });
+});
+
+describe('applyStoredV3Content', () => {  it('aplica el manifiesto guardado y salta el que ya tiene applied_hash', async () => {
     const release = loadRelease(X03_DIR, 'manifest-topics.json', 'demo');
     const { db, statements } = makeDb([
       {

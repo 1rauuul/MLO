@@ -63,10 +63,10 @@ describe('applyV3GroupRelease', () => {
     expect(inserts('INSERT INTO questions')).toHaveLength(1);
     expect(inserts('INSERT INTO evaluation_exercises')).toHaveLength(1);
 
-    expect(inserts('INSERT INTO lessons')[0]?.params.at(-1)).toBe('class-demo');
-    expect(inserts('INSERT INTO exercises')[0]?.params.at(-1)).toBe('class-demo');
-    expect(inserts('INSERT INTO examples')[0]?.params.at(-1)).toBe('class-demo');
-    expect(inserts('INSERT INTO evaluations')[0]?.params.at(-1)).toBe('class-demo');
+    expect(inserts('INSERT INTO lessons')[0]?.params.at(-2)).toBe('class-demo');
+    expect(inserts('INSERT INTO exercises')[0]?.params.at(-2)).toBe('class-demo');
+    expect(inserts('INSERT INTO examples')[0]?.params.at(-2)).toBe('class-demo');
+    expect(inserts('INSERT INTO evaluations')[0]?.params.at(-2)).toBe('class-demo');
 
     const addition = inserts('INSERT INTO class_extras_cache')[0];
     expect(addition?.params[0]).toBe('class-demo');

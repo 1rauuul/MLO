@@ -1,4 +1,4 @@
-export const DATABASE_VERSION = 20;
+export const DATABASE_VERSION = 21;
 
 export const SCHEMA_DDL = `
 CREATE TABLE IF NOT EXISTS accounts (
@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS lessons (
   position INTEGER NOT NULL DEFAULT 0,
   catalog_id TEXT NOT NULL DEFAULT 'base',
   group_id TEXT,
-  archived_at TEXT
+  archived_at TEXT,
+  reference_ids TEXT NOT NULL DEFAULT '[]'
 );
 
 -- Contenido publicado de las clases. Es una caché global por clase; cada
@@ -114,7 +115,8 @@ CREATE TABLE IF NOT EXISTS examples (
   hints TEXT NOT NULL DEFAULT '[]',
   explanation TEXT NOT NULL DEFAULT '',
   position INTEGER NOT NULL DEFAULT 0,
-  group_id TEXT
+  group_id TEXT,
+  reference_ids TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE TABLE IF NOT EXISTS exercises (
@@ -128,7 +130,8 @@ CREATE TABLE IF NOT EXISTS exercises (
   config TEXT NOT NULL DEFAULT '{}',
   explanation TEXT NOT NULL DEFAULT '',
   position INTEGER NOT NULL DEFAULT 0,
-  group_id TEXT
+  group_id TEXT,
+  reference_ids TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE TABLE IF NOT EXISTS evaluations (
@@ -141,7 +144,8 @@ CREATE TABLE IF NOT EXISTS evaluations (
   exercise_count INTEGER NOT NULL DEFAULT 5,
   archived_at TEXT,
   position INTEGER NOT NULL DEFAULT 0,
-  group_id TEXT
+  group_id TEXT,
+  reference_ids TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE TABLE IF NOT EXISTS questions (
@@ -153,13 +157,25 @@ CREATE TABLE IF NOT EXISTS questions (
   prompt TEXT NOT NULL,
   options TEXT NOT NULL DEFAULT '[]',
   answer INTEGER NOT NULL,
-  explanation TEXT NOT NULL
+  explanation TEXT NOT NULL,
+  reference_ids TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE TABLE IF NOT EXISTS evaluation_exercises (
   evaluation_id TEXT NOT NULL REFERENCES evaluations(id) ON DELETE CASCADE,
   exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
   PRIMARY KEY (evaluation_id, exercise_id)
+);
+
+-- Referencias APA 7 por ámbito: curso (group_id = '') o grupo (group_id = id).
+-- La asociación con cada elemento vive en su columna reference_ids.
+CREATE TABLE IF NOT EXISTS content_references (
+  id TEXT NOT NULL,
+  catalog_id TEXT NOT NULL DEFAULT 'base',
+  group_id TEXT NOT NULL DEFAULT '',
+  text TEXT NOT NULL,
+  url TEXT,
+  PRIMARY KEY (id, catalog_id, group_id)
 );
 
 CREATE TABLE IF NOT EXISTS attempts (
@@ -295,6 +311,7 @@ CREATE INDEX IF NOT EXISTS idx_examples_group ON examples(group_id);
 CREATE INDEX IF NOT EXISTS idx_exercises_group ON exercises(group_id);
 CREATE INDEX IF NOT EXISTS idx_evaluations_group ON evaluations(group_id);
 CREATE INDEX IF NOT EXISTS idx_remote_lessons_catalog ON remote_lessons(catalog_id);
+CREATE INDEX IF NOT EXISTS idx_content_references_scope ON content_references(catalog_id, group_id);
 `;
 
 export const DROP_ALL_DDL = `
@@ -307,6 +324,7 @@ DROP TABLE IF EXISTS evaluation_results;
 DROP TABLE IF EXISTS module_progress;
 DROP TABLE IF EXISTS last_location;
 DROP TABLE IF EXISTS example_state;
+DROP TABLE IF EXISTS content_references;
 DROP TABLE IF EXISTS account_classes;
 DROP TABLE IF EXISTS class_extras_cache;
 DROP TABLE IF EXISTS class_cache;

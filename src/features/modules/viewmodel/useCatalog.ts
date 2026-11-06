@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useRepositories } from '@/shared/services/data/DataProvider';
 import type { Lesson, Topic, Unit } from '@/shared/model/entities';
+import type { BibliographyReference } from '@/features/modules/model/bibliography.logic';
 
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
 import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
@@ -11,6 +12,7 @@ interface CatalogResult {
   topics: Topic[];
   lessonsByUnit: Record<string, Lesson[]>;
   completionMap: Record<string, boolean>;
+  references: BibliographyReference[];
   activeGroupId: string | null;
   isLoading: boolean;
   error: string | null;
@@ -18,12 +20,13 @@ interface CatalogResult {
 }
 
 export function useCatalog(catalogId: string = BASE_CATALOG_ID): CatalogResult {
-  const { lessons, progress, classes } = useRepositories();
+  const { lessons, progress, classes, bibliography } = useRepositories();
   const { account } = useAuth();
   const [units, setUnits] = useState<Unit[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [lessonsByUnit, setLessonsByUnit] = useState<Record<string, Lesson[]>>({});
   const [completionMap, setCompletionMap] = useState<Record<string, boolean>>({});
+  const [references, setReferences] = useState<BibliographyReference[]>([]);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +37,7 @@ export function useCatalog(catalogId: string = BASE_CATALOG_ID): CatalogResult {
       setTopics([]);
       setLessonsByUnit({});
       setCompletionMap({});
+      setReferences([]);
       setActiveGroupId(null);
       setError(null);
       setIsLoading(false);
@@ -52,10 +56,12 @@ export function useCatalog(catalogId: string = BASE_CATALOG_ID): CatalogResult {
       const loadedCompletion = account
         ? await progress.selectCompletionMap(account.id, catalogId)
         : {};
+      const loadedReferences = await bibliography.selectReferences(catalogId, groupId);
       setUnits(loadedUnits);
       setTopics(loadedTopics);
       setLessonsByUnit(grouped);
       setCompletionMap(loadedCompletion);
+      setReferences(loadedReferences);
       setActiveGroupId(groupId);
       setError(null);
     } catch {
@@ -63,11 +69,21 @@ export function useCatalog(catalogId: string = BASE_CATALOG_ID): CatalogResult {
     } finally {
       setIsLoading(false);
     }
-  }, [lessons, progress, classes, account, catalogId]);
+  }, [lessons, progress, classes, bibliography, account, catalogId]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  return { units, topics, lessonsByUnit, completionMap, activeGroupId, isLoading, error, refresh };
+  return {
+    units,
+    topics,
+    lessonsByUnit,
+    completionMap,
+    references,
+    activeGroupId,
+    isLoading,
+    error,
+    refresh,
+  };
 }

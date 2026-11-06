@@ -222,4 +222,47 @@ describe('assertV3Envelope', () => {
       'schemaVersion no soportada: 4',
     );
   });
+
+  it('acepta referencias con url opcional y referenceIds resueltos', () => {
+    const fixture = loadJson('valid-course-empty.json');
+
+    const envelope = assertV3Envelope({
+      ...fixture,
+      references: [
+        { id: 'ref-1', text: 'Autor, A. (2024). Título.', url: 'https://example.org' },
+        { id: 'ref-2', text: 'Autor, B. (s. f.). Título.' },
+      ],
+      lessons: [{ referenceIds: ['ref-1', 'ref-2'] }],
+    });
+
+    expect(envelope.references).toEqual([
+      { id: 'ref-1', text: 'Autor, A. (2024). Título.', url: 'https://example.org' },
+      { id: 'ref-2', text: 'Autor, B. (s. f.). Título.' },
+    ]);
+  });
+
+  it.each([
+    ['referencias no es un arreglo', { references: {} }, 'references debe ser un array'],
+    ['referencia sin id', { references: [{ text: 'Sin id' }] }, 'references[0].id vacío'],
+    ['referencia sin texto', { references: [{ id: 'r1', text: '' }] }, 'references[0].text vacío'],
+    [
+      'url no textual',
+      { references: [{ id: 'r1', text: 'Texto', url: 7 }] },
+      'references[0].url no es un string',
+    ],
+    [
+      'referenceIds desconocido',
+      { references: [{ id: 'r1', text: 'Texto' }], lessons: [{ referenceIds: ['r2'] }] },
+      'lessons referencia inexistente: r2',
+    ],
+    [
+      'referenceIds no es arreglo',
+      { references: [{ id: 'r1', text: 'Texto' }], lessons: [{ referenceIds: 'r1' }] },
+      'lessons[].referenceIds debe ser un arreglo de ids',
+    ],
+  ])('rechaza %s', (_name, patch, message) => {
+    const fixture = loadJson('valid-course-empty.json');
+
+    expect(() => assertV3Envelope({ ...fixture, ...patch })).toThrow(message);
+  });
 });

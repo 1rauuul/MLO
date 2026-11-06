@@ -484,6 +484,21 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     version = 20;
   }
 
+  if (version < 21) {
+    await db.withTransactionAsync(async () => {
+      for (const table of ['lessons', 'examples', 'exercises', 'evaluations', 'questions']) {
+        if (!(await hasColumn(db, table, 'reference_ids'))) {
+          await db.execAsync(
+            `ALTER TABLE ${table} ADD COLUMN reference_ids TEXT NOT NULL DEFAULT '[]'`,
+          );
+        }
+      }
+      await db.execAsync(SCHEMA_DDL);
+      await db.execAsync('PRAGMA user_version = 21');
+    });
+    version = 21;
+  }
+
   await seedIfEmpty(db);
   await syncBundledAndRemote(db);
   await db.withTransactionAsync(() => backfillLegacyTopics(db));

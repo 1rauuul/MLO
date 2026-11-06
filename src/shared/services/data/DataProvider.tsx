@@ -56,6 +56,7 @@ import {
   loadAccountCourses,
   selectCourse,
 } from '@/features/modules/model/courseRepository';
+import { selectReferences } from '@/features/modules/model/referenceRepository';
 import {
   saveExampleState,
   selectExampleState,
@@ -204,6 +205,10 @@ export function createRepositories(db: SQLiteDatabase) {
         selectCourse(db, accountId, catalogId),
       applyStoredContent: (catalogId?: string) => applyStoredV3Content(db, catalogId),
       refreshCourseList: () => refreshCourseList(db, httpV3),
+    },
+    bibliography: {
+      selectReferences: (catalogId: string, groupId: string | null) =>
+        selectReferences(db, catalogId, groupId),
     },
     classes: {
       selectAccountClasses: (accountId: number) => selectAccountClasses(db, accountId),

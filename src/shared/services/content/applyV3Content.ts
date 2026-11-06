@@ -3,6 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import type { ContentBlock, ExerciseConfig, ExerciseType } from '@/shared/model/entities';
 import type { CourseManifest, GroupManifest } from '@/shared/services/content/coursesV3';
 import { parseCourseManifest } from '@/shared/services/content/coursesV3';
+import type { V3Reference } from '@/shared/services/content/remote/contractV3';
 
 interface V3Unit {
   id: string;
@@ -31,6 +32,7 @@ interface V3Lesson {
   body: string;
   content: ContentBlock[];
   position: number;
+  referenceIds?: string[];
 }
 
 interface V3Example {
@@ -44,6 +46,7 @@ interface V3Example {
   hints?: string[];
   explanation?: string;
   position: number;
+  referenceIds?: string[];
 }
 
 interface V3EmbeddedExample {
@@ -63,6 +66,7 @@ interface V3Exercise {
   explanation?: string;
   example: V3EmbeddedExample | null;
   position: number;
+  referenceIds?: string[];
 }
 
 interface V3Evaluation {
@@ -73,6 +77,7 @@ interface V3Evaluation {
   position: number;
   questionIds: string[];
   exerciseIds: string[];
+  referenceIds?: string[];
 }
 
 interface V3Question {
@@ -85,6 +90,7 @@ interface V3Question {
   config?: ExerciseConfig;
   explanation?: string;
   position: number;
+  referenceIds?: string[];
 }
 
 /**
@@ -134,16 +140,18 @@ async function insertExample(
   example: V3Example,
   lessonId: string,
   groupId: string | null = null,
+  referenceIds: string[] = [],
 ): Promise<void> {
   await db.runAsync(
     `INSERT INTO examples
-       (id, lesson_id, topic_id, type, title, prompt, config, steps, hints, explanation, position, group_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (id, lesson_id, topic_id, type, title, prompt, config, steps, hints, explanation, position, group_id, reference_ids)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        lesson_id = excluded.lesson_id, topic_id = excluded.topic_id, type = excluded.type,
        title = excluded.title, prompt = excluded.prompt, config = excluded.config,
        steps = excluded.steps, hints = excluded.hints, explanation = excluded.explanation,
-       position = excluded.position, group_id = excluded.group_id`,
+       position = excluded.position, group_id = excluded.group_id,
+       reference_ids = excluded.reference_ids`,
     example.id,
     lessonId,
     example.topicId,
@@ -156,6 +164,7 @@ async function insertExample(
     example.explanation ?? '',
     example.position,
     groupId,
+    JSON.stringify(referenceIds),
   );
 }
 
@@ -182,6 +191,50 @@ async function insertEmbeddedExample(
       position: exercise.position,
     },
     lessonId,
+    null,
+    exercise.referenceIds ?? [],
+  );
+}
+
+function referenceIdsJson(value: string[] | undefined): string {
+  return JSON.stringify(value ?? []);
+}
+
+/**
+ * Persiste las referencias del release en su ámbito (curso o grupo). La primera
+ * aparición de un id gana; un duplicado posterior se ignora (DEC-07).
+ */
+async function replaceReferences(
+  db: SQLiteDatabase,
+  references: V3Reference[],
+  catalogId: string,
+  groupId: string,
+): Promise<void> {
+  const seen = new Set<string>();
+  for (const reference of references) {
+    if (seen.has(reference.id)) {
+      continue;
+    }
+    seen.add(reference.id);
+    await db.runAsync(
+      `INSERT INTO content_references (id, catalog_id, group_id, text, url)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(id, catalog_id, group_id) DO UPDATE SET
+         text = excluded.text, url = excluded.url`,
+      reference.id,
+      catalogId,
+      groupId,
+      reference.text,
+      reference.url ?? null,
+    );
+  }
+  const ids = [...seen];
+  const keep = ids.length > 0 ? ` AND id NOT IN (${placeholders(ids)})` : '';
+  await db.runAsync(
+    `DELETE FROM content_references WHERE catalog_id = ? AND group_id = ?${keep}`,
+    catalogId,
+    groupId,
+    ...ids,
   );
 }
 
@@ -202,6 +255,7 @@ export async function applyV3Release(
   const exercises = release.exercises as V3Exercise[];
   const evaluations = release.evaluations as V3Evaluation[];
   const questions = release.questions as V3Question[];
+  const references = release.references;
   const now = new Date().toISOString();
 
   if (units.length === 0 && topics.length === 0 && lessons.length === 0) {
@@ -231,6 +285,8 @@ export async function applyV3Release(
   };
 
   await db.withTransactionAsync(async () => {
+    await replaceReferences(db, references, catalogId, '');
+
     for (const unit of units) {
       await db.runAsync(
         `INSERT INTO units (id, number, title, description, difficulty, color, catalog_id, archived_at)
@@ -273,13 +329,14 @@ export async function applyV3Release(
       await db.runAsync(
         `INSERT INTO lessons
            (id, unit_id, topic_id, code, title, eyebrow, body, code_sample, context_title,
-            context_body, synthesis, content, position, catalog_id, archived_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, '', '', '', '[]', ?, ?, ?, NULL)
+            context_body, synthesis, content, position, catalog_id, archived_at, reference_ids)
+         VALUES (?, ?, ?, ?, ?, ?, ?, '', '', '', '[]', ?, ?, ?, NULL, ?)
          ON CONFLICT(id) DO UPDATE SET
            unit_id = excluded.unit_id, topic_id = excluded.topic_id, code = excluded.code,
            title = excluded.title, eyebrow = excluded.eyebrow, body = excluded.body,
            content = excluded.content, position = excluded.position,
-           catalog_id = excluded.catalog_id, archived_at = NULL`,
+           catalog_id = excluded.catalog_id, archived_at = NULL,
+           reference_ids = excluded.reference_ids`,
         lesson.id,
         unitId,
         lesson.topicId,
@@ -290,24 +347,32 @@ export async function applyV3Release(
         JSON.stringify(lesson.content ?? []),
         lesson.position,
         catalogId,
+        referenceIdsJson(lesson.referenceIds),
       );
     }
 
     for (const example of examples) {
-      await insertExample(db, example, contextLesson(example.topicId));
+      await insertExample(
+        db,
+        example,
+        contextLesson(example.topicId),
+        null,
+        example.referenceIds ?? [],
+      );
     }
 
     for (const exercise of exercises) {
       const lessonId = contextLesson(exercise.topicId);
       await db.runAsync(
         `INSERT INTO exercises
-           (id, lesson_id, topic_id, type, prompt, instructions, correct_order, config, explanation, position)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           (id, lesson_id, topic_id, type, prompt, instructions, correct_order, config, explanation, position, reference_ids)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            lesson_id = excluded.lesson_id, topic_id = excluded.topic_id, type = excluded.type,
            prompt = excluded.prompt, instructions = excluded.instructions,
            correct_order = excluded.correct_order, config = excluded.config,
-           explanation = excluded.explanation, position = excluded.position`,
+           explanation = excluded.explanation, position = excluded.position,
+           reference_ids = excluded.reference_ids`,
         exercise.id,
         lessonId,
         exercise.topicId,
@@ -318,6 +383,7 @@ export async function applyV3Release(
         JSON.stringify(exercise.config ?? {}),
         exercise.explanation ?? '',
         exercise.position,
+        referenceIdsJson(exercise.referenceIds),
       );
       await insertEmbeddedExample(db, exercise, lessonId);
     }
@@ -338,13 +404,14 @@ export async function applyV3Release(
       const lessonId = contextLesson(evaluation.topicId);
       await db.runAsync(
         `INSERT INTO evaluations
-           (id, lesson_id, topic_id, title, description, question_count, exercise_count, archived_at, position)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)
+           (id, lesson_id, topic_id, title, description, question_count, exercise_count, archived_at, position, reference_ids)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            lesson_id = excluded.lesson_id, topic_id = excluded.topic_id,
            title = excluded.title, description = excluded.description,
            question_count = excluded.question_count, exercise_count = excluded.exercise_count,
-           archived_at = NULL, position = excluded.position`,
+           archived_at = NULL, position = excluded.position,
+           reference_ids = excluded.reference_ids`,
         evaluation.id,
         lessonId,
         evaluation.topicId,
@@ -353,6 +420,7 @@ export async function applyV3Release(
         evaluation.questionIds.length,
         evaluation.exerciseIds.length,
         evaluation.position,
+        referenceIdsJson(evaluation.referenceIds),
       );
 
       const questionIds = questions
@@ -385,13 +453,13 @@ export async function applyV3Release(
       }
       await db.runAsync(
         `INSERT INTO questions
-           (id, evaluation_id, order_index, type, config, prompt, options, answer, explanation)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           (id, evaluation_id, order_index, type, config, prompt, options, answer, explanation, reference_ids)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            evaluation_id = excluded.evaluation_id, order_index = excluded.order_index,
            type = excluded.type, config = excluded.config, prompt = excluded.prompt,
            options = excluded.options, answer = excluded.answer,
-           explanation = excluded.explanation`,
+           explanation = excluded.explanation, reference_ids = excluded.reference_ids`,
         question.id,
         question.evaluationId,
         question.position,
@@ -401,6 +469,7 @@ export async function applyV3Release(
         JSON.stringify(question.options ?? []),
         question.answer,
         question.explanation ?? '',
+        referenceIdsJson(question.referenceIds),
       );
     }
 
@@ -479,6 +548,7 @@ export async function applyV3GroupRelease(
   const exercises = release.exercises as V3Exercise[];
   const evaluations = release.evaluations as V3Evaluation[];
   const questions = release.questions as V3Question[];
+  const references = release.references;
   const now = new Date().toISOString();
 
   const topicUnits = new Map(topics.map(topic => [topic.id, topic.unitId]));
@@ -517,6 +587,8 @@ export async function applyV3GroupRelease(
   };
 
   await db.withTransactionAsync(async () => {
+    await replaceReferences(db, references, catalogId, groupId);
+
     for (const unit of units) {
       await db.runAsync(
         `INSERT INTO units (id, number, title, description, difficulty, color, catalog_id, group_id, archived_at)
@@ -573,13 +645,14 @@ export async function applyV3GroupRelease(
       await db.runAsync(
         `INSERT INTO lessons
            (id, unit_id, topic_id, code, title, eyebrow, body, code_sample, context_title,
-            context_body, synthesis, content, position, catalog_id, group_id, archived_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, '', '', '', '[]', ?, ?, ?, ?, NULL)
+            context_body, synthesis, content, position, catalog_id, group_id, archived_at, reference_ids)
+         VALUES (?, ?, ?, ?, ?, ?, ?, '', '', '', '[]', ?, ?, ?, ?, NULL, ?)
          ON CONFLICT(id) DO UPDATE SET
            unit_id = excluded.unit_id, topic_id = excluded.topic_id, code = excluded.code,
            title = excluded.title, eyebrow = excluded.eyebrow, body = excluded.body,
            content = excluded.content, position = excluded.position,
-           catalog_id = excluded.catalog_id, group_id = excluded.group_id, archived_at = NULL`,
+           catalog_id = excluded.catalog_id, group_id = excluded.group_id, archived_at = NULL,
+           reference_ids = excluded.reference_ids`,
         lesson.id,
         unitId,
         lesson.topicId,
@@ -591,25 +664,32 @@ export async function applyV3GroupRelease(
         lesson.position,
         catalogId,
         groupId,
+        referenceIdsJson(lesson.referenceIds),
       );
     }
 
     for (const example of examples) {
-      await insertExample(db, example, await contextLesson(example.topicId), groupId);
+      await insertExample(
+        db,
+        example,
+        await contextLesson(example.topicId),
+        groupId,
+        example.referenceIds ?? [],
+      );
     }
 
     for (const exercise of exercises) {
       const lessonId = await contextLesson(exercise.topicId);
       await db.runAsync(
         `INSERT INTO exercises
-           (id, lesson_id, topic_id, type, prompt, instructions, correct_order, config, explanation, position, group_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           (id, lesson_id, topic_id, type, prompt, instructions, correct_order, config, explanation, position, group_id, reference_ids)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            lesson_id = excluded.lesson_id, topic_id = excluded.topic_id, type = excluded.type,
            prompt = excluded.prompt, instructions = excluded.instructions,
            correct_order = excluded.correct_order, config = excluded.config,
            explanation = excluded.explanation, position = excluded.position,
-           group_id = excluded.group_id`,
+           group_id = excluded.group_id, reference_ids = excluded.reference_ids`,
         exercise.id,
         lessonId,
         exercise.topicId,
@@ -621,6 +701,7 @@ export async function applyV3GroupRelease(
         exercise.explanation ?? '',
         exercise.position,
         groupId,
+        referenceIdsJson(exercise.referenceIds),
       );
       if (exercise.example) {
         await insertExample(
@@ -639,6 +720,7 @@ export async function applyV3GroupRelease(
           },
           lessonId,
           groupId,
+          exercise.referenceIds ?? [],
         );
       }
     }
@@ -647,13 +729,14 @@ export async function applyV3GroupRelease(
       const lessonId = await contextLesson(evaluation.topicId);
       await db.runAsync(
         `INSERT INTO evaluations
-           (id, lesson_id, topic_id, title, description, question_count, exercise_count, archived_at, position, group_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
+           (id, lesson_id, topic_id, title, description, question_count, exercise_count, archived_at, position, group_id, reference_ids)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            lesson_id = excluded.lesson_id, topic_id = excluded.topic_id,
            title = excluded.title, description = excluded.description,
            question_count = excluded.question_count, exercise_count = excluded.exercise_count,
-           archived_at = NULL, position = excluded.position, group_id = excluded.group_id`,
+           archived_at = NULL, position = excluded.position, group_id = excluded.group_id,
+           reference_ids = excluded.reference_ids`,
         evaluation.id,
         lessonId,
         evaluation.topicId,
@@ -663,6 +746,7 @@ export async function applyV3GroupRelease(
         evaluation.exerciseIds.length,
         evaluation.position,
         groupId,
+        referenceIdsJson(evaluation.referenceIds),
       );
 
       const questionIds = questions
@@ -693,13 +777,13 @@ export async function applyV3GroupRelease(
       }
       await db.runAsync(
         `INSERT INTO questions
-           (id, evaluation_id, order_index, type, config, prompt, options, answer, explanation)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           (id, evaluation_id, order_index, type, config, prompt, options, answer, explanation, reference_ids)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            evaluation_id = excluded.evaluation_id, order_index = excluded.order_index,
            type = excluded.type, config = excluded.config, prompt = excluded.prompt,
            options = excluded.options, answer = excluded.answer,
-           explanation = excluded.explanation`,
+           explanation = excluded.explanation, reference_ids = excluded.reference_ids`,
         question.id,
         question.evaluationId,
         question.position,
@@ -709,6 +793,7 @@ export async function applyV3GroupRelease(
         JSON.stringify(question.options ?? []),
         question.answer,
         question.explanation ?? '',
+        referenceIdsJson(question.referenceIds),
       );
     }
 
