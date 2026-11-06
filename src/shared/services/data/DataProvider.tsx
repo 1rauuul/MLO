@@ -48,6 +48,7 @@ import {
   leaveClassRequest,
   refreshCatalog,
 } from '@/shared/services/content/remoteContent';
+import { claimInvitationRequest } from '@/shared/services/content/invitations';
 import { http, httpV3 } from '@/shared/services/http/client';
 import { refreshCourseList } from '@/shared/services/content/coursesV3';
 import { applyStoredV3Content } from '@/shared/services/content/applyV3Content';
@@ -229,6 +230,8 @@ export function createRepositories(db: SQLiteDatabase) {
       fetchClassPreview: (code: string) => fetchClassPreview(http, code),
       joinClass: (code: string, studentKey: string, studentName: string) =>
         joinClassRequest(http, code, studentKey, studentName),
+      claimInvitation: (token: string, studentKey: string, studentName: string) =>
+        claimInvitationRequest(httpV3, token, studentKey, studentName),
       leaveClass: (code: string, studentKey: string) =>
         leaveClassRequest(http, code, studentKey),
       fetchClassRelease: (code: string) => fetchClassRelease(http, code),
