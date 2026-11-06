@@ -121,6 +121,7 @@ describe('migrateAndSeed', () => {
     let depth = 0;
     const db = {
       runAsync: async () => ({ changes: 1, lastInsertRowId: 0 }),
+      getAllAsync: async () => [],
       withTransactionAsync: async (task: () => Promise<void>) => {
         if (depth > 0) {
           throw new Error('nested transaction');
@@ -564,6 +565,7 @@ describe('migrateAndSeed', () => {
         statements.push(sql);
         return { changes: 1, lastInsertRowId: 0 };
       },
+      getAllAsync: async () => [],
       withTransactionAsync: async (task: () => Promise<void>) => task(),
     } as unknown as SQLiteDatabase;
 
@@ -582,6 +584,7 @@ describe('migrateAndSeed', () => {
         statements.push({ sql, params });
         return { changes: 1, lastInsertRowId: 0 };
       },
+      getAllAsync: async () => [],
       withTransactionAsync: async (task: () => Promise<void>) => task(),
     } as unknown as SQLiteDatabase;
 
@@ -715,6 +718,7 @@ describe('migrateAndSeed', () => {
         statements.push(sql);
         return { changes: 1, lastInsertRowId: 0 };
       },
+      getAllAsync: async () => [],
       withTransactionAsync: async (task: () => Promise<void>) => task(),
     } as unknown as SQLiteDatabase;
 
@@ -733,6 +737,7 @@ describe('migrateAndSeed', () => {
         statements.push({ sql, params });
         return { changes: 1, lastInsertRowId: 0 };
       },
+      getAllAsync: async () => [],
       withTransactionAsync: async (task: () => Promise<void>) => task(),
     } as unknown as SQLiteDatabase;
 
@@ -781,6 +786,7 @@ describe('migrateAndSeed', () => {
         statements.push(sql);
         return { changes: 1, lastInsertRowId: 0 };
       },
+      getAllAsync: async () => [],
       withTransactionAsync: async (task: () => Promise<void>) => task(),
     } as unknown as SQLiteDatabase;
 

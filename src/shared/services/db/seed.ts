@@ -188,6 +188,15 @@ function hashString(value: string): string {
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
+/**
+ * Referencia empaquetada del curso base. Coincide con la publicada por el CMS
+ * (`ref-sommerville-2011`); el base se consume por v2 y no trae `references`.
+ */
+export const BASE_REFERENCE = {
+  id: 'ref-sommerville-2011',
+  text: 'Sommerville, I. (2011). Ingeniería de software (9.ª ed.). Pearson Educación.',
+} as const;
+
 // Cualquier cambio en el contenido empaquetado cambia el hash y dispara una
 // re-sincronización sin subir DATABASE_VERSION.
 export const CONTENT_HASH = hashString(
@@ -199,6 +208,7 @@ export const CONTENT_HASH = hashString(
     unit1Evaluations,
     l12QuestionBank,
     richContent,
+    reference: BASE_REFERENCE,
   }),
 );
 
@@ -403,6 +413,47 @@ async function deleteContentOrphans(db: SQLiteDatabase): Promise<void> {
   await deleteOrphans(db, 'questions', 'evaluation_id', UNIT1_EVALUATIONS, seedQuestionIds());
 }
 
+function withReferenceId(existing: string, referenceId: string): string | null {
+  let ids: string[] = [];
+  try {
+    const parsed: unknown = JSON.parse(existing);
+    if (Array.isArray(parsed)) {
+      ids = parsed.filter((id): id is string => typeof id === 'string');
+    }
+  } catch {
+    ids = [];
+  }
+  if (ids.includes(referenceId)) {
+    return null;
+  }
+  return JSON.stringify([...ids, referenceId]);
+}
+
+/** Idempotente: asegura la fila y adjunta la referencia a las lecciones base. */
+async function ensureBaseReference(db: SQLiteDatabase, lessonId?: string): Promise<void> {
+  await db.runAsync(
+    `INSERT INTO content_references (id, catalog_id, group_id, text, url)
+     VALUES (?, 'base', '', ?, NULL)
+     ON CONFLICT(id, catalog_id, group_id) DO UPDATE SET text = excluded.text, url = NULL`,
+    BASE_REFERENCE.id,
+    BASE_REFERENCE.text,
+  );
+  const rows = lessonId
+    ? await db.getAllAsync<{ id: string; reference_ids: string }>(
+        `SELECT id, reference_ids FROM lessons WHERE catalog_id = 'base' AND id = ?`,
+        lessonId,
+      )
+    : await db.getAllAsync<{ id: string; reference_ids: string }>(
+        "SELECT id, reference_ids FROM lessons WHERE catalog_id = 'base'",
+      );
+  for (const row of rows) {
+    const next = withReferenceId(row.reference_ids ?? '[]', BASE_REFERENCE.id);
+    if (next) {
+      await db.runAsync('UPDATE lessons SET reference_ids = ? WHERE id = ?', next, row.id);
+    }
+  }
+}
+
 /**
  * Upsert + limpieza del contenido empaquetado. No abre transacción: los
  * llamadores deciden el límite atómico (expo-sqlite falla con anidamiento).
@@ -461,6 +512,7 @@ export async function writeContentSync(db: SQLiteDatabase): Promise<void> {
   }
   await insertQuestionBankRows(db, 'ev1.2', l12QuestionBank);
   await deleteContentOrphans(db);
+  await ensureBaseReference(db);
 }
 
 export async function applyContentSync(db: SQLiteDatabase): Promise<void> {
@@ -623,6 +675,10 @@ export async function applyLessonPayloadInTransaction(
       lesson.position,
       payload.catalogId,
     );
+
+    if (payload.catalogId === 'base') {
+      await ensureBaseReference(db, lesson.id);
+    }
 
     if (evaluation) {
       await db.runAsync(
