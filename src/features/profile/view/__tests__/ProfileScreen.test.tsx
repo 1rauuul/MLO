@@ -34,6 +34,7 @@ jest.mock('@/features/classes/viewmodel/useClasses', () => ({
         teacherName: 'Profesora Ríos',
         version: 1,
         joinedAt: '2026-01-01',
+        courseCatalogId: 'base',
       },
     ],
     isLoading: false,

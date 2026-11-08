@@ -39,6 +39,7 @@ interface ClassRow {
   teacher_name: string | null;
   version: number;
   joined_at: string;
+  course_catalog_id: string;
 }
 
 interface ExtraRow {
@@ -70,7 +71,7 @@ export async function selectAccountClasses(
   accountId: number,
 ): Promise<AccountClass[]> {
   const rows = await db.getAllAsync<ClassRow>(
-    `SELECT ac.class_id, ac.class_code,
+    `SELECT ac.class_id, ac.class_code, ac.course_catalog_id,
             COALESCE(c.class_name, ac.class_code) AS class_name,
             c.teacher_name, COALESCE(c.version, 0) AS version, ac.joined_at
        FROM account_classes ac
@@ -87,6 +88,7 @@ export async function selectAccountClasses(
     teacherName: row.teacher_name,
     version: row.version,
     joinedAt: row.joined_at,
+    courseCatalogId: row.course_catalog_id,
   }));
 }
 

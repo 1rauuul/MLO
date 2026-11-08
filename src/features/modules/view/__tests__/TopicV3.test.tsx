@@ -103,31 +103,41 @@ beforeEach(() => {
   makeHub();
 });
 
-describe('TopicScreen v3', () => {
-  it('muestra las dos lecciones y las actividades del fixture en orden', () => {
-    const { getByText, getAllByRole, getByLabelText } = render(<TopicScreen />);
+describe('TopicScreen', () => {
+  it('muestra el estado y las actividades como mosaicos', () => {
+    const { getByText, getByLabelText, queryByLabelText } = render(<TopicScreen />);
 
     expect(getByText('Subtema con varias actividades')).toBeTruthy();
+    expect(getByText('En progreso')).toBeTruthy();
+    expect(getByLabelText('Ejemplos. Demostración guiada')).toBeTruthy();
+    expect(getByLabelText('Ejercicios. Práctica lo aprendido')).toBeTruthy();
+    expect(queryByLabelText('Lecciones. Concepto y síntesis')).toBeNull();
+    expect(queryByLabelText('Evaluación. Comprueba tu avance')).toBeNull();
+  });
+
+  it('abre los ejemplos y ejercicios del subtema', () => {
+    const { getByLabelText } = render(<TopicScreen />);
+
+    fireEvent.press(getByLabelText('Ejemplos. Demostración guiada'));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/ejemplos',
+      params: { lesson: 'demo-l1.1' },
+    });
+
+    fireEvent.press(getByLabelText('Ejercicios. Práctica lo aprendido'));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/ejercicios',
+      params: { lesson: 'demo-l1.1' },
+    });
+  });
+
+  it('lista las lecciones y evaluaciones cuando hay más de una', () => {
+    const { getByText, getByLabelText } = render(<TopicScreen />);
+
     expect(getByText('Primera lección')).toBeTruthy();
     expect(getByText('Segunda lección')).toBeTruthy();
-    expect(lessons).toHaveLength(2);
-
-    const labels = getAllByRole('button')
-      .map(button => String(button.props.accessibilityLabel))
-      .filter(label =>
-        label.startsWith('Ejemplo:') ||
-        label.startsWith('Ejercicio:') ||
-        label.startsWith('Evaluación:'),
-      );
-
-    expect(labels).toEqual([
-      'Ejemplo: Ejemplo de relación',
-      'Ejemplo: Ejemplo de completar',
-      'Ejercicio: Ordena el proceso',
-      'Ejercicio: Completa la definición',
-      'Evaluación: Evaluación uno',
-      'Evaluación: Evaluación dos',
-    ]);
+    expect(getByText('Evaluación uno')).toBeTruthy();
+    expect(getByText('Evaluación dos')).toBeTruthy();
 
     fireEvent.press(getByLabelText('Evaluación: Evaluación dos'));
     expect(mockPush).toHaveBeenCalledWith({
@@ -136,27 +146,31 @@ describe('TopicScreen v3', () => {
     });
   });
 
-  it('respeta el orden de posición aunque los ids no sean alfabéticos', () => {
-    makeHub({
-      lessons: [],
-      exercises: [],
-      evaluations: [],
-      examples: [
-        { ...examples[1], id: 'z-demo-ex', title: 'Primero por posición', position: 0 },
-        { ...examples[0], id: 'a-demo-ex', title: 'Segundo por posición', position: 1 },
-      ],
+  it('abre directo la única lección y la única evaluación', () => {
+    makeHub({ lessons: [lessons[0]], evaluations: [evaluations[0]] });
+
+    const { getByLabelText, queryByText } = render(<TopicScreen />);
+
+    expect(queryByText('Primera lección')).toBeNull();
+    fireEvent.press(getByLabelText('Lecciones. Concepto y síntesis'));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/lecciones/[id]',
+      params: { id: 'demo-l1.1' },
     });
 
-    const { getAllByRole } = render(<TopicScreen />);
+    fireEvent.press(getByLabelText('Evaluación. Comprueba tu avance'));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/evaluacion',
+      params: { lesson: 'demo-l1.1', evaluationId: 'demo-ev1', catalog: 'demo' },
+    });
+  });
 
-    const labels = getAllByRole('button')
-      .map(button => String(button.props.accessibilityLabel))
-      .filter(label => label.startsWith('Ejemplo:'));
+  it('marca el subtema completado', () => {
+    makeHub({ completed: true });
 
-    expect(labels).toEqual([
-      'Ejemplo: Primero por posición',
-      'Ejemplo: Segundo por posición',
-    ]);
+    const { getByText } = render(<TopicScreen />);
+
+    expect(getByText('Subtema completado')).toBeTruthy();
   });
 
   it('muestra un estado vacío cuando el subtema no tiene contenido', () => {

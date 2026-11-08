@@ -5,15 +5,25 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '@/shared/components/AppText';
 import { Chevron } from '@/shared/components/Chevron';
 import { EmptyState } from '@/shared/components/EmptyState';
-import { Icon } from '@/shared/components/Icon';
 import { Screen } from '@/shared/components/Screen';
 import { ScreenHeader } from '@/shared/components/ScreenHeader';
 import { SectionHeading } from '@/shared/components/SectionHeading';
+import { HubTile } from '@/features/modules/view/HubTile';
 import { SubtopicRow } from '@/features/modules/view/SubtopicRow';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { useLessonHub } from '@/features/modules/viewmodel/useLessonHub';
 import { useCourses } from '@/features/modules/viewmodel/useCourses';
 import { useSession } from '@/features/auth/viewmodel/useSession';
+import type { IconName } from '@/shared/components/Icon';
+
+interface HubAction {
+  key: string;
+  icon: IconName;
+  label: string;
+  note: string;
+  accent: string;
+  onPress: () => void;
+}
 
 function ActivityRow({
   label,
@@ -102,10 +112,7 @@ export default function TopicHubScreen() {
     );
   }
 
-  const go = (
-    pathname: '/ejemplos' | '/ejercicios' | '/evaluacion',
-    evaluationId?: string,
-  ) => {
+  const go = (pathname: '/ejemplos' | '/ejercicios' | '/evaluacion', evaluationId?: string) => {
     if (contextLesson) {
       router.push({
         pathname,
@@ -117,6 +124,54 @@ export default function TopicHubScreen() {
       });
     }
   };
+
+  const actions: HubAction[] = [];
+  if (lessons.length === 1) {
+    actions.push({
+      key: 'lesson',
+      icon: 'lesson',
+      label: 'Lecciones',
+      note: 'Concepto y síntesis',
+      accent: colors.primary,
+      onPress: () =>
+        router.push({ pathname: '/lecciones/[id]', params: { id: lessons[0]!.id } }),
+    });
+  }
+  if (contextLesson && examples.length > 0) {
+    actions.push({
+      key: 'examples',
+      icon: 'examples',
+      label: 'Ejemplos',
+      note: 'Demostración guiada',
+      accent: colors.success,
+      onPress: () => go('/ejemplos'),
+    });
+  }
+  if (contextLesson && exercises.length > 0) {
+    actions.push({
+      key: 'exercises',
+      icon: 'exercises',
+      label: 'Ejercicios',
+      note: 'Práctica lo aprendido',
+      accent: colors.warning,
+      onPress: () => go('/ejercicios'),
+    });
+  }
+  if (contextLesson && evaluations.length === 1) {
+    actions.push({
+      key: 'eval',
+      icon: 'eval',
+      label: 'Evaluación',
+      note: 'Comprueba tu avance',
+      accent: colors.danger,
+      onPress: () => go('/evaluacion', evaluations[0]!.id),
+    });
+  }
+
+  const tileRows: HubAction[][] = [];
+  for (let index = 0; index < actions.length; index += 2) {
+    tileRows.push(actions.slice(index, index + 2));
+  }
 
   const empty =
     lessons.length === 0 &&
@@ -138,16 +193,17 @@ export default function TopicHubScreen() {
           {
             backgroundColor: colors.card,
             borderColor: completed ? colors.success : colors.line,
-            borderRadius: radius.control,
+            borderRadius: radius.pill,
           },
         ]}>
-        <Icon
-          name={completed ? 'check' : 'clock'}
-          size={18}
-          color={completed ? colors.success : colors.primary}
+        <View
+          style={[
+            styles.statusDot,
+            { backgroundColor: completed ? colors.success : colors.primary },
+          ]}
         />
         <AppText weight="600" style={styles.flex}>
-          {completed ? 'Subtema completado' : `${lessons.length} lecciones`}
+          {completed ? 'Subtema completado' : 'En progreso'}
         </AppText>
       </View>
 
@@ -158,7 +214,27 @@ export default function TopicHubScreen() {
         />
       ) : null}
 
-      {lessons.length > 0 ? (
+      {tileRows.length > 0 ? (
+        <View style={styles.grid}>
+          {tileRows.map((row, rowIndex) => (
+            <View key={rowIndex} style={styles.gridRow}>
+              {row.map(action => (
+                <HubTile
+                  key={action.key}
+                  icon={action.icon}
+                  label={action.label}
+                  note={action.note}
+                  accent={action.accent}
+                  onPress={action.onPress}
+                />
+              ))}
+              {row.length === 1 ? <View style={styles.tileSpacer} /> : null}
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {lessons.length > 1 ? (
         <>
           <SectionHeading eyebrow="Lectura" title="Lecciones" trailing={String(lessons.length)} />
           <View style={styles.list}>
@@ -176,47 +252,7 @@ export default function TopicHubScreen() {
         </>
       ) : null}
 
-      {examples.length > 0 ? (
-        <>
-          <SectionHeading
-            eyebrow="Práctica guiada"
-            title="Ejemplos"
-            trailing={String(examples.length)}
-          />
-          <View style={styles.list}>
-            {examples.map(example => (
-              <ActivityRow
-                key={example.id}
-                label="Ejemplo"
-                detail={example.title}
-                onPress={() => go('/ejemplos')}
-              />
-            ))}
-          </View>
-        </>
-      ) : null}
-
-      {exercises.length > 0 ? (
-        <>
-          <SectionHeading
-            eyebrow="Práctica"
-            title="Ejercicios"
-            trailing={String(exercises.length)}
-          />
-          <View style={styles.list}>
-            {exercises.map(exercise => (
-              <ActivityRow
-                key={exercise.id}
-                label="Ejercicio"
-                detail={exercise.prompt}
-                onPress={() => go('/ejercicios')}
-              />
-            ))}
-          </View>
-        </>
-      ) : null}
-
-      {evaluations.length > 0 ? (
+      {evaluations.length > 1 ? (
         <>
           <SectionHeading
             eyebrow="Comprobación"
@@ -245,12 +281,20 @@ const styles = StyleSheet.create({
   status: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     padding: 14,
     borderWidth: 1,
     marginBottom: 18,
   },
-  list: { gap: 10, marginBottom: 20 },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+  },
+  grid: { gap: 12 },
+  gridRow: { flexDirection: 'row', gap: 12 },
+  tileSpacer: { flex: 1 },
+  list: { gap: 10 },
   activityRow: {
     flexDirection: 'row',
     alignItems: 'center',

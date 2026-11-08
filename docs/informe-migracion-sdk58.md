@@ -47,13 +47,19 @@ También se actualizaron `react-native-reanimated` 4.7.1, `react-native-worklets
 
 ## Build
 
-No se generó un build final de EAS por indicación del usuario. La validación se hizo en local:
+Build `preview` de Android completado con `versionCode 5`.
 
-- `npx expo start --clear --offline --port 8082`: Metro arrancó y quedó escuchando.
+- ID: `200f1e6d-4b58-423c-b1fd-ff9a56a4fd2a`
+- Estado: `FINISHED`
+- APK: https://expo.dev/artifacts/eas/YrgMB5lVRkY8S0pQLmB4bPtAHpiwYMudcJpH7k7QGBQ.apk
+- Página del build: https://expo.dev/accounts/1raul/projects/MLO-Ingenieria-software/builds/200f1e6d-4b58-423c-b1fd-ff9a56a4fd2a
+- **Tamaño final: 23,832,944 bytes (~23.8 MB)**
+- Contenido verificado: solo `arm64-v8a`, `libQuickCrypto.so`, `libNitroModules.so` y el icono nuevo dentro del APK.
+
+Antes de este build también se validó en local:
+
+- `npx expo start --clear --offline --port 8082`: Metro arrancó.
 - `npx expo export --platform web`: export correcto.
-- El intento anterior de EAS (`bdd9fa2e-aaa5-424c-862f-84b84e557545`) falló en `npm ci` por el peer opcional de RNTL 14; se corrigió con `.npmrc` y `@react-native/jest-preset`, pero no se relanzó el build.
-
-Pendiente cuando se solicite: build `versionCode 4` y prueba en dispositivo.
 
 ## Vulnerabilidades restantes
 

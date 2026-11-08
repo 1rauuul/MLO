@@ -1,15 +1,15 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import ModulesScreen from '@/features/modules/view/ModulesScreen';
 
 const mockPush = jest.fn();
 const mockNavigate = jest.fn();
 const mockRefreshCatalog = jest.fn(async () => {});
+const mockRefreshLibrary = jest.fn(async () => {});
 const mockSelectCourse = jest.fn(async () => {});
-const mockRefreshCourses = jest.fn(async () => {});
 
 let mockCatalog: Record<string, unknown> = {};
-let mockCourses: Record<string, unknown> = {};
+let mockLibrary: Record<string, unknown> = {};
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, navigate: mockNavigate, back: jest.fn() }),
@@ -23,8 +23,6 @@ jest.mock('@/features/auth/viewmodel/useAuth', () => ({
     resetProgress: jest.fn(),
   }),
 }));
-jest.mock('@/features/modules/viewmodel/useCatalog', () => ({ useCatalog: () => mockCatalog }));
-jest.mock('@/features/modules/viewmodel/useCourses', () => ({ useCourses: () => mockCourses }));
 jest.mock('@/features/auth/viewmodel/useSession', () => ({
   useSession: () => ({
     location: { unitId: null, lessonId: null, lessonCode: null, section: null },
@@ -33,6 +31,11 @@ jest.mock('@/features/auth/viewmodel/useSession', () => ({
     record: jest.fn(),
   }),
 }));
+jest.mock('@/features/modules/viewmodel/useCatalog', () => ({ useCatalog: () => mockCatalog }));
+jest.mock('@/features/modules/viewmodel/useCourseLibrary', () => ({
+  useCourseLibrary: () => mockLibrary,
+}));
+jest.mock('@/shared/services/data/dataMode', () => ({ isHybrid: () => true }));
 jest.mock('@/shared/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }));
 jest.mock('@/shared/theme/ThemeProvider', () => ({
   useTheme: () => ({
@@ -51,6 +54,7 @@ const lessons = [
   {
     id: 'l1.1',
     unitId: 'u1',
+    topicId: 't1',
     code: '1.1',
     title: 'Introducción a la ISW',
     eyebrow: '',
@@ -65,6 +69,7 @@ const lessons = [
   {
     id: 'l1.2',
     unitId: 'u1',
+    topicId: 't1',
     code: '1.2',
     title: 'Desarrollo profesional',
     eyebrow: '',
@@ -89,10 +94,7 @@ const baseCatalog = {
       color: 'blue',
     },
   ],
-  topics: [
-    { id: 't-l1.1', unitId: 'u1', title: 'Subtema A', summary: '', position: 0 },
-    { id: 't-l1.2', unitId: 'u1', title: 'Subtema B', summary: '', position: 1 },
-  ],
+  topics: [{ id: 't1', unitId: 'u1', title: 'Subtema A', summary: '', position: 0 }],
   lessonsByUnit: { u1: lessons },
   completionMap: { 'l1.1': true },
   isLoading: false,
@@ -104,35 +106,31 @@ function makeCatalog(overrides: Record<string, unknown>) {
   mockCatalog = { ...baseCatalog, ...overrides };
 }
 
-const courseList = [
+const entries = [
+  {
+    catalogId: 'demo',
+    title: 'Diseño de experiencias',
+    percent: 25,
+    className: 'QA Fase 6',
+    isActive: true,
+    isBase: false,
+  },
   {
     catalogId: 'base',
     title: 'Ingeniería de Software',
-    status: 'published',
-    usesBase: false,
-    version: '7',
-    hash: 'hash-base',
-    publishedAt: '2026-11-05T00:00:00.000Z',
-    empty: false,
-  },
-  {
-    catalogId: 'demo',
-    title: 'Curso vacío (demo)',
-    status: 'published',
-    usesBase: false,
-    version: '1',
-    hash: 'hash-demo',
-    publishedAt: '2026-11-06T00:00:00.000Z',
-    empty: true,
+    percent: 0,
+    className: null,
+    isActive: false,
+    isBase: true,
   },
 ];
 
-function makeCourses(overrides: Record<string, unknown>) {
-  mockCourses = {
-    courses: courseList,
-    activeCatalogId: 'base',
+function makeLibrary(overrides: Record<string, unknown>) {
+  mockLibrary = {
+    entries,
+    activeCatalogId: 'demo',
     selectCourse: mockSelectCourse,
-    refresh: mockRefreshCourses,
+    refresh: mockRefreshLibrary,
     isLoading: false,
     error: null,
     ...overrides,
@@ -142,94 +140,80 @@ function makeCourses(overrides: Record<string, unknown>) {
 beforeEach(() => {
   jest.clearAllMocks();
   makeCatalog({});
-  makeCourses({});
+  makeLibrary({});
 });
 
 describe('ModulesScreen', () => {
-  it('saluda al estudiante y lista las unidades', () => {
+  it('saluda al estudiante y lista sus cursos con la clase y el avance', () => {
     const { getByText } = render(<ModulesScreen />);
 
     expect(getByText('Hola, Valentina Ríos')).toBeTruthy();
-    expect(getByText('Introducción')).toBeTruthy();
-    expect(getByText('2 subtemas')).toBeTruthy();
+    expect(getByText('Mis cursos')).toBeTruthy();
+    expect(getByText('02')).toBeTruthy();
+    expect(getByText('Diseño de experiencias')).toBeTruthy();
+    expect(getByText('Clase · QA Fase 6 · 25%')).toBeTruthy();
+    expect(getByText('Ingeniería de Software')).toBeTruthy();
+    expect(getByText('Curso disponible · 0%')).toBeTruthy();
   });
 
-  it('navega al continuar', () => {
+  it('abre el curso seleccionado y lo marca como activo', async () => {
+    const { getByLabelText } = render(<ModulesScreen />);
+
+    fireEvent.press(getByLabelText('Curso Diseño de experiencias, Clase · QA Fase 6 · 25%'));
+
+    expect(mockSelectCourse).toHaveBeenCalledWith('demo');
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/curso/[id]',
+        params: { id: 'demo' },
+      }),
+    );
+  });
+
+  it('permite unirse a una clase desde la biblioteca', () => {
+    const { getByLabelText } = render(<ModulesScreen />);
+
+    fireEvent.press(getByLabelText('Unirme a una clase'));
+
+    expect(mockPush).toHaveBeenCalledWith('/join-class');
+  });
+
+  it('continúa desde el hero hacia el subtema pendiente', () => {
     const { getByLabelText } = render(<ModulesScreen />);
 
     fireEvent.press(getByLabelText('Continuar unidad'));
 
-    expect(mockPush).toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/tema/[id]', params: { id: 't1' } });
   });
 
-  it('muestra el error cuando el catálogo no carga', () => {
+  it('muestra el error del catálogo sin ocultar la biblioteca', () => {
     makeCatalog({ units: [], error: 'No se pudo cargar el catálogo de unidades.' });
 
     const { getByText } = render(<ModulesScreen />);
 
     expect(getByText('No se pudo cargar')).toBeTruthy();
     expect(getByText('No se pudo cargar el catálogo de unidades.')).toBeTruthy();
+    expect(getByText('Diseño de experiencias')).toBeTruthy();
   });
 
-  it('muestra un indicador mientras carga el catálogo', () => {
-    makeCatalog({ units: [], isLoading: true });
+  it('muestra un estado vacío y permite reintentar cuando la cuenta no tiene cursos', () => {
+    makeLibrary({ entries: [], activeCatalogId: '', isLoading: false });
 
-    const { getByLabelText, getByText } = render(<ModulesScreen />);
-
-    expect(getByText('Cargando catálogo')).toBeTruthy();
-    expect(getByLabelText('Cargando')).toBeTruthy();
-  });
-
-  it('permite reintentar cuando el catálogo termina vacío', () => {
-    makeCatalog({ units: [], isLoading: false });
-
-    const { getByText } = render(<ModulesScreen />);
-
-    expect(getByText('Sin contenido')).toBeTruthy();
-    fireEvent.press(getByText('Reintentar'));
-    expect(mockRefreshCatalog).toHaveBeenCalled();
-  });
-
-  it('muestra el selector de cursos y cambia el curso activo', () => {
     const { getByText, getByLabelText } = render(<ModulesScreen />);
-
-    expect(getByText('Mis cursos')).toBeTruthy();
-    fireEvent.press(getByLabelText('Curso Curso vacío (demo)'));
-
-    expect(mockSelectCourse).toHaveBeenCalledWith('demo');
-  });
-
-  it('muestra sin cursos habilitados cuando la cuenta sincronizó sin acceso', () => {
-    makeCatalog({ units: [] });
-    makeCourses({ courses: [], activeCatalogId: '', isLoading: false });
-
-    const { getByText, queryByText } = render(<ModulesScreen />);
 
     expect(getByText('Sin cursos habilitados')).toBeTruthy();
     expect(getByText('No tienes cursos disponibles.')).toBeTruthy();
-    expect(queryByText('Introducción')).toBeNull();
+    expect(getByLabelText('Unirme a una clase')).toBeTruthy();
+    fireEvent.press(getByText('Reintentar'));
+    expect(mockRefreshLibrary).toHaveBeenCalled();
   });
 
-  it('muestra el estado vacío de un curso no-base sin contenido', () => {
-    makeCatalog({ units: [] });
-    makeCourses({ activeCatalogId: 'demo' });
+  it('muestra el error de carga de cursos', () => {
+    makeLibrary({ entries: [], activeCatalogId: '', error: 'No se pudieron cargar los cursos.' });
 
     const { getByText } = render(<ModulesScreen />);
 
-    expect(getByText('Sin contenido')).toBeTruthy();
-    expect(getByText('Este curso aún no tiene contenido publicado.')).toBeTruthy();
-  });
-
-  it('muestra contenido en preparación para un curso no-base con metadata', () => {
-    makeCatalog({ units: [] });
-    makeCourses({
-      activeCatalogId: 'demo',
-      courses: [{ ...courseList[1], empty: false }, courseList[0]],
-    });
-
-    const { getByText } = render(<ModulesScreen />);
-
-    expect(getByText('Contenido en preparación')).toBeTruthy();
-    expect(getByText('Este curso todavía no tiene unidades disponibles.')).toBeTruthy();
+    expect(getByText('No se pudieron cargar los cursos')).toBeTruthy();
+    expect(getByText('No se pudieron cargar los cursos.')).toBeTruthy();
   });
 });

@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.mlo.ingenieriasoftware",
-      "versionCode": 4,
+      "versionCode": 5,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground-transparent.png",

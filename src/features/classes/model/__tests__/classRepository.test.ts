@@ -149,6 +149,7 @@ describe('classRepository', () => {
           teacher_name: 'Profesora Ríos',
           version: 2,
           joined_at: '2026-01-01',
+          course_catalog_id: 'base',
         },
       ]),
     });
@@ -161,6 +162,7 @@ describe('classRepository', () => {
         teacherName: 'Profesora Ríos',
         version: 2,
         joinedAt: '2026-01-01',
+        courseCatalogId: 'base',
       },
     ]);
   });

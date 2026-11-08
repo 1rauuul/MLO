@@ -125,6 +125,8 @@ export interface AccountClass {
   teacherName: string | null;
   version: number;
   joinedAt: string;
+  /** Curso al que pertenece la clase; el contenido de la clase se suma a ese catálogo. */
+  courseCatalogId: string;
 }
 
 export interface Evaluation {

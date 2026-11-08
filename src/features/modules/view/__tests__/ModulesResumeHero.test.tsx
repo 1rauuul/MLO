@@ -66,10 +66,30 @@ jest.mock('@/shared/theme/ThemeProvider', () => ({
     },
     scale: 1,
     spacing: { xl: 20, lg: 16, md: 12, sm: 8, xxl: 32 },
-    radius: { card: 12, control: 8, pill: 99 },
+    radius: { card: 12, control: 8, tile: 20, pill: 99 },
     fonts: { mono: 'monospace' },
   }),
 }));
+jest.mock('@/features/modules/viewmodel/useCourseLibrary', () => ({
+  useCourseLibrary: () => ({
+    entries: [
+      {
+        catalogId: 'base',
+        title: 'Ingeniería de Software',
+        percent: 0,
+        className: null,
+        isActive: true,
+        isBase: true,
+      },
+    ],
+    activeCatalogId: 'base',
+    selectCourse: jest.fn(),
+    refresh: jest.fn(),
+    isLoading: false,
+    error: null,
+  }),
+}));
+jest.mock('@/shared/services/data/dataMode', () => ({ isHybrid: () => false }));
 jest.mock('@/shared/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }));
 jest.mock('@/features/auth/viewmodel/useAuth', () => ({
   useAuth: () => ({

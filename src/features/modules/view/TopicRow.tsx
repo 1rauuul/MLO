@@ -10,12 +10,13 @@ import { Icon } from '@/shared/components/Icon';
 
 interface TopicRowProps {
   topic: Topic;
-  lessonCount: number;
+  /** Lecciones completadas sobre el total del subtema. */
+  progress: number;
   completed: boolean;
   onPress: () => void;
 }
 
-export function TopicRow({ topic, lessonCount, completed, onPress }: TopicRowProps) {
+export function TopicRow({ topic, progress, completed, onPress }: TopicRowProps) {
   const { colors, radius } = useTheme();
   const reduced = useReducedMotion();
   const accent = completed ? colors.success : colors.primary;
@@ -23,20 +24,17 @@ export function TopicRow({ topic, lessonCount, completed, onPress }: TopicRowPro
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${topic.title}, ${lessonCount} lecciones${completed ? ', completado' : ''}`}
+      accessibilityLabel={`${topic.title}, ${progress}% completado${completed ? '' : ', en progreso'}`}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.row,
-        pressed && !reduced ? { opacity: 0.65 } : null,
-      ]}>
+      style={({ pressed }) => [styles.row, pressed && !reduced ? { opacity: 0.65 } : null]}>
       <View style={[styles.marker, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
         <AppText variant="code" color={accent}>
-          {String(topic.position + 1).padStart(2, '0')}
+          {String(topic.position + 1)}
         </AppText>
       </View>
       <View style={styles.copy}>
         <AppText weight="600">{topic.title}</AppText>
-        <AppText variant="small">{`${lessonCount} lecciones`}</AppText>
+        <AppText variant="small">{`${progress}%`}</AppText>
       </View>
       {completed ? (
         <Icon name="check" size={17} color={colors.success} strokeWidth={2.5} />

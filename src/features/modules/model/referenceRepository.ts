@@ -42,23 +42,32 @@ export async function selectReferences(
   catalogId: string,
   groupId: string | null,
 ): Promise<BibliographyReference[]> {
+  // examples/exercises/evaluations/questions no guardan catalog_id: el curso
+  // se hereda de su lección (o de la evaluación, para las preguntas).
   const links = await db.getAllAsync<LinkRow>(
-    `SELECT reference_ids AS referenceIds, catalog_id AS catalogId, group_id AS groupId,
-            archived_at AS archivedAt, position, 'lesson' AS kind
-       FROM lessons WHERE catalog_id IN ('base', ?)
+    `SELECT l.reference_ids AS referenceIds, l.catalog_id AS catalogId, l.group_id AS groupId,
+            l.archived_at AS archivedAt, l.position, 'lesson' AS kind
+       FROM lessons l WHERE l.catalog_id IN ('base', ?)
      UNION ALL
-     SELECT reference_ids, catalog_id, group_id, archived_at, position, 'evaluation'
-       FROM evaluations WHERE catalog_id IN ('base', ?)
+     SELECT e.reference_ids, l.catalog_id, e.group_id, COALESCE(e.archived_at, l.archived_at),
+            e.position, 'evaluation'
+       FROM evaluations e JOIN lessons l ON l.id = e.lesson_id
+      WHERE l.catalog_id IN ('base', ?)
      UNION ALL
-     SELECT q.reference_ids, e.catalog_id, e.group_id, e.archived_at, q.order_index, 'question'
-       FROM questions q JOIN evaluations e ON e.id = q.evaluation_id
-      WHERE e.catalog_id IN ('base', ?)
+     SELECT q.reference_ids, l.catalog_id, e.group_id, COALESCE(e.archived_at, l.archived_at),
+            q.order_index, 'question'
+       FROM questions q
+       JOIN evaluations e ON e.id = q.evaluation_id
+       JOIN lessons l ON l.id = e.lesson_id
+      WHERE l.catalog_id IN ('base', ?)
      UNION ALL
-     SELECT reference_ids, catalog_id, group_id, NULL, position, 'exercise'
-       FROM exercises WHERE catalog_id IN ('base', ?)
+     SELECT x.reference_ids, l.catalog_id, x.group_id, l.archived_at, x.position, 'exercise'
+       FROM exercises x JOIN lessons l ON l.id = x.lesson_id
+      WHERE l.catalog_id IN ('base', ?)
      UNION ALL
-     SELECT reference_ids, catalog_id, group_id, NULL, position, 'example'
-       FROM examples WHERE catalog_id IN ('base', ?)`,
+     SELECT x.reference_ids, l.catalog_id, x.group_id, l.archived_at, x.position, 'example'
+       FROM examples x JOIN lessons l ON l.id = x.lesson_id
+      WHERE l.catalog_id IN ('base', ?)`,
     catalogId,
     catalogId,
     catalogId,

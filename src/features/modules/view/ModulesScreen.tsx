@@ -1,25 +1,22 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { useCallback } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/shared/components/AppText';
 import { SecondaryButton } from '@/shared/components/Buttons';
 import { Chevron } from '@/shared/components/Chevron';
-import { ContentUpdateButton } from '@/shared/components/ContentUpdateNotice';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Screen } from '@/shared/components/Screen';
 import { SectionHeading } from '@/shared/components/SectionHeading';
-import { TopicRow } from '@/features/modules/view/TopicRow';
-import { UnitCard } from '@/features/modules/view/UnitCard';
-import { Bibliography } from '@/features/modules/view/Bibliography';
+import { CourseCard } from '@/features/modules/view/CourseCard';
 import type { Lesson, Topic } from '@/shared/model/entities';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { initials } from '@/features/auth/viewmodel/auth.logic';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
-import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
 import { useCatalog } from '@/features/modules/viewmodel/useCatalog';
-import { useCourses, type CoursesResult } from '@/features/modules/viewmodel/useCourses';
+import { useCourseLibrary } from '@/features/modules/viewmodel/useCourseLibrary';
 import { useSession } from '@/features/auth/viewmodel/useSession';
+import { isHybrid } from '@/shared/services/data/dataMode';
 
 function greetingDate(): string {
   const formatted = new Date().toLocaleDateString('es-ES', {
@@ -30,141 +27,37 @@ function greetingDate(): string {
   return formatted.toUpperCase();
 }
 
-function CoursePicker({
-  courses,
-  activeCatalogId,
-  onSelect,
-}: {
-  courses: CoursesResult['courses'];
-  activeCatalogId: string;
-  onSelect: (catalogId: string) => void;
-}) {
-  const { colors, radius } = useTheme();
-  return (
-    <View style={styles.coursePicker}>
-      <AppText variant="eyebrow">Mis cursos</AppText>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.courseChips}>
-        {courses.map(course => {
-          const selected = course.catalogId === activeCatalogId;
-          return (
-            <Pressable
-              key={course.catalogId}
-              accessibilityRole="button"
-              accessibilityLabel={`Curso ${course.title}`}
-              accessibilityState={{ selected }}
-              onPress={() => onSelect(course.catalogId)}
-              style={[
-                styles.courseChip,
-                {
-                  backgroundColor: selected ? colors.primary : colors.card,
-                  borderColor: selected ? colors.primary : colors.line,
-                  borderRadius: radius.pill,
-                },
-              ]}>
-              <AppText
-                variant="small"
-                color={selected ? colors.onPrimary : colors.text}
-                weight={selected ? '700' : undefined}>
-                {course.title}
-              </AppText>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
-}
-
 export default function ModulesScreen() {
   const { colors, radius } = useTheme();
   const { account } = useAuth();
   const {
-    courses,
+    entries,
     activeCatalogId,
     selectCourse,
-    refresh: refreshCourses,
-    isLoading: coursesLoading,
-  } = useCourses();
-  const { units, topics, lessonsByUnit, completionMap, references, isLoading, error, refresh } =
-    useCatalog(coursesLoading ? '' : activeCatalogId);
+    refresh: refreshLibrary,
+    isLoading: libraryLoading,
+    error: libraryError,
+  } = useCourseLibrary();
+  const {
+    units,
+    topics,
+    lessonsByUnit,
+    completionMap,
+    error: catalogError,
+    refresh: refreshCatalog,
+  } = useCatalog(libraryLoading ? '' : activeCatalogId);
   const { location, resumeHref } = useSession();
   const router = useRouter();
-  const [expanded, setExpanded] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      void refreshCourses();
-      void refresh();
-    }, [refreshCourses, refresh]),
+      void refreshLibrary();
+      void refreshCatalog();
+    }, [refreshLibrary, refreshCatalog]),
   );
 
   const learnerName = account?.displayName ?? 'Estudiante';
-  const activeCourse = courses.find(course => course.catalogId === activeCatalogId);
-  const isBaseCourse = activeCatalogId === BASE_CATALOG_ID;
-  const coursePicker = (
-    <CoursePicker
-      courses={courses}
-      activeCatalogId={activeCatalogId}
-      onSelect={catalogId => void selectCourse(catalogId)}
-    />
-  );
-
-  if (!coursesLoading && courses.length === 0) {
-    return (
-      <Screen contentStyle={styles.content}>
-        {coursePicker}
-        <EmptyState
-          title="Sin cursos habilitados"
-          message="No tienes cursos disponibles."
-        />
-        <SecondaryButton
-          label="Reintentar"
-          onPress={() => {
-            void refreshCourses();
-            void refresh();
-          }}
-          style={styles.retry}
-        />
-      </Screen>
-    );
-  }
-
-  if (units.length === 0) {
-    const title = error
-      ? 'No se pudo cargar'
-      : isLoading
-        ? 'Cargando catálogo'
-        : !isBaseCourse && activeCourse?.empty
-          ? 'Sin contenido'
-          : !isBaseCourse
-            ? 'Contenido en preparación'
-            : 'Sin contenido';
-    const message =
-      error ??
-      (isLoading
-        ? 'Preparando las unidades del curso.'
-        : !isBaseCourse && activeCourse?.empty
-          ? 'Este curso aún no tiene contenido publicado.'
-          : !isBaseCourse
-            ? 'Este curso todavía no tiene unidades disponibles.'
-            : 'No hay unidades disponibles en este dispositivo.');
-    return (
-      <Screen contentStyle={styles.content}>
-        {coursePicker}
-        <EmptyState loading={isLoading && !error} title={title} message={message} />
-        {!isLoading ? (
-          <SecondaryButton
-            label="Reintentar"
-            onPress={() => void refresh()}
-            style={styles.retry}
-          />
-        ) : null}
-      </Screen>
-    );
-  }
+  const showLibrary = entries.length > 0;
 
   const allLessons = units.flatMap(unit => lessonsByUnit[unit.id] ?? []);
   const lessonsForTopic = (topicId: string) =>
@@ -179,14 +72,12 @@ export default function ModulesScreen() {
           summary: '',
           position: lesson.position,
         }));
-  const topicsByUnit: Record<string, Topic[]> = {};
-  for (const topic of catalogTopics) {
-    (topicsByUnit[topic.unitId] ??= []).push(topic);
-  }
   const currentTopic =
     catalogTopics.find(topic =>
       lessonsForTopic(topic.id).some(lesson => !completionMap[lesson.id]),
-    ) ?? catalogTopics[0] ?? null;
+    ) ??
+    catalogTopics[0] ??
+    null;
   const nextLesson = currentTopic
     ? lessonsForTopic(currentTopic.id).find(lesson => !completionMap[lesson.id]) ??
       lessonsForTopic(currentTopic.id)[0]
@@ -215,7 +106,7 @@ export default function ModulesScreen() {
   const heroTitle =
     canResume && resumedLesson
       ? resumedLesson.title
-      : heroTopic?.title ?? heroUnit.title;
+      : heroTopic?.title ?? heroUnit?.title ?? '';
 
   const openTopic = (topic: Topic) => {
     router.push({ pathname: '/tema/[id]', params: { id: topic.id } });
@@ -245,6 +136,28 @@ export default function ModulesScreen() {
     }
   };
 
+  const openCourse = async (catalogId: string) => {
+    await selectCourse(catalogId);
+    router.push({ pathname: '/curso/[id]', params: { id: catalogId } });
+  };
+
+  const joinClass = isHybrid() ? (
+    <SecondaryButton
+      label="Unirme a una clase"
+      labelColor={colors.primary}
+      icon={
+        <AppText weight="700" color={colors.primary} style={styles.plus}>
+          +
+        </AppText>
+      }
+      onPress={() => router.push('/join-class' as Href)}
+      style={[
+        styles.joinButton,
+        { backgroundColor: colors.card, borderColor: colors.line, borderWidth: 1 },
+      ]}
+    />
+  ) : null;
+
   return (
     <Screen contentStyle={styles.content}>
       <View style={styles.topHeader}>
@@ -263,101 +176,93 @@ export default function ModulesScreen() {
         </Pressable>
       </View>
 
-      {coursePicker}
+      {libraryLoading && !showLibrary ? (
+        <EmptyState loading title="Cargando cursos" message="Preparando tus cursos." />
+      ) : null}
 
-      <View
-        style={[
-          styles.continueCard,
-          { backgroundColor: colors.primary, borderRadius: radius.tile },
-        ]}>
-        <AppText variant="eyebrow" color="#DCE6FF">
-          Continúa donde lo dejaste
-        </AppText>
-        <AppText style={styles.continueTitle} color={colors.onPrimary} weight="700">
-          Unidad {heroUnit.number}
-          {'\n'}
-          {heroTitle}
-        </AppText>
-        <AppText variant="small" color="#E6ECFF">
-          {`${heroDone} de ${heroLessons.length} lecciones · ${heroProgress}%`}
-        </AppText>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Continuar unidad"
-          disabled={!canResume && !nextLesson}
-          onPress={handleContinue}
-          style={[styles.continueAction, { backgroundColor: colors.onPrimary }]}>
-          <Chevron direction="right" size={18} color={colors.primary} strokeWidth={2.4} />
-        </Pressable>
-      </View>
+      {!libraryLoading && !showLibrary ? (
+        <>
+          <SectionHeading eyebrow="Tu biblioteca" title="Mis cursos" trailing="00" />
+          <EmptyState
+            title={libraryError ? 'No se pudieron cargar los cursos' : 'Sin cursos habilitados'}
+            message={libraryError ?? 'No tienes cursos disponibles.'}
+          />
+          <SecondaryButton
+            label="Reintentar"
+            onPress={() => {
+              void refreshLibrary();
+              void refreshCatalog();
+            }}
+            style={styles.retry}
+          />
+        </>
+      ) : null}
 
-      <SectionHeading
-        eyebrow="Ruta de aprendizaje"
-        title="Tus unidades"
-        trailing={String(units.length).padStart(2, '0')}
-      />
+      {showLibrary ? (
+        <>
+          {catalogError ? (
+            <View style={styles.catalogError}>
+              <EmptyState title="No se pudo cargar" message={catalogError} />
+              <SecondaryButton
+                label="Reintentar"
+                onPress={() => void refreshCatalog()}
+                style={styles.retry}
+              />
+            </View>
+          ) : null}
 
-      <View style={styles.list}>
-        {units.map(unit => {
-          const unitTopics = topicsByUnit[unit.id] ?? [];
-          const lessons = lessonsByUnit[unit.id] ?? [];
-          const done = lessons.filter(lesson => completionMap[lesson.id]).length;
-          const progress = lessons.length ? Math.round((done / lessons.length) * 100) : 0;
-          const isExpanded = expanded === unit.id;
-          const nextTopicInUnit =
-            unitTopics.find(topic =>
-              lessonsForTopic(topic.id).some(lesson => !completionMap[lesson.id]),
-            ) ?? unitTopics[0];
-          return (
-            <UnitCard
-              key={unit.id}
-              unit={unit}
-              subtopicCount={unitTopics.length}
-              progress={progress}
-              expanded={isExpanded}
-              onToggle={() => setExpanded(isExpanded ? null : unit.id)}>
-              <AppText variant="eyebrow">{`Objetos de aprendizaje · ${unitTopics.length} subtemas`}</AppText>
-              <View style={styles.subtopics}>
-                {unitTopics.map((topic, index) => {
-                  const topicLessons = lessonsForTopic(topic.id);
-                  const topicDone =
-                    topicLessons.length > 0 &&
-                    topicLessons.every(lesson => completionMap[lesson.id]);
-                  return (
-                    <View key={topic.id}>
-                      {index > 0 ? (
-                        <View style={[styles.divider, { backgroundColor: colors.line }]} />
-                      ) : null}
-                      <TopicRow
-                        topic={topic}
-                        lessonCount={topicLessons.length}
-                        completed={topicDone}
-                        onPress={() => openTopic(topic)}
-                      />
-                    </View>
-                  );
-                })}
-              </View>
-              {nextTopicInUnit ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Explorar subtemas"
-                  onPress={() => openTopic(nextTopicInUnit)}
-                  style={styles.explore}>
-                  <AppText variant="small" color={colors.primary} weight="700">
-                    Explorar subtemas
-                  </AppText>
-                  <Chevron direction="right" size={16} color={colors.primary} strokeWidth={2.4} />
-                </Pressable>
-              ) : null}
-            </UnitCard>
-          );
-        })}
-      </View>
+          {!catalogError && heroUnit && heroTopic ? (
+            <View
+              style={[
+                styles.continueCard,
+                { backgroundColor: colors.primary, borderRadius: radius.tile },
+              ]}>
+              <AppText variant="eyebrow" color="#DCE6FF">
+                Continúa donde lo dejaste
+              </AppText>
+              <AppText style={styles.continueTitle} color={colors.onPrimary} weight="700">
+                Unidad {heroUnit.number}
+                {'\n'}
+                {heroTitle}
+              </AppText>
+              <AppText variant="small" color="#E6ECFF">
+                {`${heroDone} de ${heroLessons.length} lecciones · ${heroProgress}%`}
+              </AppText>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Continuar unidad"
+                disabled={!canResume && !nextLesson}
+                onPress={handleContinue}
+                style={[styles.continueAction, { backgroundColor: colors.onPrimary }]}>
+                <Chevron
+                  direction="right"
+                  size={18}
+                  color={colors.primary}
+                  strokeWidth={2.4}
+                />
+              </Pressable>
+            </View>
+          ) : null}
 
-      <Bibliography references={references ?? []} />
+          <SectionHeading
+            eyebrow="Tu biblioteca"
+            title="Mis cursos"
+            trailing={String(entries.length).padStart(2, '0')}
+          />
 
-      <ContentUpdateButton style={styles.syncButton} />
+          <View style={styles.list}>
+            {entries.map(entry => (
+              <CourseCard
+                key={entry.catalogId}
+                entry={entry}
+                onPress={() => void openCourse(entry.catalogId)}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      {joinClass}
     </Screen>
   );
 }
@@ -396,16 +301,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   retry: { marginTop: 12 },
-  coursePicker: { gap: 8, marginBottom: 18 },
-  courseChips: { gap: 8, paddingRight: 8 },
-  courseChip: {
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
   list: { gap: 12 },
-  subtopics: { marginTop: 6 },
-  divider: { height: 1 },
-  explore: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
-  syncButton: { marginTop: 18 },
+  joinButton: { marginTop: 14 },
+  plus: { fontSize: 18, lineHeight: 20 },
+  catalogError: { marginBottom: 8 },
 });

@@ -9,7 +9,7 @@ export function SectionHeading({
   title,
   trailing,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   trailing?: string;
 }) {
@@ -17,7 +17,7 @@ export function SectionHeading({
   return (
     <View style={[styles.heading, { marginTop: spacing.xl }]}>
       <View style={styles.copy}>
-        <AppText variant="eyebrow">{eyebrow}</AppText>
+        {eyebrow ? <AppText variant="eyebrow">{eyebrow}</AppText> : null}
         <AppText variant="heading">{title}</AppText>
       </View>
       {trailing ? <AppText variant="code">{trailing}</AppText> : null}

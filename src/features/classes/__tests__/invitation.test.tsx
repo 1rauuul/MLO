@@ -12,6 +12,9 @@ import {
 } from '@/shared/services/content/invitations';
 import { HttpError, NetworkError } from '@/shared/services/http/client';
 
+// Flujo de invitación con esperas encadenadas; 5 s es muy justo con la suite en paralelo.
+jest.setTimeout(15000);
+
 const FIXTURES = join(__dirname, '..', '__fixtures__', 'x07');
 const TOKEN = 'A'.repeat(43);
 const STUDENT_KEY = '11111111-1111-4111-8111-111111111111';
