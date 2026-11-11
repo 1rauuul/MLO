@@ -19,7 +19,7 @@ export interface RemoteUnit {
   title: string;
   description: string;
   difficulty: 'Fundamental' | 'Intermedio' | 'Avanzado';
-  color: 'blue' | 'violet' | 'green';
+  color: 'blue' | 'violet' | 'green' | 'amber' | 'orange' | 'rose' | 'teal';
 }
 
 export interface RemoteLesson {
@@ -298,7 +298,7 @@ function parseUnit(value: unknown): RemoteUnit {
   if (!['Fundamental', 'Intermedio', 'Avanzado'].includes(String(value.difficulty))) {
     fail('dificultad inválida');
   }
-  if (!['blue', 'violet', 'green'].includes(String(value.color))) {
+  if (!['blue', 'violet', 'green', 'amber', 'orange', 'rose', 'teal'].includes(String(value.color))) {
     fail('color inválido');
   }
   return value as unknown as RemoteUnit;

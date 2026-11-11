@@ -68,7 +68,7 @@ const fillQuestion: Question = {
 jest.mock('expo-sqlite', () => ({ useSQLiteContext: () => ({}) }));
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
-  useRouter: () => ({ back: mockBack, navigate: mockNavigate, push: mockPush }),
+  useRouter: () => ({ back: mockBack, navigate: mockNavigate, push: mockPush, replace: jest.fn() }),
   useNavigation: () => ({
     addListener: jest.fn(() => () => {}),
     setOptions: jest.fn(),
@@ -588,6 +588,17 @@ describe('Ejercicios screen wiring', () => {
     render(<PracticeScreen />);
 
     expect(mockCapturedActivityProps?.locked).toBe(false);
+  });
+
+  it('sale al hub al abandonar ejercicios si vino de ejemplos', () => {
+    mockParams = { lesson: 'lesson-2', from: 'examples' };
+    const { getByRole } = render(<PracticeScreen />);
+
+    fireEvent.press(getByRole('button', { name: 'Volver' }));
+    fireEvent.press(getByRole('button', { name: 'Salir' }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/');
+    expect(mockBack).not.toHaveBeenCalled();
   });
 });
 

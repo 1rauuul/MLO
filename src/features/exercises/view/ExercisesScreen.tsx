@@ -24,7 +24,7 @@ function formatPoints(value: number): string {
 }
 
 export default function PracticeScreen() {
-  const { lesson: lessonParam } = useLocalSearchParams<{ lesson?: string }>();
+  const { lesson: lessonParam, from } = useLocalSearchParams<{ lesson?: string; from?: string }>();
   const { lesson } = useLessonContent(lessonParam ?? null);
   const engine = usePracticeEngine(lessonParam ?? null);
   const { record } = useSession();
@@ -46,7 +46,14 @@ export default function PracticeScreen() {
     }, [lesson, record]),
   );
 
-  const goBack = () => router.back();
+  const goBack = () => {
+    // Si venimos de ejemplos, ese flujo ya terminó: se sale al hub, no a ejemplos.
+    if (from === 'examples') {
+      router.navigate('/');
+      return;
+    }
+    router.back();
+  };
   const goLesson = () => {
     if (lessonParam) {
       router.push({ pathname: '/lecciones/[id]', params: { id: lessonParam } });

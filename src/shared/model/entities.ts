@@ -2,7 +2,14 @@ export type LearningStyle = 'Activo' | 'Reflexivo' | 'Teórico' | 'Pragmático';
 
 export type Complexity = 'Fundamental' | 'Intermedio' | 'Avanzado';
 
-export type UnitColor = 'blue' | 'violet' | 'green';
+export type UnitColor =
+  | 'blue'
+  | 'violet'
+  | 'green'
+  | 'amber'
+  | 'orange'
+  | 'rose'
+  | 'teal';
 
 export type ActivityType = 'order' | 'match' | 'fill' | 'crossword' | 'mcq';
 

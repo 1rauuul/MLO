@@ -50,3 +50,13 @@ export function demoSteps(exercise: Exercise): ExampleStep[] {
 export function hasDemo(exercise: Exercise): boolean {
   return demoSteps(exercise).length > 0;
 }
+
+/** Máximo de ejemplos por sesión; los independientes conservan su lugar. */
+export function capExamples(
+  drawn: Exercise[],
+  independent: Exercise[],
+  limit: number,
+): Exercise[] {
+  const extras = independent.slice(0, limit);
+  return [...drawn.slice(0, Math.max(0, limit - extras.length)), ...extras];
+}

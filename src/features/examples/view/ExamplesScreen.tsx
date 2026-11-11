@@ -67,7 +67,11 @@ export default function ExamplesScreen() {
         onNext={engine.next}
         onRedraw={engine.redraw}
         onGoExercises={() => {
-          router.push({ pathname: '/ejercicios', params: { lesson: lessonParam } });
+          // El sorteo de ejemplos termina aquí: se reemplaza para no volver a él.
+          router.replace({
+            pathname: '/ejercicios',
+            params: { lesson: lessonParam, from: 'examples' },
+          });
         }}
         onBack={() => router.back()}
       />

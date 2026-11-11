@@ -17,6 +17,7 @@ interface CapturedActivityProps {
 const mockBack = jest.fn();
 const mockNavigate = jest.fn();
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
 const mockNext = jest.fn();
 
 const firstExercise: Exercise = {
@@ -61,7 +62,7 @@ let mockEngine: ExamplesEngine = makeEngine([firstExercise, secondExercise], 0);
 jest.mock('expo-sqlite', () => ({ useSQLiteContext: () => ({}) }));
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ lesson: 'lesson-2' }),
-  useRouter: () => ({ back: mockBack, navigate: mockNavigate, push: mockPush }),
+  useRouter: () => ({ back: mockBack, navigate: mockNavigate, push: mockPush, replace: mockReplace }),
   useFocusEffect: jest.fn(),
 }));
 jest.mock('@/features/auth/viewmodel/useSession', () => ({
@@ -106,6 +107,7 @@ beforeEach(() => {
   mockBack.mockClear();
   mockNavigate.mockClear();
   mockPush.mockClear();
+  mockReplace.mockClear();
   mockNext.mockClear();
   mockCapturedActivityProps = null;
   mockEngine = makeEngine([firstExercise, secondExercise], 0);
@@ -154,11 +156,16 @@ describe('Ejemplos sequential flow', () => {
     expect(queryByRole('button', { name: 'Siguiente ejemplo' })).toBeNull();
     fireEvent.press(getByRole('button', { name: 'Ir a ejercicios' }));
     expect(mockPush).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
 
     act(() => mockCapturedActivityProps?.onSubmit('respuesta', true));
 
     fireEvent.press(getByRole('button', { name: 'Ir a ejercicios' }));
-    expect(mockPush).toHaveBeenCalledWith({ pathname: '/ejercicios', params: { lesson: 'lesson-2' } });
+    expect(mockReplace).toHaveBeenCalledWith({
+      pathname: '/ejercicios',
+      params: { lesson: 'lesson-2', from: 'examples' },
+    });
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it('muestra el why y las pistas del ejemplo curado', () => {

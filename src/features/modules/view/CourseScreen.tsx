@@ -151,6 +151,7 @@ export default function CourseScreen() {
                       ) : null}
                       <TopicRow
                         topic={topic}
+                        unitNumber={unit.number}
                         progress={topicProgress}
                         completed={topicCompleted}
                         onPress={() =>

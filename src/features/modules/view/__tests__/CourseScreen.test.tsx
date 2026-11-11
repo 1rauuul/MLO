@@ -95,7 +95,8 @@ describe('CourseScreen', () => {
 
     expect(getByText('Subtema A')).toBeTruthy();
     expect(getByText('Subtema B')).toBeTruthy();
-    expect(getByText('1')).toBeTruthy();
+    expect(getByText('1.1')).toBeTruthy();
+    expect(getByText('1.2')).toBeTruthy();
     expect(getByText('100%')).toBeTruthy();
     expect(getByText('50%')).toBeTruthy();
     expect(queryByText('1 lecciones')).toBeNull();

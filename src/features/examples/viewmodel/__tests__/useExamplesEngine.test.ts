@@ -204,6 +204,20 @@ describe('useExamplesEngine', () => {
     expect(result.current.items.map(item => item.id)).toEqual(expected);
   });
 
+  it('limita a 10 ejemplos aunque haya independientes', async () => {
+    mockSelect.mockResolvedValue(
+      Array.from({ length: 20 }, (_, index) => buildExercise(`e${index}`, 'fill')),
+    );
+    mockSelectExamples.mockResolvedValue([buildExample('ex1')]);
+
+    const { result } = renderHook(() => useExamplesEngine('lesson-1'));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.items).toHaveLength(10);
+    expect(result.current.items.map(item => item.id)).toContain('ex1');
+  });
+
   it('ignora los independientes de tipo ordenar', async () => {
     mockSelect.mockResolvedValue([]);
     mockSelectExamples.mockResolvedValue([buildExample('ex-order', 'order')]);

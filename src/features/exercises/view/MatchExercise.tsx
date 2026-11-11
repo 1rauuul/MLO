@@ -56,6 +56,16 @@ export function MatchExercise({
             const accent = accentForIndex(index);
             const selected = engine.selectedLeft === index;
             const correct = leftCorrect(index);
+            const stateColor = engine.checked
+              ? correct
+                ? colors.success
+                : colors.danger
+              : accent;
+            const stateBackground = engine.checked
+              ? `${correct ? colors.success : colors.danger}22`
+              : selected
+                ? `${accent}1F`
+                : colors.card;
             return (
               <Pressable
                 key={left}
@@ -67,9 +77,9 @@ export function MatchExercise({
                 style={[
                   styles.item,
                   {
-                    backgroundColor: selected ? `${accent}1F` : colors.card,
-                    borderColor: accent,
-                    borderWidth: selected ? 3 : 2,
+                    backgroundColor: stateBackground,
+                    borderColor: stateColor,
+                    borderWidth: selected && !engine.checked ? 3 : 2,
                     borderRadius: radius.control,
                   },
                 ]}>
@@ -81,14 +91,6 @@ export function MatchExercise({
                 <AppText variant="small" weight="600" style={styles.flex}>
                   {left}
                 </AppText>
-                {engine.checked ? (
-                  <Icon
-                    name={correct ? 'check' : 'close'}
-                    size={16}
-                    color={correct ? colors.success : colors.danger}
-                    strokeWidth={2.5}
-                  />
-                ) : null}
               </Pressable>
             );
           })}
@@ -97,8 +99,17 @@ export function MatchExercise({
         <View style={styles.column}>
           {engine.rights.map((right, position) => {
             const owner = engine.assignment.indexOf(position);
-            const accent = owner === -1 ? colors.line : accentForIndex(owner);
-            const correct = owner !== -1 && leftCorrect(owner);
+            const assigned = owner !== -1;
+            const accent = assigned ? accentForIndex(owner) : colors.line;
+            const correct = assigned && leftCorrect(owner);
+            const stateColor =
+              engine.checked && assigned ? (correct ? colors.success : colors.danger) : accent;
+            const stateBackground =
+              engine.checked && assigned
+                ? `${correct ? colors.success : colors.danger}22`
+                : assigned
+                  ? `${accent}14`
+                  : colors.card;
             return (
               <Pressable
                 key={right}
@@ -110,32 +121,24 @@ export function MatchExercise({
                 style={[
                   styles.item,
                   {
-                    backgroundColor: owner === -1 ? colors.card : `${accent}14`,
-                    borderColor: accent,
-                    borderWidth: owner === -1 ? 1 : 2,
+                    backgroundColor: stateBackground,
+                    borderColor: stateColor,
+                    borderWidth: assigned ? 2 : 1,
                     borderRadius: radius.control,
                     opacity: engine.selectedLeft === null && owner === -1 ? 0.85 : 1,
                   },
                 ]}>
-                <View style={[styles.badge, { backgroundColor: owner === -1 ? colors.soft : accent }]}>
+                <View style={[styles.badge, { backgroundColor: assigned ? accent : colors.soft }]}>
                   <AppText
                     variant="small"
-                    color={owner === -1 ? colors.muted : colors.onPrimary}
+                    color={assigned ? colors.onPrimary : colors.muted}
                     weight="700">
-                    {owner === -1 ? position + 1 : owner + 1}
+                    {assigned ? owner + 1 : position + 1}
                   </AppText>
                 </View>
                 <AppText variant="small" style={styles.flex}>
                   {right}
                 </AppText>
-                {engine.checked && owner !== -1 ? (
-                  <Icon
-                    name={correct ? 'check' : 'close'}
-                    size={16}
-                    color={correct ? colors.success : colors.danger}
-                    strokeWidth={2.5}
-                  />
-                ) : null}
               </Pressable>
             );
           })}

@@ -121,7 +121,10 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
             undefined,
             groupId,
           );
-          drawnIds = shuffleItems(state.drawExerciseIds, Math.random);
+          drawnIds = shuffleItems(state.drawExerciseIds, Math.random).slice(
+            0,
+            PRACTICE_DRAW_COUNT,
+          );
         } else {
           drawnIds = [];
         }

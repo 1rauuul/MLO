@@ -83,4 +83,11 @@ describe('ensureLessonDraw', () => {
     expect(draw.drawExerciseIds.length).toBe(2);
     expect(draw.drawExampleIds.filter(id => draw.drawExerciseIds.includes(id))).toEqual([]);
   });
+
+  it('con banco suficiente reserva 10 ejemplos y 10 ejercicios', async () => {
+    const draw = await ensureLessonDraw(repositories, 1, 'l1.2');
+
+    expect(draw.drawExampleIds).toHaveLength(10);
+    expect(draw.drawExerciseIds).toHaveLength(10);
+  });
 });

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
 import { useActiveGroup } from '@/features/classes/viewmodel/useActiveGroup';
-import { syntheticExamples } from '@/features/examples/viewmodel/example.logic';
+import { capExamples, syntheticExamples } from '@/features/examples/viewmodel/example.logic';
 import { ensureLessonDraw, splitDraw } from '@/features/exercises/viewmodel/lessonDraw';
 import type { Example, Exercise } from '@/shared/model/entities';
 import { EXERCISE_TYPES } from '@/shared/model/entities';
@@ -87,15 +87,17 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
         if (!active) {
           return;
         }
+        const items = capExamples(
+          chosenIds.map(id => byId.get(id)).filter((item): item is Exercise => Boolean(item)),
+          independent,
+          EXAMPLE_DRAW_COUNT,
+        );
         setPool(loaded);
         setExamples(loadedExamples);
         setDrawExerciseIds(exerciseIds);
         setLoadedLessonId(lessonId);
-        setItems([
-          ...chosenIds.map(id => byId.get(id)).filter((item): item is Exercise => Boolean(item)),
-          ...independent,
-        ]);
-        setIndex(Math.max(0, startIndex));
+        setItems(items);
+        setIndex(Math.max(0, Math.min(startIndex, items.length - 1)));
       } catch (caught) {
         if (__DEV__) {
           console.error('[examples] carga fallida', caught);
@@ -158,10 +160,13 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
     }
     const drawn = splitDraw(ids, EXAMPLE_DRAW_COUNT);
     const byId = new Map(pool.map(item => [item.id, item]));
-    setItems([
-      ...drawn.exampleIds.map(id => byId.get(id)).filter((item): item is Exercise => Boolean(item)),
-      ...syntheticExamples(pool, examples),
-    ]);
+    setItems(
+      capExamples(
+        drawn.exampleIds.map(id => byId.get(id)).filter((item): item is Exercise => Boolean(item)),
+        syntheticExamples(pool, examples),
+        EXAMPLE_DRAW_COUNT,
+      ),
+    );
     setDrawExerciseIds(drawn.exerciseIds);
     setIndex(0);
   }, [pool, examples]);

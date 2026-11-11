@@ -76,9 +76,9 @@ export function RichContent({ blocks }: { blocks: ContentBlock[] }) {
 
 const styles = StyleSheet.create({
   root: {},
-  flex: { flex: 1 },
+  flex: { flex: 1, textAlign: 'justify' },
   paragraph: { fontSize: 14, lineHeight: 21, textAlign: 'justify' },
-  heading: { marginTop: 4 },
+  heading: { marginTop: 4, textAlign: 'justify' },
   list: { gap: 10 },
   listRow: { flexDirection: 'row', gap: 10 },
   listMark: { width: 20 },

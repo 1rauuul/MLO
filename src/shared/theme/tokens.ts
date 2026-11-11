@@ -76,6 +76,10 @@ const unitAccents: Record<string, string> = {
   blue: '#4D7CFE',
   violet: '#8B7CFE',
   green: '#45D39A',
+  amber: '#D99318',
+  orange: '#EB6A3D',
+  rose: '#E3547D',
+  teal: '#18A7A2',
 };
 
 export function accentForUnit(color: string): string {

@@ -10,13 +10,14 @@ import { Icon } from '@/shared/components/Icon';
 
 interface TopicRowProps {
   topic: Topic;
+  unitNumber: number;
   /** Lecciones completadas sobre el total del subtema. */
   progress: number;
   completed: boolean;
   onPress: () => void;
 }
 
-export function TopicRow({ topic, progress, completed, onPress }: TopicRowProps) {
+export function TopicRow({ topic, unitNumber, progress, completed, onPress }: TopicRowProps) {
   const { colors, radius } = useTheme();
   const reduced = useReducedMotion();
   const accent = completed ? colors.success : colors.primary;
@@ -29,7 +30,7 @@ export function TopicRow({ topic, progress, completed, onPress }: TopicRowProps)
       style={({ pressed }) => [styles.row, pressed && !reduced ? { opacity: 0.65 } : null]}>
       <View style={[styles.marker, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
         <AppText variant="code" color={accent}>
-          {String(topic.position + 1)}
+          {`${unitNumber}.${topic.position + 1}`}
         </AppText>
       </View>
       <View style={styles.copy}>
