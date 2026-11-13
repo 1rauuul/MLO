@@ -14,6 +14,7 @@ import type {
   ClassPreviewData,
   RemoteClassRelease,
 } from '@/shared/services/content/remote/validateClassRelease';
+import { registerJoinedCourse } from '@/shared/services/content/coursesV3';
 
 export interface ClassMembershipKey {
   accountId: number;
@@ -105,6 +106,7 @@ export async function saveAccountClass(
   code: string,
   preview: ClassPreviewData,
   courseCatalogId = 'base',
+  courseName = '',
 ): Promise<void> {
   const now = new Date().toISOString();
   await db.withTransactionAsync(async () => {
@@ -146,6 +148,39 @@ export async function saveAccountClass(
       code,
       courseCatalogId,
       now,
+    );
+    await registerJoinedCourse(db, accountId, courseCatalogId, courseName);
+  });
+}
+
+/**
+ * Corrige una membresía guardada antes de que la clase conociera su curso.
+ * Si otra clase del mismo curso estaba activa, se desactiva sin borrarla.
+ */
+export async function reassignAccountClassCourse(
+  db: SQLiteDatabase,
+  accountId: number,
+  classId: string,
+  courseCatalogId: string,
+): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      `UPDATE account_classes SET active = 0
+       WHERE account_id = ? AND course_catalog_id = ? AND class_id <> ? AND active = 1`,
+      accountId,
+      courseCatalogId,
+      classId,
+    );
+    await db.runAsync(
+      'UPDATE account_classes SET course_catalog_id = ? WHERE account_id = ? AND class_id = ?',
+      courseCatalogId,
+      accountId,
+      classId,
+    );
+    await db.runAsync(
+      'UPDATE class_cache SET course_catalog_id = ? WHERE class_id = ?',
+      courseCatalogId,
+      classId,
     );
   });
 }

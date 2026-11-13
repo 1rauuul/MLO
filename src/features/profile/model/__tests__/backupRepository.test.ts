@@ -17,11 +17,18 @@ describe('replaceProgressFromBackup', () => {
     } as unknown as SQLiteDatabase;
 
     await replaceProgressFromBackup(db, 7, {
-      version: 4,
+      version: 5,
       exportedAt: '2026-10-15T00:00:00.000Z',
       student: { externalKey: '11111111-1111-4111-8111-111111111111' },
       classes: [
-        { classId: 'c1', code: 'ABC123', name: 'Grupo A', teacherName: null },
+        {
+          classId: 'c1',
+          code: 'ABC123',
+          name: 'Grupo A',
+          teacherName: null,
+          courseCatalogId: 'base',
+          courseTitle: null,
+        },
       ],
       moduleProgress: [],
       attempts: [],
@@ -66,7 +73,7 @@ describe('selectProgressBackup', () => {
     } as unknown as SQLiteDatabase;
 
     const result = await replaceProgressFromBackup(db, 7, {
-      version: 4,
+      version: 5,
       exportedAt: '2026-10-15T00:00:00.000Z',
       student: null,
       classes: [],
@@ -140,6 +147,8 @@ describe('selectProgressBackup', () => {
               class_code: 'ABC123',
               class_name: 'Grupo A',
               teacher_name: 'Profesora Ríos',
+              course_catalog_id: 'base',
+              course_title: 'Ingeniería de Software',
             },
           ];
         }
@@ -160,7 +169,7 @@ describe('selectProgressBackup', () => {
 
     const backup = await selectProgressBackup(db, 7);
 
-    expect(backup.version).toBe(4);
+    expect(backup.version).toBe(5);
     expect(backup.student).toEqual({
       externalKey: '11111111-1111-4111-8111-111111111111',
     });
@@ -170,6 +179,8 @@ describe('selectProgressBackup', () => {
         code: 'ABC123',
         name: 'Grupo A',
         teacherName: 'Profesora Ríos',
+        courseCatalogId: 'base',
+        courseTitle: 'Ingeniería de Software',
       },
     ]);
     expect(backup.attempts[0]).toEqual({

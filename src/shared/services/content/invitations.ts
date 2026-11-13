@@ -32,6 +32,8 @@ export interface InvitationMembership {
   teacherName: string;
   courseId: string;
   courseCatalogId: string;
+  /** Título del curso asignado en el CMS; ausente en respuestas anteriores. */
+  courseName?: string;
   joinedAt: string;
 }
 
@@ -63,6 +65,9 @@ function parseMembership(value: unknown): InvitationMembership {
     teacherName: nonEmpty(value.teacherName, 'teacherName'),
     courseId: nonEmpty(value.courseId, 'courseId'),
     courseCatalogId: nonEmpty(value.courseCatalogId, 'courseCatalogId'),
+    ...(isString(value.courseName) && value.courseName.trim().length > 0
+      ? { courseName: value.courseName }
+      : {}),
     joinedAt: nonEmpty(value.joinedAt, 'joinedAt'),
   };
 }

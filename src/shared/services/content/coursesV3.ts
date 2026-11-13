@@ -393,6 +393,41 @@ export async function ensureBaseCourse(db: SQLiteDatabase, accountId?: number): 
   );
 }
 
+/**
+ * Registra localmente el curso de una clase recién unida. Permite mostrar el
+ * nombre asignado en el CMS aunque el curso aún no tenga release v3 ni aparezca
+ * todavía en `GET /courses`.
+ */
+export async function registerJoinedCourse(
+  db: SQLiteDatabase,
+  accountId: number,
+  catalogId: string,
+  title: string,
+): Promise<void> {
+  if (!catalogId || catalogId === BASE_CATALOG_ID || title.trim().length === 0) {
+    return;
+  }
+  const now = new Date().toISOString();
+  await db.runAsync(
+    `INSERT INTO remote_courses
+       (catalog_id, title, status, uses_base, version, hash, published_at, empty, is_base, manifest, fetched_at)
+     VALUES (?, ?, 'published', 0, '', '', NULL, 1, 0, NULL, ?)
+     ON CONFLICT(catalog_id) DO UPDATE SET title = excluded.title
+      WHERE remote_courses.version = ''`,
+    catalogId,
+    title.trim(),
+    now,
+  );
+  await db.runAsync(
+    `INSERT INTO account_courses (account_id, catalog_id, active, added_at)
+     VALUES (?, ?, 0, ?)
+     ON CONFLICT(account_id, catalog_id) DO NOTHING`,
+    accountId,
+    catalogId,
+    now,
+  );
+}
+
 export async function loadAccountCourses(
   db: SQLiteDatabase,
   accountId?: number,
@@ -495,7 +530,7 @@ export async function refreshCourseList(
         `SELECT rc.catalog_id, rc.version, rc.hash
            FROM account_courses ac
            JOIN remote_courses rc ON rc.catalog_id = ac.catalog_id
-          WHERE ac.account_id = ? AND rc.catalog_id != ?`,
+          WHERE ac.account_id = ? AND rc.catalog_id != ? AND rc.version != ''`,
         account.id,
         BASE_CATALOG_ID,
       )
@@ -540,26 +575,51 @@ export async function refreshCourseList(
         manifests.get(course.catalogId) ? JSON.stringify(manifests.get(course.catalogId)) : null,
         now,
       );
+      // Todos los cursos autorizados forman la biblioteca; solo uno queda activo.
+      await db.runAsync(
+        `INSERT INTO account_courses (account_id, catalog_id, active, added_at)
+         VALUES (?, ?, 0, ?)
+         ON CONFLICT(account_id, catalog_id) DO NOTHING`,
+        account.id,
+        course.catalogId,
+        now,
+      );
     }
 
     const catalogIds = list.courses.map(course => course.catalogId);
+    // Los cursos locales de una clase activa se conservan aunque el servidor aún
+    // no los liste: son los que dan nombre a la tarjeta mientras se publica.
+    const keepClassCourses = `catalog_id NOT IN (
+      SELECT course_catalog_id FROM account_classes
+       WHERE account_id = ? AND active = 1)`;
     if (catalogIds.length === 0) {
-      await db.runAsync('DELETE FROM account_courses WHERE account_id = ?', account.id);
+      await db.runAsync(
+        `DELETE FROM account_courses WHERE account_id = ? AND ${keepClassCourses}`,
+        account.id,
+        account.id,
+      );
     } else {
       await db.runAsync(
         `DELETE FROM account_courses WHERE account_id = ?
-         AND catalog_id NOT IN (${catalogIds.map(() => '?').join(', ')})`,
+         AND catalog_id NOT IN (${catalogIds.map(() => '?').join(', ')})
+         AND ${keepClassCourses}`,
         account.id,
         ...catalogIds,
+        account.id,
       );
     }
     await db.runAsync('UPDATE account_courses SET active = 0 WHERE account_id = ?', account.id);
+    const remaining = await db.getAllAsync<{ catalog_id: string }>(
+      'SELECT catalog_id FROM account_courses WHERE account_id = ?',
+      account.id,
+    );
+    const remainingIds = remaining.map(row => row.catalog_id);
     const activeCatalogId =
-      previousActive && catalogIds.includes(previousActive)
+      previousActive && remainingIds.includes(previousActive)
         ? previousActive
-        : catalogIds.includes(BASE_CATALOG_ID)
+        : remainingIds.includes(BASE_CATALOG_ID)
           ? BASE_CATALOG_ID
-          : catalogIds[0];
+          : remainingIds[0];
     if (activeCatalogId) {
       await db.runAsync(
         `INSERT INTO account_courses (account_id, catalog_id, active, added_at)

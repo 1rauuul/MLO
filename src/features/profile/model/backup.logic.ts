@@ -2,7 +2,7 @@ import type { ExampleState } from '@/features/exercises/model/exampleStateReposi
 
 import { isBoolean, isNumber, isRecord, isString, isStringOrNull } from '@/shared/utils/validate';
 
-export const PROGRESS_BACKUP_VERSION = 4;
+export const PROGRESS_BACKUP_VERSION = 5;
 
 export interface BackupStudent {
   /** Identidad estable de la persona ante el panel. */
@@ -14,6 +14,9 @@ export interface BackupClass {
   code: string;
   name: string;
   teacherName: string | null;
+  /** Curso de la clase; los respaldos v4 y anteriores se importan como `base`. */
+  courseCatalogId: string;
+  courseTitle: string | null;
 }
 
 export interface BackupAttempt {
@@ -42,7 +45,7 @@ export interface BackupLastLocation {
 }
 
 export interface ProgressBackup {
-  version: 4;
+  version: 5;
   exportedAt: string;
   student: BackupStudent | null;
   classes: BackupClass[];
@@ -134,10 +137,15 @@ export function parseProgressBackup(raw: string): ProgressBackup {
   const value: unknown = JSON.parse(raw);
   if (
     !isRecord(value) ||
-    (value.version !== 1 && value.version !== 2 && value.version !== 3 && value.version !== 4)
+    (value.version !== 1 &&
+      value.version !== 2 &&
+      value.version !== 3 &&
+      value.version !== 4 &&
+      value.version !== 5)
   ) {
     throw new Error('Formato de respaldo no compatible.');
   }
+  const version = value.version as 1 | 2 | 3 | 4 | 5;
 
   const moduleProgress = value.moduleProgress;
   const attempts = value.attempts;
@@ -177,7 +185,7 @@ export function parseProgressBackup(raw: string): ProgressBackup {
     throw new Error('Los resultados del respaldo no son válidos.');
   }
 
-  const isV2 = value.version === 2 || value.version === 3 || value.version === 4;
+  const isV2 = version >= 2;
   const exampleState = isV2 ? value.exampleState : [];
   if (
     isV2 &&
@@ -194,7 +202,7 @@ export function parseProgressBackup(raw: string): ProgressBackup {
   }
 
   let student: BackupStudent | null = null;
-  if (value.version === 4 && value.student !== null && value.student !== undefined) {
+  if (version >= 4 && value.student !== null && value.student !== undefined) {
     if (!isRecord(value.student) || !isString(value.student.externalKey)) {
       throw new Error('La identidad del respaldo no es válida.');
     }
@@ -212,7 +220,7 @@ export function parseProgressBackup(raw: string): ProgressBackup {
   }
 
   let classes: BackupClass[] = [];
-  if (value.version === 4 && value.classes !== null && value.classes !== undefined) {
+  if (version >= 4 && value.classes !== null && value.classes !== undefined) {
     if (!Array.isArray(value.classes)) {
       throw new Error('Las clases del respaldo no son válidas.');
     }
@@ -236,6 +244,13 @@ export function parseProgressBackup(raw: string): ProgressBackup {
         code: item.code,
         name: item.name,
         teacherName: isString(item.teacherName) ? item.teacherName : null,
+        courseCatalogId:
+          isString(item.courseCatalogId) && item.courseCatalogId.trim().length > 0
+            ? item.courseCatalogId
+            : 'base',
+        courseTitle: isString(item.courseTitle) && item.courseTitle.trim().length > 0
+          ? item.courseTitle
+          : null,
       };
     });
   }

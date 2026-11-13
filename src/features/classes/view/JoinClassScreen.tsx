@@ -96,6 +96,9 @@ export default function JoinClassScreen() {
               { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card },
             ]}>
             <AppText variant="eyebrow">Invitación aceptada</AppText>
+            {invitation.membership.courseName ? (
+              <AppText variant="small">{`Curso: ${invitation.membership.courseName}`}</AppText>
+            ) : null}
             <AppText weight="600">{invitation.membership.className}</AppText>
             <AppText variant="small">{`Maestro: ${invitation.membership.teacherName}`}</AppText>
             <AppText variant="small">
@@ -143,8 +146,15 @@ export default function JoinClassScreen() {
               styles.card,
               { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card },
             ]}>
-            <AppText variant="eyebrow">{preview.class.name}</AppText>
-            <AppText weight="600">{`Maestro: ${preview.class.teacherName}`}</AppText>
+            <AppText variant="eyebrow">
+              {preview.course?.title ?? preview.class.name}
+            </AppText>
+            <AppText weight="600">
+              {preview.course ? preview.class.name : `Maestro: ${preview.class.teacherName}`}
+            </AppText>
+            {preview.course ? (
+              <AppText variant="small">{`Maestro: ${preview.class.teacherName}`}</AppText>
+            ) : null}
             <AppText variant="small">
               {preview.published
                 ? `Contenido publicado: versión ${preview.published.version}`

@@ -39,19 +39,11 @@ El arranque nunca espera a la red. `migrateAndSeed` primero siembra el contenido
 local y después aplica lo remoto ya validado que esté pendiente
 (`src/shared/services/db/database.ts:34-51` y `:319-322`).
 
-**Importante para el CMS:** hoy la sincronización automática de cursos solo
-consulta el catálogo `base`:
-
-```ts
-// src/shared/services/content/remoteContent.ts:339-341
-export async function catalogsInUse(_db: SQLiteDatabase): Promise<string[]> {
-  return ['base'];
-}
-```
-
-Por tanto, el contrato de curso publicado se consume en
-`/catalogs/base/manifest` y `/catalogs/base/lessons/{lessonId}`. Los fixtures
-`k7f3q` sirven para pruebas, pero la ruta activa de la app es `base`.
+**Importante para el CMS:** la lista de cursos se consume en
+`/api/mlo/v3/courses` y los manifiestos en `/api/mlo/v3/catalogs/{catalogId}/manifest`.
+El lector v2 de `/catalogs/base/...` se conserva para el contenido empaquetado y los
+clientes anteriores. `catalogsInUse()` sigue devolviendo `base`, pero el flujo v3
+descarga y aplica todos los cursos autorizados con su propio `catalogId`.
 
 El fixture real de referencia es:
 
@@ -745,9 +737,11 @@ Manifest correspondiente:
 
 ## 5. Contrato del release de clase (grupo)
 
-Una clase **no cambia el catálogo ni el curso base**. Solo agrega bloques,
-ejercicios y ejemplos sobre lecciones existentes. No puede agregar unidades,
-lecciones nuevas, evaluaciones ni preguntas.
+Cada clase pertenece a un curso del CMS. La vista previa y el join incluyen
+`course: { catalogId, title }`; el release v3 declara su `catalogId` y puede
+agregar unidades, subtemas, lecciones y actividades del curso. El release v2 se
+mantiene solo para clientes anteriores y únicamente agrega bloques, ejercicios y
+ejemplos sobre lecciones existentes.
 
 ### 5.1 Vista previa
 
@@ -759,6 +753,7 @@ lecciones nuevas, evaluaciones ni preguntas.
     "name": "Clase contrato MLO",
     "teacherName": "Docente contrato"
   },
+  "course": { "catalogId": "k7f3q", "title": "Curso 2" },
   "published": {
     "version": 2,
     "hash": "class-hash-2",
@@ -767,6 +762,7 @@ lecciones nuevas, evaluaciones ni preguntas.
 }
 ```
 
+- `course` es opcional para compatibilidad: si falta, MLO usa `base`.
 - `published` puede ser `null` o venir ausente.
 - `class.id`, `name` y `teacherName` deben ser strings no vacíos
   (`parseClassInfo`, `validateClassRelease.ts:56`).
@@ -1016,11 +1012,8 @@ Archivos locales relevantes:
 
 ## 10. Limitaciones actuales que el CMS debe respetar
 
-1. **Solo se sincroniza el catálogo `base`.** No hay selección de curso ni
-   descarga de otros catálogos desde la app. `/catalogs/base/...` es la ruta
-   real.
-2. **No hay entidad “curso” en SQLite.** El curso solo existe como `catalog_id`
-   y como fila en `remote_catalogs`; su `title` no se renderiza.
+1. **Se sincronizan todos los cursos autorizados.** `/api/mlo/v3/courses` devuelve los cursos del alumno y MLO descarga su manifiesto v3. El curso base empaquetado sigue disponible.
+2. **El curso existe en SQLite** como `remote_courses.catalog_id`/`title` y en `account_courses`; la biblioteca muestra el título que el CMS asigna al curso.
 3. **No hay endpoint de unidades.** Cada lección debe repetir su unidad. La
    última lección aplicada gana si hay datos contradictorios.
 4. **Los ids son globales.** Un id no puede repetirse entre lecciones del mismo

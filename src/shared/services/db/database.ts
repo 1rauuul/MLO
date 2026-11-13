@@ -25,6 +25,48 @@ async function hasColumn(db: SQLiteDatabase, table: string, column: string): Pro
   return columns.some(item => item.name === column);
 }
 
+async function ensureColumn(
+  db: SQLiteDatabase,
+  table: string,
+  column: string,
+  definition: string,
+): Promise<void> {
+  if (!(await hasColumn(db, table, column))) {
+    await db.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
+/**
+ * `SCHEMA_DDL` es el esquema actual, pero las migraciones lo ejecutan antes de
+ * v16/v19/v20 y `writeContentSync` corre antes de v21: catálogo, temas, grupos y
+ * bibliografía deben existir ya o los índices/inserts fallan con "no such column".
+ */
+async function ensureContentSchema(db: SQLiteDatabase): Promise<void> {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS content_references (
+      id TEXT NOT NULL,
+      catalog_id TEXT NOT NULL DEFAULT 'base',
+      group_id TEXT NOT NULL DEFAULT '',
+      text TEXT NOT NULL,
+      url TEXT,
+      PRIMARY KEY (id, catalog_id, group_id)
+    );
+  `);
+  const contentTables = ['lessons', 'examples', 'exercises', 'evaluations'];
+  for (const table of ['units', 'lessons']) {
+    await ensureColumn(db, table, 'catalog_id', "TEXT NOT NULL DEFAULT 'base'");
+  }
+  for (const table of contentTables) {
+    await ensureColumn(db, table, 'topic_id', 'TEXT');
+  }
+  for (const table of ['units', ...contentTables]) {
+    await ensureColumn(db, table, 'group_id', 'TEXT');
+  }
+  for (const table of [...contentTables, 'questions']) {
+    await ensureColumn(db, table, 'reference_ids', "TEXT NOT NULL DEFAULT '[]'");
+  }
+}
+
 async function seedIfEmpty(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ units: number; lessons: number }>(
     'SELECT (SELECT COUNT(*) FROM units) AS units, (SELECT COUNT(*) FROM lessons) AS lessons',
@@ -77,6 +119,8 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     });
     version = 2;
   }
+
+  await ensureContentSchema(db);
 
   if (version < 3) {
     const hasContent = await hasColumn(db, 'lessons', 'content');
@@ -285,6 +329,8 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
           `ALTER TABLE evaluations ADD COLUMN exercise_count INTEGER NOT NULL DEFAULT 5`,
         );
       }
+      // v5 pudo recrear `examples` sin las columnas que usan los índices de abajo.
+      await ensureContentSchema(db);
       await db.execAsync(SCHEMA_DDL);
       await db.runAsync("DELETE FROM meta WHERE key = 'remote_content_hash'");
       await db.execAsync('PRAGMA user_version = 16');
@@ -486,13 +532,6 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
 
   if (version < 21) {
     await db.withTransactionAsync(async () => {
-      for (const table of ['lessons', 'examples', 'exercises', 'evaluations', 'questions']) {
-        if (!(await hasColumn(db, table, 'reference_ids'))) {
-          await db.execAsync(
-            `ALTER TABLE ${table} ADD COLUMN reference_ids TEXT NOT NULL DEFAULT '[]'`,
-          );
-        }
-      }
       await db.execAsync(SCHEMA_DDL);
       await db.execAsync('PRAGMA user_version = 21');
     });

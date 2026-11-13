@@ -35,6 +35,9 @@ const mockClaimInvitation = jest.fn();
 const mockRefreshClass = jest.fn(async () => false);
 const mockSaveAccountClass = jest.fn(async () => {});
 const mockRefreshClasses = jest.fn(async () => {});
+const mockRefreshCourseList = jest.fn(async () => false);
+const mockSelectCourse = jest.fn(async () => true);
+const mockApplyStoredContent = jest.fn(async () => ({ failed: [] }));
 let mockParams: Record<string, string | string[]> = {};
 
 jest.mock('expo-router', () => ({
@@ -68,6 +71,11 @@ jest.mock('@/shared/services/data/DataProvider', () => ({
       refreshClass: mockRefreshClass,
     },
     classes: { saveAccountClass: mockSaveAccountClass },
+    courses: {
+      refreshCourseList: mockRefreshCourseList,
+      selectCourse: mockSelectCourse,
+      applyStoredContent: mockApplyStoredContent,
+    },
   }),
 }));
 jest.mock('@/shared/services/data/dataMode', () => ({
@@ -122,7 +130,7 @@ beforeEach(() => {
 describe('fixtures x07', () => {
   it('conserva los hashes del productor CMS', () => {
     const hashes: Record<string, string> = {
-      'success.json': '51516785b638f210b79800c8b0b2b1a2f8914d7505f9e678b75a12425793f626',
+      'success.json': '2b09f8c99ed8b64986d4177072adf2fac6751f244ec221540267a3857a71c387',
       'expired.json': '94a355cdfb2801b76dcc1485f2ad1c2a0cd121cdf7fe0e2d2611a33ac2c47cb6',
       'used.json': '2008b390be72c69d1462b4263d2b135e4ae051aa64a97ffd6f5b1e1033eb0d81',
       'revoked.json': 'dfe547486f916b34ff6845ec525f01766a9d98928f8e895b90d507edb63eda99',
@@ -196,6 +204,7 @@ describe('reclamo de invitación', () => {
         published: claim.published,
       },
       'base',
+      'Ingeniería de Software',
     );
     await waitFor(() => expect(view.getByText('Invitación aceptada')).toBeTruthy());
     expect(mockRefreshClass).toHaveBeenCalledWith(
@@ -224,6 +233,7 @@ describe('reclamo de invitación', () => {
         'A7K2M9',
         expect.objectContaining({ schemaVersion: 2 }),
         'demo',
+        'Ingeniería de Software',
       ),
     );
     await waitFor(() => expect(view.getByText('Invitación aceptada')).toBeTruthy());

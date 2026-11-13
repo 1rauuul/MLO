@@ -46,6 +46,7 @@ interface DbOptions {
   membership?: boolean;
   membershipCount?: number;
   previous?: { catalog_id: string; active: number }[];
+  remaining?: string[];
   rows?: Record<string, unknown>[];
   synced?: boolean;
 }
@@ -71,6 +72,9 @@ function makeDb(options: DbOptions = {}) {
     getAllAsync: jest.fn(async (sql: string) => {
       if (sql.includes('SELECT catalog_id, active FROM account_courses')) {
         return options.previous ?? [];
+      }
+      if (sql.includes('SELECT catalog_id FROM account_courses')) {
+        return (options.remaining ?? []).map(catalog_id => ({ catalog_id }));
       }
       if (sql.includes('JOIN remote_courses')) {
         return options.rows ?? [];
@@ -220,7 +224,7 @@ describe('refreshCourseList', () => {
     const remove = statements.find(statement =>
       statement.sql.startsWith('DELETE FROM account_courses'),
     );
-    expect(remove?.params).toEqual([1]);
+    expect(remove?.params).toEqual([1, 1]);
     expect(
       statements.some(statement => statement.sql.startsWith('INSERT INTO account_courses')),
     ).toBe(false);
@@ -232,6 +236,7 @@ describe('refreshCourseList', () => {
     const { db, statements } = makeDb({
       session: { id: 1, external_key: STUDENT_KEY },
       previous: [{ catalog_id: 'demo', active: 1 }],
+      remaining: ['base', 'demo'],
     });
     const client = makeClient(readJson('course-list.json'), {
       demo: readJson('manifest-empty.json'),
@@ -251,11 +256,16 @@ describe('refreshCourseList', () => {
     expect(String(demo?.params[9])).toContain('"kind":"course"');
     expect(demo?.params[7]).toBe(1);
 
-    const active = statements.find(
-      statement =>
-        statement.sql.startsWith('INSERT INTO account_courses') &&
-        statement.params[0] === 1,
+    const memberships = statements.filter(statement =>
+      statement.sql.startsWith('INSERT INTO account_courses'),
     );
+    expect(memberships).toHaveLength(3);
+    expect(memberships.slice(0, 2).map(statement => statement.params.slice(0, 2))).toEqual([
+      [1, 'base'],
+      [1, 'demo'],
+    ]);
+    expect(memberships.slice(0, 2).every(statement => statement.sql.includes('VALUES (?, ?, 0, ?)'))).toBe(true);
+    const active = memberships.find(statement => statement.sql.includes('VALUES (?, ?, 1, ?)'));
     expect(active?.params.slice(0, 2)).toEqual([1, 'demo']);
   });
 
@@ -263,6 +273,7 @@ describe('refreshCourseList', () => {
     const { db, statements } = makeDb({
       session: { id: 7, external_key: STUDENT_KEY },
       previous: [{ catalog_id: 'demo', active: 1 }],
+      remaining: ['base'],
     });
     const list = readJson('course-list.json');
     const baseOnly = {
@@ -276,13 +287,40 @@ describe('refreshCourseList', () => {
     const remove = statements.find(statement =>
       statement.sql.startsWith('DELETE FROM account_courses'),
     );
-    expect(remove?.params).toEqual([7, 'base']);
+    expect(remove?.params).toEqual([7, 'base', 7]);
     const active = statements.find(
       statement =>
         statement.sql.startsWith('INSERT INTO account_courses') &&
-        statement.params[0] === 7,
+        statement.sql.includes('VALUES (?, ?, 1, ?)'),
     );
     expect(active?.params.slice(0, 2)).toEqual([7, 'base']);
+  });
+
+  it('conserva el curso local de una clase aunque el servidor aún no lo liste', async () => {
+    const { db, statements } = makeDb({
+      session: { id: 9, external_key: STUDENT_KEY },
+      previous: [{ catalog_id: 'k7f3q', active: 1 }],
+      remaining: ['base', 'k7f3q'],
+    });
+    const list = readJson('course-list.json');
+    const baseOnly = {
+      ...list,
+      courses: [(list.courses as unknown[])[0]],
+    };
+
+    await refreshCourseList(db, makeClient(baseOnly));
+
+    const remove = statements.find(statement =>
+      statement.sql.startsWith('DELETE FROM account_courses'),
+    );
+    expect(remove?.sql).toContain('SELECT course_catalog_id FROM account_classes');
+    expect(remove?.params).toEqual([9, 'base', 9]);
+    const active = statements.find(
+      statement =>
+        statement.sql.startsWith('INSERT INTO account_courses') &&
+        statement.sql.includes('VALUES (?, ?, 1, ?)'),
+    );
+    expect(active?.params.slice(0, 2)).toEqual([9, 'k7f3q']);
   });
 
   it('un error de red o parseo no escribe ni borra la caché', async () => {

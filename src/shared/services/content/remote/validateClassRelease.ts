@@ -14,9 +14,16 @@ import { parseContentBlocks } from './validateLessonPayload';
 
 export const CLASS_SCHEMA_VERSION = 2;
 
+export interface ClassCourseInfo {
+  catalogId: string;
+  title: string;
+}
+
 export interface ClassPreviewData {
   schemaVersion: 2;
   class: { id: string; name: string; teacherName: string };
+  /** Curso asignado a la clase en el CMS; ausente en servidores anteriores. */
+  course?: ClassCourseInfo;
   published: {
     version: number;
     hash: string;
@@ -62,6 +69,19 @@ function parseClassInfo(value: unknown): ClassPreviewData['class'] {
   };
 }
 
+function parseCourseInfo(value: unknown): ClassCourseInfo | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (!isRecord(value)) {
+    fail('curso de la clase inválido');
+  }
+  return {
+    catalogId: nonEmpty(value.catalogId, 'catalogId del curso'),
+    title: nonEmpty(value.title, 'título del curso'),
+  };
+}
+
 export function parseClassPreview(value: unknown, code: string): ClassPreviewData {
   if (!isRecord(value) || value.schemaVersion !== CLASS_SCHEMA_VERSION) {
     fail(`respuesta de la clase ${code}`);
@@ -87,9 +107,11 @@ export function parseClassPreview(value: unknown, code: string): ClassPreviewDat
     };
   }
 
+  const course = parseCourseInfo(value.course);
   return {
     schemaVersion: CLASS_SCHEMA_VERSION,
     class: parseClassInfo(value.class),
+    ...(course ? { course } : {}),
     published: normalizedPublished,
   };
 }

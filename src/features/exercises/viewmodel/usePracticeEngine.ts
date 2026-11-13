@@ -10,7 +10,7 @@ import { drawGroups } from '@/features/exercises/viewmodel/draw.logic';
 import { shuffleItems } from '@/features/exercises/viewmodel/exercise.logic';
 import { ensureLessonDraw } from '@/features/exercises/viewmodel/lessonDraw';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
-import { useActiveGroup } from '@/features/classes/viewmodel/useActiveGroup';
+import { useActiveGroupForLesson } from '@/features/classes/viewmodel/useActiveGroup';
 import { useRepositories } from '@/shared/services/data/DataProvider';
 
 export const PRACTICE_DRAW_COUNT = 10;
@@ -85,7 +85,7 @@ function summarizeSession(order: Exercise[], results: Record<string, ExerciseSco
 export function usePracticeEngine(lessonId: string | null): PracticeEngine {
   const { exercises: exerciseRepository, attempts, exampleState } = useRepositories();
   const { account } = useAuth();
-  const groupId = useActiveGroup();
+  const groupId = useActiveGroupForLesson(lessonId);
   const [items, setItems] = useState<Exercise[]>([]);
   const [order, setOrder] = useState<Exercise[]>([]);
   const [phase, setPhase] = useState<PracticePhase>('running');

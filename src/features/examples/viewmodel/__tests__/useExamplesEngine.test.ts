@@ -37,6 +37,7 @@ jest.mock('@/features/examples/model/exampleRepository', () => ({
 jest.mock('@/features/auth/viewmodel/useAuth', () => ({ useAuth: () => ({ account: mockAccount }) }));
 jest.mock('@/features/classes/viewmodel/useActiveGroup', () => ({
   useActiveGroup: () => null,
+  useActiveGroupForLesson: () => null,
 }));
 
 jest.mock('@/features/exercises/model/exampleStateRepository', () => ({

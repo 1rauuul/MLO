@@ -163,19 +163,25 @@ describe('migrateAndSeed', () => {
 
   test('no repite ALTERs salvo las columnas nuevas de attempts', async () => {
     const statements: string[] = [];
-    const currentColumns = [
-      { name: 'content' },
-      { name: 'config' },
-      { name: 'type' },
-      { name: 'explanation' },
-    ];
+    const baseColumns = ['content', 'config', 'type', 'explanation'];
+    const addedColumns = new Map<string, string[]>();
+    const trackAlter = (sql: string) => {
+      const match = /^ALTER TABLE (\w+) ADD COLUMN (\w+)/.exec(sql);
+      if (match) {
+        addedColumns.set(match[1], [...(addedColumns.get(match[1]) ?? []), match[2]]);
+      }
+    };
     const db = {
       execAsync: async (sql: string) => {
         statements.push(sql);
+        trackAlter(sql);
       },
       getFirstAsync: async (sql: string) =>
         sql.includes('COUNT(*)') ? { units: 5, lessons: 24 } : { user_version: 2 },
-      getAllAsync: async () => currentColumns,
+      getAllAsync: async (sql: string) => {
+        const table = /table_info\((\w+)\)/.exec(sql)?.[1] ?? '';
+        return [...baseColumns, ...(addedColumns.get(table) ?? [])].map(name => ({ name }));
+      },
       runAsync: async (sql: string) => {
         statements.push(sql);
         return { changes: 1, lastInsertRowId: 0 };
@@ -186,41 +192,41 @@ describe('migrateAndSeed', () => {
     await migrateAndSeed(db);
 
     expect(statements.filter(statement => statement.startsWith('ALTER TABLE'))).toEqual([
+      expect.stringContaining('ALTER TABLE units ADD COLUMN catalog_id'),
+      expect.stringContaining('ALTER TABLE lessons ADD COLUMN catalog_id'),
+      expect.stringContaining('ALTER TABLE lessons ADD COLUMN topic_id'),
+      expect.stringContaining('ALTER TABLE examples ADD COLUMN topic_id'),
+      expect.stringContaining('ALTER TABLE exercises ADD COLUMN topic_id'),
+      expect.stringContaining('ALTER TABLE evaluations ADD COLUMN topic_id'),
+      expect.stringContaining('ALTER TABLE units ADD COLUMN group_id'),
+      expect.stringContaining('ALTER TABLE lessons ADD COLUMN group_id'),
+      expect.stringContaining('ALTER TABLE examples ADD COLUMN group_id'),
+      expect.stringContaining('ALTER TABLE exercises ADD COLUMN group_id'),
+      expect.stringContaining('ALTER TABLE evaluations ADD COLUMN group_id'),
+      expect.stringContaining('ALTER TABLE lessons ADD COLUMN reference_ids'),
+      expect.stringContaining('ALTER TABLE examples ADD COLUMN reference_ids'),
+      expect.stringContaining('ALTER TABLE exercises ADD COLUMN reference_ids'),
+      expect.stringContaining('ALTER TABLE evaluations ADD COLUMN reference_ids'),
+      expect.stringContaining('ALTER TABLE questions ADD COLUMN reference_ids'),
       expect.stringContaining('ALTER TABLE attempts ADD COLUMN score_correct'),
       expect.stringContaining('ALTER TABLE attempts ADD COLUMN score_total'),
-      expect.stringContaining('ALTER TABLE units ADD COLUMN catalog_id'),
       expect.stringContaining('ALTER TABLE units ADD COLUMN archived_at'),
-      expect.stringContaining('ALTER TABLE lessons ADD COLUMN catalog_id'),
       expect.stringContaining('ALTER TABLE lessons ADD COLUMN archived_at'),
       expect.stringContaining('ALTER TABLE evaluations ADD COLUMN archived_at'),
       expect.stringContaining('ALTER TABLE evaluations ADD COLUMN question_count'),
       expect.stringContaining('ALTER TABLE evaluations ADD COLUMN exercise_count'),
       expect.stringContaining('ALTER TABLE accounts ADD COLUMN external_key'),
-      expect.stringContaining('ALTER TABLE lessons ADD COLUMN topic_id'),
-      expect.stringContaining('ALTER TABLE examples ADD COLUMN topic_id'),
-      expect.stringContaining('ALTER TABLE exercises ADD COLUMN topic_id'),
-      expect.stringContaining('ALTER TABLE evaluations ADD COLUMN topic_id'),
       expect.stringContaining('ALTER TABLE examples ADD COLUMN position'),
       expect.stringContaining('ALTER TABLE exercises ADD COLUMN position'),
       expect.stringContaining('ALTER TABLE evaluations ADD COLUMN position'),
       expect.stringContaining('ALTER TABLE remote_courses ADD COLUMN applied_hash'),
-      expect.stringContaining('ALTER TABLE units ADD COLUMN group_id'),
       expect.stringContaining('ALTER TABLE topics ADD COLUMN group_id'),
-      expect.stringContaining('ALTER TABLE lessons ADD COLUMN group_id'),
-      expect.stringContaining('ALTER TABLE examples ADD COLUMN group_id'),
-      expect.stringContaining('ALTER TABLE exercises ADD COLUMN group_id'),
-      expect.stringContaining('ALTER TABLE evaluations ADD COLUMN group_id'),
       expect.stringContaining('ALTER TABLE account_classes ADD COLUMN course_catalog_id'),
       expect.stringContaining('ALTER TABLE account_classes ADD COLUMN active'),
       expect.stringContaining('ALTER TABLE class_cache ADD COLUMN course_catalog_id'),
       expect.stringContaining('ALTER TABLE class_cache ADD COLUMN archived'),
       expect.stringContaining('ALTER TABLE class_cache ADD COLUMN release_v3'),
       expect.stringContaining('ALTER TABLE class_cache ADD COLUMN applied_hash'),
-      expect.stringContaining('ALTER TABLE lessons ADD COLUMN reference_ids'),
-      expect.stringContaining('ALTER TABLE examples ADD COLUMN reference_ids'),
-      expect.stringContaining('ALTER TABLE exercises ADD COLUMN reference_ids'),
-      expect.stringContaining('ALTER TABLE evaluations ADD COLUMN reference_ids'),
-      expect.stringContaining('ALTER TABLE questions ADD COLUMN reference_ids'),
     ]);
     expect(statements.some(statement => statement === 'PRAGMA user_version = 21')).toBe(true);
   });

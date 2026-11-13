@@ -44,14 +44,18 @@ Reglas:
 - Contenido retirado: `units`, `lessons` y `evaluations` se archivan con `archived_at`; no se
   borran si tienen progreso asociado. Los ids de contenido remoto son globales
   (`{catalogId}-{id}`); el curso base usa ids sin prefijo y `catalog_id = 'base'`.
-- Las clases **no cambian de catálogo**: agregan contenido extra sobre `base`.
-  `account_classes` guarda las membresías, `class_cache` el último release por clase y
-  `class_extras_cache` sus bloques/ejemplos/ejercicios. El mismo `extra_id` en varias clases
-  se deduplica y se etiqueta con los nombres de las clases.
+- Las clases **pertenecen a un curso**: el CMS asigna la clase a un curso y el preview/join
+  devuelven `course: { catalogId, title }`. `account_classes` guarda la membresía con su
+  `course_catalog_id`; `class_cache` el último release por clase y `class_extras_cache` sus
+  bloques/ejemplos/ejercicios. Un alumno puede estar en una clase por curso y en varios cursos;
+  el mismo `extra_id` en varias clases se deduplica y se etiqueta con los nombres de las clases.
+- Al unirse por código o reclamar una invitación, el CMS concede acceso al curso de la clase
+  (`course_access`) y MLO registra una tarjeta local con el nombre del curso aunque aún no tenga
+  release publicado.
 - La identidad del alumno es `accounts.external_key` (UUID estable, generado al registrarse).
-  Los respaldos v4 incluyen ese UUID y las clases; siguen aceptando v1/v2/v3. Al importar un
-  respaldo con otra identidad se vuelve a unir a las clases y se retira la identidad temporal
-  del dispositivo para no duplicar al alumno en la lista del docente.
+  Los respaldos v5 incluyen ese UUID, las clases y el curso de cada clase; siguen aceptando
+  v1/v2/v3/v4. Al importar un respaldo con otra identidad se vuelve a unir a las clases y se
+  retira la identidad temporal del dispositivo para no duplicar al alumno en la lista del docente.
 - El esquema conserva las entidades núcleo (`Lesson`, `Example`, `Exercise`, `Evaluation`,
   `Question`) y **mantiene `Exercise` y `Evaluation`/`Question` como tablas separadas**
   (feedback inmediato por reactivo vs. puntaje acumulado). La bitácora real de intentos es

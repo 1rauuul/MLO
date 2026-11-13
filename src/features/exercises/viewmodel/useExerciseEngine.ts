@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { CrosswordEntry, Exercise, ExerciseConfig, MatchPair } from '@/shared/model/entities';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
-import { useActiveGroup } from '@/features/classes/viewmodel/useActiveGroup';
+import { useActiveGroupForLesson } from '@/features/classes/viewmodel/useActiveGroup';
 import { useRepositories } from '@/shared/services/data/DataProvider';
 
 import {
@@ -116,7 +116,7 @@ interface UseExercisesForLessonResult {
 export function useExercisesForLesson(lessonId: string | null): UseExercisesForLessonResult {
   const { exercises: exerciseRepository } = useRepositories();
   const { account } = useAuth();
-  const groupId = useActiveGroup();
+  const groupId = useActiveGroupForLesson(lessonId);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

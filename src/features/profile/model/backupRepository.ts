@@ -2,6 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { ExampleState } from '@/features/exercises/model/exampleStateRepository';
 import type { ProgressBackup } from '@/features/profile/model/backup.logic';
+import { registerJoinedCourse } from '@/shared/services/content/coursesV3';
 
 interface ProgressRow {
   lesson_id: string;
@@ -47,6 +48,8 @@ interface ClassRow {
   class_code: string;
   class_name: string;
   teacher_name: string | null;
+  course_catalog_id: string;
+  course_title: string | null;
 }
 
 export interface BackupImportResult {
@@ -104,9 +107,11 @@ export async function selectProgressBackup(db: SQLiteDatabase, accountId: number
     db.getAllAsync<ClassRow>(
       `SELECT ac.class_id, ac.class_code,
               COALESCE(c.class_name, ac.class_code) AS class_name,
-              c.teacher_name
+              c.teacher_name, ac.course_catalog_id,
+              rc.title AS course_title
          FROM account_classes ac
          LEFT JOIN class_cache c ON c.class_id = ac.class_id
+         LEFT JOIN remote_courses rc ON rc.catalog_id = ac.course_catalog_id
         WHERE ac.account_id = ? AND ac.active = 1 AND COALESCE(c.archived, 0) = 0
         ORDER BY class_name COLLATE NOCASE`,
       accountId,
@@ -114,7 +119,7 @@ export async function selectProgressBackup(db: SQLiteDatabase, accountId: number
   ]);
 
   return {
-    version: 4,
+    version: 5,
     exportedAt: new Date().toISOString(),
     student: account?.external_key ? { externalKey: account.external_key } : null,
     classes: classes.map(row => ({
@@ -122,6 +127,8 @@ export async function selectProgressBackup(db: SQLiteDatabase, accountId: number
       code: row.class_code,
       name: row.class_name,
       teacherName: row.teacher_name,
+      courseCatalogId: row.course_catalog_id,
+      courseTitle: row.course_title,
     })),
     moduleProgress: moduleProgress.map(row => ({
       lessonId: row.lesson_id,
@@ -203,26 +210,45 @@ export async function replaceProgressFromBackup(
       for (const klass of backup.classes) {
         await db.runAsync(
           `INSERT INTO class_cache
-             (class_id, class_code, class_name, teacher_name, version, hash, published_at, fetched_at)
-           VALUES (?, ?, ?, ?, 0, '', NULL, NULL)
+             (class_id, class_code, class_name, teacher_name, version, hash, published_at,
+              course_catalog_id, fetched_at)
+           VALUES (?, ?, ?, ?, 0, '', NULL, ?, NULL)
            ON CONFLICT(class_id) DO UPDATE SET
              class_code = excluded.class_code,
              class_name = excluded.class_name,
-             teacher_name = excluded.teacher_name`,
+             teacher_name = excluded.teacher_name,
+             course_catalog_id = excluded.course_catalog_id,
+             archived = 0`,
           klass.classId,
           klass.code,
           klass.name,
           klass.teacherName,
+          klass.courseCatalogId,
         );
         await db.runAsync(
-          `INSERT INTO account_classes (account_id, class_id, class_code, joined_at)
-           VALUES (?, ?, ?, ?)
-           ON CONFLICT(account_id, class_id) DO UPDATE SET class_code = excluded.class_code`,
+          `UPDATE account_classes SET active = 0
+           WHERE account_id = ? AND course_catalog_id = ? AND class_id <> ? AND active = 1`,
+          accountId,
+          klass.courseCatalogId,
+          klass.classId,
+        );
+        await db.runAsync(
+          `INSERT INTO account_classes
+             (account_id, class_id, class_code, course_catalog_id, active, joined_at)
+           VALUES (?, ?, ?, ?, 1, ?)
+           ON CONFLICT(account_id, class_id) DO UPDATE SET
+             class_code = excluded.class_code,
+             course_catalog_id = excluded.course_catalog_id,
+             active = 1`,
           accountId,
           klass.classId,
           klass.code,
+          klass.courseCatalogId,
           backup.exportedAt,
         );
+        if (klass.courseTitle) {
+          await registerJoinedCourse(db, accountId, klass.courseCatalogId, klass.courseTitle);
+        }
       }
     }
 

@@ -53,10 +53,10 @@ const v2Backup = {
 const parse = (value: unknown) => parseProgressBackup(JSON.stringify(value));
 
 describe('parseProgressBackup', () => {
-  it('acepta el respaldo v4 con identidad, clases, ejemplos y ubicación', () => {
+  it('acepta el respaldo v5 con identidad, curso de cada clase, ejemplos y ubicación', () => {
     const backup = parse({
       ...v2Backup,
-      version: 4,
+      version: 5,
       student: { externalKey: '11111111-1111-4111-8111-111111111111' },
       classes: [
         {
@@ -64,11 +64,13 @@ describe('parseProgressBackup', () => {
           code: 'ABC123',
           name: 'Grupo A',
           teacherName: 'Profesora Ríos',
+          courseCatalogId: 'k7f3q',
+          courseTitle: 'Curso 2',
         },
       ],
     });
 
-    expect(backup.version).toBe(4);
+    expect(backup.version).toBe(5);
     expect(backup.student).toEqual({
       externalKey: '11111111-1111-4111-8111-111111111111',
     });
@@ -78,13 +80,27 @@ describe('parseProgressBackup', () => {
         code: 'ABC123',
         name: 'Grupo A',
         teacherName: 'Profesora Ríos',
+        courseCatalogId: 'k7f3q',
+        courseTitle: 'Curso 2',
       },
     ]);
     expect(backup.exampleState[0]?.payload.drawExerciseIds).toEqual(['b']);
     expect(backup.attempts[0]?.scoreCorrect).toBe(3);
   });
 
-  it('sigue aceptando v1, v2 y v3 y los normaliza a v4 sin identidad ni clases', () => {
+  it('los respaldos v4 importan sus clases como curso base', () => {
+    const backup = parse({
+      ...v2Backup,
+      version: 4,
+      classes: [{ classId: 'c1', code: 'ABC123', name: 'Grupo A', teacherName: null }],
+    });
+
+    expect(backup.classes[0]).toEqual(
+      expect.objectContaining({ courseCatalogId: 'base', courseTitle: null }),
+    );
+  });
+
+  it('sigue aceptando v1, v2 y v3 y los normaliza a v5 sin identidad ni clases', () => {
     const v1 = parse(v1Backup);
     const v2 = parse(v2Backup);
     const v3 = parse({
@@ -93,9 +109,9 @@ describe('parseProgressBackup', () => {
       group: { code: 'abc123', catalogId: 'k7f3q', name: 'Grupo A' },
     });
 
-    expect(v1.version).toBe(4);
-    expect(v2.version).toBe(4);
-    expect(v3.version).toBe(4);
+    expect(v1.version).toBe(5);
+    expect(v2.version).toBe(5);
+    expect(v3.version).toBe(5);
     expect(v1.student).toBeNull();
     expect(v1.classes).toEqual([]);
     expect(v1.exampleState).toEqual([]);
@@ -104,7 +120,7 @@ describe('parseProgressBackup', () => {
   });
 
   it('rechaza versiones desconocidas', () => {
-    expect(() => parse({ ...v2Backup, version: 5 })).toThrow('Formato de respaldo no compatible.');
+    expect(() => parse({ ...v2Backup, version: 6 })).toThrow('Formato de respaldo no compatible.');
   });
 
   it('rechaza una identidad vacía y clases repetidas', () => {

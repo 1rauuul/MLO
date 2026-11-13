@@ -69,6 +69,7 @@ import {
 } from '@/features/exercises/model/exerciseRepository';
 import {
   selectLesson,
+  selectLessonCatalogId,
   selectLessons,
   selectLessonsByTopic,
   selectTopic,
@@ -198,6 +199,7 @@ export function createRepositories(db: SQLiteDatabase) {
         selectLessonsByTopic(db, topicId, catalogId, groupId),
       selectLesson: (id: string, catalogId?: string, groupId?: string | null) =>
         selectLesson(db, id, catalogId, groupId),
+      selectLessonCatalogId: (lessonId: string) => selectLessonCatalogId(db, lessonId),
     },
     courses: {
       ensureBaseCourse: (accountId?: number) => ensureBaseCourse(db, accountId),
@@ -220,7 +222,8 @@ export function createRepositories(db: SQLiteDatabase) {
         code: string,
         preview: Parameters<typeof saveAccountClass>[3],
         courseCatalogId?: string,
-      ) => saveAccountClass(db, accountId, code, preview, courseCatalogId),
+        courseName?: string,
+      ) => saveAccountClass(db, accountId, code, preview, courseCatalogId, courseName),
       removeAccountClass: (accountId: number, classId: string) =>
         removeAccountClass(db, accountId, classId),
       selectLessonExtras: (accountId: number, lessonId: string) =>

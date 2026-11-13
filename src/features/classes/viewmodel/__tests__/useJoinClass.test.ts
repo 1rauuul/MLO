@@ -8,6 +8,9 @@ const mockJoinClass = jest.fn();
 const mockRefreshClass = jest.fn(async () => false);
 const mockSaveAccountClass = jest.fn(async () => {});
 const mockRefreshClasses = jest.fn(async () => {});
+const mockRefreshCourseList = jest.fn(async () => false);
+const mockSelectCourse = jest.fn(async () => true);
+const mockApplyStoredContent = jest.fn(async () => ({ failed: [] }));
 
 jest.mock('@/features/auth/viewmodel/useAuth', () => ({
   useAuth: () => ({
@@ -29,6 +32,11 @@ jest.mock('@/shared/services/data/DataProvider', () => ({
       refreshClass: mockRefreshClass,
     },
     classes: { saveAccountClass: mockSaveAccountClass },
+    courses: {
+      refreshCourseList: mockRefreshCourseList,
+      selectCourse: mockSelectCourse,
+      applyStoredContent: mockApplyStoredContent,
+    },
   }),
 }));
 
@@ -72,14 +80,41 @@ describe('useJoinClass', () => {
       '11111111-1111-4111-8111-111111111111',
       'Ana Alumna',
     );
-    expect(mockSaveAccountClass).toHaveBeenCalledWith(1, 'ABC123', preview, 'base');
+    expect(mockSaveAccountClass).toHaveBeenCalledWith(1, 'ABC123', preview, 'base', '');
     expect(mockRefreshClass).toHaveBeenCalledWith(
       'c1',
       'ABC123',
       '11111111-1111-4111-8111-111111111111',
       'base',
     );
+    expect(mockSelectCourse).toHaveBeenCalledWith(1, 'base');
     expect(mockRefreshClasses).toHaveBeenCalled();
+  });
+
+  it('guarda el curso que asigna el CMS al unirse por código', async () => {
+    const withCourse = {
+      ...preview,
+      course: { catalogId: 'k7f3q', title: 'Curso 2' },
+    };
+    mockJoinClass.mockResolvedValue(withCourse);
+    const { result } = renderHook(() => useJoinClass());
+
+    await act(async () => {
+      await result.current.lookup('ABC123');
+    });
+    await act(async () => {
+      await expect(result.current.join()).resolves.toBe(true);
+    });
+
+    expect(mockSaveAccountClass).toHaveBeenCalledWith(1, 'ABC123', withCourse, 'k7f3q', 'Curso 2');
+    expect(mockRefreshClass).toHaveBeenCalledWith(
+      'c1',
+      'ABC123',
+      '11111111-1111-4111-8111-111111111111',
+      'k7f3q',
+    );
+    expect(mockSelectCourse).toHaveBeenCalledWith(1, 'k7f3q');
+    expect(mockApplyStoredContent).toHaveBeenCalledWith('k7f3q');
   });
 
   it('clasifica una clase inexistente', async () => {

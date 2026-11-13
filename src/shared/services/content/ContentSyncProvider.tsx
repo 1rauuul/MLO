@@ -11,7 +11,7 @@ import {
 } from 'react';
 import { AppState } from 'react-native';
 
-import { stageClassContent } from '@/shared/services/content/classSync';
+import { refreshClassMemberships, stageClassContent } from '@/shared/services/content/classSync';
 import { refreshCourseList } from '@/shared/services/content/coursesV3';
 import { refreshCatalogs } from '@/shared/services/content/remoteContent';
 import {
@@ -76,8 +76,10 @@ export function ContentSyncProvider({ children }: { children: ReactNode }) {
 
   const detect = useCallback(async () => {
     let changed = await hasPendingContent(db).catch(() => false);
+    let online = false;
     try {
       changed = (await refreshCatalogs(db, http)) || changed;
+      online = true;
     } catch (caught) {
       if (__DEV__) {
         console.warn('[content] no se pudo comprobar el catálogo base', caught);
@@ -85,9 +87,23 @@ export function ContentSyncProvider({ children }: { children: ReactNode }) {
     }
     try {
       changed = (await refreshCourseList(db, httpV3)) || changed;
+      online = true;
     } catch (caught) {
       if (__DEV__) {
         console.warn('[content] no se pudo comprobar la lista de cursos', caught);
+      }
+    }
+    if (online) {
+      try {
+        // La vista previa v2 asocia cada clase con su curso del CMS.
+        const repaired = await refreshClassMemberships(db, http);
+        if (repaired) {
+          changed = (await refreshCourseList(db, httpV3)) || changed;
+        }
+      } catch (caught) {
+        if (__DEV__) {
+          console.warn('[content] no se pudo comprobar el curso de las clases', caught);
+        }
       }
     }
     try {

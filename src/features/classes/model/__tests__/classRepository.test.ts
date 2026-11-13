@@ -106,6 +106,33 @@ describe('classRepository', () => {
     expect(membership?.params[3]).toBe('base');
   });
 
+  it('registra el curso de la clase para que la biblioteca lo muestre', async () => {
+    const { db, statements } = makeDb();
+
+    await saveAccountClass(
+      db,
+      7,
+      'ABC123',
+      {
+        schemaVersion: 2,
+        class: { id: 'c2', name: 'Grupo B', teacherName: 'Docente' },
+        course: { catalogId: 'k7f3q', title: 'Curso 2' },
+        published: null,
+      },
+      'k7f3q',
+      'Curso 2',
+    );
+
+    const course = statements.find(statement =>
+      statement.sql.startsWith('INSERT INTO remote_courses'),
+    );
+    expect(course?.params).toEqual(['k7f3q', 'Curso 2', expect.any(String)]);
+    const accountCourse = statements.find(statement =>
+      statement.sql.startsWith('INSERT INTO account_courses'),
+    );
+    expect(accountCourse?.params).toEqual([7, 'k7f3q', expect.any(String)]);
+  });
+
   it('salir marca inactiva la membresía sin borrarla', async () => {
     const { db, statements } = makeDb();
 

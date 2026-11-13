@@ -30,3 +30,35 @@ export function useActiveGroup(catalogId = 'base'): string | null {
 
   return groupId;
 }
+
+/** Catálogo de la lección; una clase puede vivir en un curso distinto de base. */
+export function useLessonCatalogId(lessonId: string | null): string {
+  const { lessons } = useRepositories();
+  const [catalogId, setCatalogId] = useState('base');
+
+  useEffect(() => {
+    if (!lessonId) {
+      setCatalogId('base');
+      return;
+    }
+    let active = true;
+    lessons
+      .selectLessonCatalogId(lessonId)
+      .then(id => {
+        if (active) setCatalogId(id);
+      })
+      .catch(() => {
+        if (active) setCatalogId('base');
+      });
+    return () => {
+      active = false;
+    };
+  }, [lessons, lessonId]);
+
+  return catalogId;
+}
+
+/** Atajo para los motores de actividades, que solo conocen el id de la lección. */
+export function useActiveGroupForLesson(lessonId: string | null): string | null {
+  return useActiveGroup(useLessonCatalogId(lessonId));
+}

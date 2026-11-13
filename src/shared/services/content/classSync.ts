@@ -2,17 +2,78 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import {
   archiveClassCache,
+  reassignAccountClassCourse,
   selectClassMemberships,
   selectClassSyncState,
+  updateClassMetadata,
 } from '@/features/classes/model/classRepository';
 import { applyV3GroupRelease } from '@/shared/services/content/applyV3Content';
-import { fetchGroupRelease, parseGroupRelease } from '@/shared/services/content/coursesV3';
+import { fetchGroupRelease, parseGroupRelease, registerJoinedCourse } from '@/shared/services/content/coursesV3';
+import { fetchClassPreview } from '@/shared/services/content/remoteContent';
 import { HttpError, ParseError } from '@/shared/services/http/client';
 import type { HttpClient } from '@/shared/services/http/client';
 
 export interface ClassStageSummary {
   changed: boolean;
   failed: string[];
+}
+
+/**
+ * Corrige membresías guardadas antes de que la clase conociera su curso y
+ * mantiene el título del curso para la biblioteca. Usa la vista previa v2, que
+ * ya incluye `course`; los servidores anteriores se ignoran sin romper el sync.
+ */
+export async function refreshClassMemberships(
+  db: SQLiteDatabase,
+  client: HttpClient,
+): Promise<boolean> {
+  let changed = false;
+  const rows = await db.getAllAsync<{
+    account_id: number;
+    class_id: string;
+    class_code: string;
+    course_catalog_id: string;
+  }>(
+    `SELECT DISTINCT ac.account_id, ac.class_id, ac.class_code, ac.course_catalog_id
+       FROM account_classes ac
+      WHERE ac.active = 1`,
+  );
+
+  for (const row of rows) {
+    try {
+      const preview = await fetchClassPreview(client, row.class_code);
+      if (!preview.course) {
+        continue;
+      }
+      if (preview.course.catalogId !== row.course_catalog_id) {
+        await reassignAccountClassCourse(
+          db,
+          row.account_id,
+          row.class_id,
+          preview.course.catalogId,
+        );
+        changed = true;
+      }
+      await registerJoinedCourse(
+        db,
+        row.account_id,
+        preview.course.catalogId,
+        preview.course.title,
+      );
+      await updateClassMetadata(
+        db,
+        row.class_id,
+        row.class_code,
+        preview.class.name,
+        preview.class.teacherName,
+      );
+    } catch (caught) {
+      if (__DEV__) {
+        console.warn(`[classes] no se pudo actualizar la membresía ${row.class_code}`, caught);
+      }
+    }
+  }
+  return changed;
 }
 
 /**

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
-import { useActiveGroup } from '@/features/classes/viewmodel/useActiveGroup';
+import { useActiveGroupForLesson } from '@/features/classes/viewmodel/useActiveGroup';
 import { capExamples, syntheticExamples } from '@/features/examples/viewmodel/example.logic';
 import { ensureLessonDraw, splitDraw } from '@/features/exercises/viewmodel/lessonDraw';
 import type { Example, Exercise } from '@/shared/model/entities';
@@ -26,7 +26,7 @@ export function useExamplesEngine(lessonId: string | null): ExamplesEngine {
   const { exercises: exerciseRepository, examples: exampleRepository, exampleState } =
     useRepositories();
   const { account } = useAuth();
-  const groupId = useActiveGroup();
+  const groupId = useActiveGroupForLesson(lessonId);
   const [items, setItems] = useState<Exercise[]>([]);
   const [pool, setPool] = useState<Exercise[]>([]);
   const [examples, setExamples] = useState<Example[]>([]);

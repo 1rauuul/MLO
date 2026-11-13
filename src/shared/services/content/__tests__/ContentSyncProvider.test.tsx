@@ -31,6 +31,7 @@ jest.mock('@/shared/services/content/coursesV3', () => ({
   refreshCourseList: jest.fn(),
 }));
 jest.mock('@/shared/services/content/classSync', () => ({
+  refreshClassMemberships: jest.fn(),
   stageClassContent: jest.fn(),
 }));
 jest.mock('@/shared/services/content/remote/applyStagedContent', () => ({

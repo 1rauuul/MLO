@@ -3,7 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react-native';
 import { useLessonContent } from '@/features/modules/viewmodel/useLessonContent';
 
 const mockRepositories = {
-  lessons: { selectLesson: jest.fn() },
+  lessons: { selectLesson: jest.fn(), selectLessonCatalogId: jest.fn() },
   examples: { selectExamplesByLesson: jest.fn() },
   classes: {
     selectActiveGroup: jest.fn(),
@@ -37,6 +37,7 @@ const lesson = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockRepositories.lessons.selectLesson.mockResolvedValue(lesson);
+  mockRepositories.lessons.selectLessonCatalogId.mockResolvedValue('base');
   mockRepositories.examples.selectExamplesByLesson.mockResolvedValue([]);
 });
 
@@ -69,6 +70,22 @@ describe('useLessonContent y visibilidad de grupo', () => {
 
     expect(mockRepositories.lessons.selectLesson).toHaveBeenCalledWith('l1.2', 'base', null);
     expect(result.current.lesson?.id).toBe('g-lesson');
+  });
+
+  it('resuelve el grupo en el curso de la lección, no siempre en base', async () => {
+    mockRepositories.lessons.selectLessonCatalogId.mockResolvedValue('k7f3q');
+    mockRepositories.classes.selectActiveGroup.mockResolvedValue('class-demo');
+
+    const { result } = renderHook(() => useLessonContent('k7f3q-l1.2'));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(mockRepositories.classes.selectActiveGroup).toHaveBeenCalledWith(7, 'k7f3q');
+    expect(mockRepositories.lessons.selectLesson).toHaveBeenCalledWith(
+      'k7f3q-l1.2',
+      'k7f3q',
+      'class-demo',
+    );
   });
 
   it('una membresía retirada o grupo archivado no devuelve la lección de grupo', async () => {

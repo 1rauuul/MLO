@@ -39,7 +39,7 @@ export function normalizeClassCode(raw: string): string {
 }
 
 export function useJoinClass() {
-  const { content, classes: classRepository } = useRepositories();
+  const { content, classes: classRepository, courses: courseRepository } = useRepositories();
   const { account } = useAuth();
   const { refresh: refreshClasses } = useClasses();
   const [preview, setPreview] = useState<ClassPreviewData | null>(null);
@@ -57,6 +57,24 @@ export function useJoinClass() {
     setPhase('idle');
     setError(null);
   }, []);
+
+  /** Descarga el curso recién autorizado y lo deja activo; nunca revierte la membresía. */
+  const syncCourse = useCallback(
+    async (accountId: number, catalogId: string) => {
+      try {
+        await courseRepository.refreshCourseList();
+      } catch {
+        // Sin red se conserva la tarjeta local con el nombre del CMS.
+      }
+      try {
+        await courseRepository.selectCourse(accountId, catalogId);
+        await courseRepository.applyStoredContent(catalogId);
+      } catch {
+        // El contenido se aplicará en el siguiente arranque.
+      }
+    },
+    [courseRepository],
+  );
 
   const lookup = useCallback(
     async (raw: string) => {
@@ -93,9 +111,17 @@ export function useJoinClass() {
         account.externalKey,
         account.displayName,
       );
-      await classRepository.saveAccountClass(account.id, code, info, 'base');
+      const catalogId = info.course?.catalogId ?? 'base';
+      await classRepository.saveAccountClass(
+        account.id,
+        code,
+        info,
+        catalogId,
+        info.course?.title ?? '',
+      );
+      await syncCourse(account.id, catalogId);
       try {
-        await content.refreshClass(info.class.id, code, account.externalKey, 'base');
+        await content.refreshClass(info.class.id, code, account.externalKey, catalogId);
       } catch {
         // La membresía ya quedó guardada; el contenido se sincroniza después.
       }
@@ -108,7 +134,7 @@ export function useJoinClass() {
       setPhase('confirm');
       return false;
     }
-  }, [account, code, preview, content, classRepository, refreshClasses]);
+  }, [account, code, preview, content, classRepository, refreshClasses, syncCourse]);
 
   const claimToken = useCallback(
     async (invitationToken: string) => {
@@ -127,6 +153,7 @@ export function useJoinClass() {
           account.displayName,
         );
         const membership = claimed.membership;
+        const catalogId = membership.courseCatalogId || 'base';
         await classRepository.saveAccountClass(
           account.id,
           membership.classCode,
@@ -139,15 +166,17 @@ export function useJoinClass() {
             },
             published: claimed.published,
           },
-          membership.courseCatalogId,
+          catalogId,
+          membership.courseName ?? '',
         );
+        await syncCourse(account.id, catalogId);
         if (claimed.published) {
           try {
             await content.refreshClass(
               membership.classId,
               membership.classCode,
               account.externalKey,
-              membership.courseCatalogId,
+              catalogId,
             );
           } catch {
             // La membresía ya quedó guardada; el contenido se sincroniza después.
@@ -163,7 +192,7 @@ export function useJoinClass() {
         return false;
       }
     },
-    [account, content, classRepository, refreshClasses],
+    [account, content, classRepository, refreshClasses, syncCourse],
   );
 
   const claim = useCallback(

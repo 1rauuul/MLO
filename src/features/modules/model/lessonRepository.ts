@@ -194,3 +194,15 @@ export async function selectLesson(
   );
   return row ? mapLesson(row) : null;
 }
+
+/** Curso de una lección: una clase puede pertenecer a un curso distinto de base. */
+export async function selectLessonCatalogId(
+  db: SQLiteDatabase,
+  lessonId: string,
+): Promise<string> {
+  const row = await db.getFirstAsync<{ catalog_id: string }>(
+    'SELECT catalog_id FROM lessons WHERE id = ?',
+    lessonId,
+  );
+  return row?.catalog_id ?? 'base';
+}

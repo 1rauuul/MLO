@@ -5,14 +5,21 @@ import { HttpError } from '@/shared/services/http/client';
 
 import {
   archiveClassCache,
+  reassignAccountClassCourse,
   selectClassMemberships,
   selectClassSyncState,
+  updateClassMetadata,
 } from '@/features/classes/model/classRepository';
 import { applyV3GroupRelease } from '@/shared/services/content/applyV3Content';
-import { fetchGroupRelease } from '@/shared/services/content/coursesV3';
+import {
+  fetchGroupRelease,
+  registerJoinedCourse,
+} from '@/shared/services/content/coursesV3';
+import { fetchClassPreview } from '@/shared/services/content/remoteContent';
 import {
   applyStagedClassReleases,
   refreshClassContent,
+  refreshClassMemberships,
   refreshClassRelease,
   stageClassRelease,
 } from '@/shared/services/content/classSync';
@@ -21,13 +28,19 @@ jest.mock('@/features/classes/model/classRepository', () => ({
   selectClassMemberships: jest.fn(),
   selectClassSyncState: jest.fn(),
   archiveClassCache: jest.fn(async () => {}),
+  reassignAccountClassCourse: jest.fn(async () => {}),
+  updateClassMetadata: jest.fn(async () => {}),
 }));
 jest.mock('@/shared/services/content/applyV3Content', () => ({
   applyV3GroupRelease: jest.fn(async () => {}),
 }));
 jest.mock('@/shared/services/content/coursesV3', () => ({
   fetchGroupRelease: jest.fn(),
+  registerJoinedCourse: jest.fn(async () => {}),
   parseGroupRelease: jest.requireActual('@/shared/services/content/coursesV3').parseGroupRelease,
+}));
+jest.mock('@/shared/services/content/remoteContent', () => ({
+  fetchClassPreview: jest.fn(),
 }));
 
 const db = {} as SQLiteDatabase;
@@ -61,11 +74,71 @@ const mockApply = jest.mocked(applyV3GroupRelease);
 const mockState = jest.mocked(selectClassSyncState);
 const mockArchive = jest.mocked(archiveClassCache);
 const mockMemberships = jest.mocked(selectClassMemberships);
+const mockFetchPreview = jest.mocked(fetchClassPreview);
+const mockReassign = jest.mocked(reassignAccountClassCourse);
+const mockUpdateMetadata = jest.mocked(updateClassMetadata);
+const mockRegisterCourse = jest.mocked(registerJoinedCourse);
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockState.mockResolvedValue(null);
   mockFetch.mockResolvedValue(release);
+});
+
+describe('refreshClassMemberships', () => {
+  it('mueve una membresía guardada como base al curso real del CMS', async () => {
+    const membershipDb = {
+      getAllAsync: jest.fn(async () => [
+        {
+          account_id: 7,
+          class_id: 'c1',
+          class_code: 'ABC123',
+          course_catalog_id: 'base',
+        },
+      ]),
+    } as unknown as SQLiteDatabase;
+    mockFetchPreview.mockResolvedValue({
+      schemaVersion: 2,
+      class: { id: 'c1', name: 'Grupo A', teacherName: 'Ana Torres' },
+      course: { catalogId: 'k7f3q', title: 'Curso 2' },
+      published: null,
+    });
+
+    await refreshClassMemberships(membershipDb, client);
+
+    expect(mockReassign).toHaveBeenCalledWith(membershipDb, 7, 'c1', 'k7f3q');
+    expect(mockRegisterCourse).toHaveBeenCalledWith(membershipDb, 7, 'k7f3q', 'Curso 2');
+    expect(mockUpdateMetadata).toHaveBeenCalledWith(
+      membershipDb,
+      'c1',
+      'ABC123',
+      'Grupo A',
+      'Ana Torres',
+    );
+  });
+
+  it('ignora respuestas sin curso (servidores anteriores)', async () => {
+    const membershipDb = {
+      getAllAsync: jest.fn(async () => [
+        {
+          account_id: 7,
+          class_id: 'c1',
+          class_code: 'ABC123',
+          course_catalog_id: 'base',
+        },
+      ]),
+    } as unknown as SQLiteDatabase;
+    mockFetchPreview.mockResolvedValue({
+      schemaVersion: 2,
+      class: { id: 'c1', name: 'Grupo A', teacherName: 'Ana Torres' },
+      published: null,
+    });
+
+    await refreshClassMemberships(membershipDb, client);
+
+    expect(mockReassign).not.toHaveBeenCalled();
+    expect(mockRegisterCourse).not.toHaveBeenCalled();
+  });
 });
 
 describe('refreshClassRelease v3', () => {

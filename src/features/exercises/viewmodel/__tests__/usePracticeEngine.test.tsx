@@ -13,6 +13,7 @@ jest.mock('expo-sqlite', () => ({ useSQLiteContext: () => mockDb }));
 jest.mock('@/features/auth/viewmodel/useAuth', () => ({ useAuth: () => ({ account: mockAccountState }) }));
 jest.mock('@/features/classes/viewmodel/useActiveGroup', () => ({
   useActiveGroup: () => null,
+  useActiveGroupForLesson: () => null,
 }));
 jest.mock('@/features/exercises/model/attemptRepository');
 jest.mock('@/features/exercises/model/exerciseRepository');

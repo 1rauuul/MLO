@@ -17,9 +17,11 @@ verdad local y con `DATA_MODE=local` (por defecto) no se hace ninguna petición.
 ## Clases
 
 El código es de 6 caracteres en mayúsculas; el cliente acepta minúsculas y
-espacios pero envía la forma canónica. Las clases no cambian el catálogo: el
-alumno siempre estudia el curso base y recibe, además, el contenido extra de sus
-clases.
+espacios pero envía la forma canónica. Cada clase pertenece a un curso del CMS:
+la vista previa y el join incluyen `course: { catalogId, title }`. El alumno
+puede unirse a **una clase por curso y a varios cursos**; el contenido de cada
+clase se suma al catálogo de su curso. Las respuestas antiguas sin `course` se
+tratan como curso `base`.
 
 ### GET /classes/{code}
 
@@ -29,6 +31,7 @@ Vista previa antes de unirse. Sin caché.
 {
   "schemaVersion": 2,
   "class": { "id": "c1", "name": "Grupo A", "teacherName": "Profesora Ríos" },
+  "course": { "catalogId": "k7f3q", "title": "Curso 2" },
   "published": { "version": 2, "hash": "…", "publishedAt": "2026-10-27T00:00:00.000Z" }
 }
 ```
@@ -44,7 +47,9 @@ el código no existe.
 
 Devuelve la misma vista previa y `"joined": true`. El `studentKey` es el UUID
 estable de la cuenta local; debe viajar en el respaldo para restaurar la misma
-identidad. La operación es idempotente.
+identidad. La operación es idempotente. El servidor concede `course_access` al
+curso de la clase (y al base empaquetado) para que MLO pueda descargar su
+manifiesto v3.
 
 ### DELETE /classes/{code}/members/{studentKey}
 
@@ -96,10 +101,12 @@ deja de mostrar su contenido extra, pero conserva la caché por si vuelve.
 ```
 
 `lessonId` es el id publicado del curso base (`l1.2`); el snapshot solo lleva
-contenido extra, nunca el curso completo. Los `extras` de tipo `lesson` son
-bloques que se muestran debajo del contenido base; `exercise` y `example` se
-suman a la práctica y a los ejemplos. El mismo `id` puede aparecer en el release
-de varias clases: el cliente lo muestra una vez y junta las etiquetas.
+contenido extra, nunca el curso completo. La versión v3 del release declara su
+`catalogId` y puede incluir la jerarquía propia del curso. Los `extras` de tipo
+`lesson` son bloques que se muestran debajo del contenido base; `exercise` y
+`example` se suman a la práctica y a los ejemplos. El mismo `id` puede aparecer
+en el release de varias clases: el cliente lo muestra una vez y junta las
+etiquetas.
 
 ## GET /catalogs/{catalogId}/manifest
 
