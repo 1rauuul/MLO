@@ -1,15 +1,9 @@
-import type { ContentBlock, ExerciseConfig, ExerciseType } from '@/shared/model/entities';
+import type { ContentBlock, ExerciseConfig, ExerciseType, ImageMime } from '@/shared/model/entities';
 import type { ExampleSeed, QuestionSeed } from '@/shared/services/content/unit1.content';
 import type { ExerciseSeed } from '@/shared/services/content/banks/types';
 import { crosswordCells, extractFillAnswers } from '@/shared/utils/exerciseRules';
-import {
-  isRecord,
-  isString,
-  isStringArray,
-  parseExampleSeed,
-  parseExerciseSeed,
-  parseQuestionSeed,
-} from '@/shared/utils/validate';
+import { isRecord, isString, isStringArray, parseExampleSeed, parseExerciseSeed, parseQuestionSeed } from '@/shared/utils/validate';
+import { youtubeVideoId } from '@/shared/utils/youtube';
 
 export const REMOTE_SCHEMA_VERSION = 2;
 
@@ -99,6 +93,15 @@ function defaultStringArray(value: unknown): string[] {
   return value;
 }
 
+const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+
+function imageMime(value: unknown): ImageMime {
+  if (typeof value !== 'string' || !(IMAGE_MIMES as readonly string[]).includes(value)) {
+    fail('formato de imagen no permitido');
+  }
+  return value as ImageMime;
+}
+
 export function parseContentBlocks(value: unknown): ContentBlock[] {
   if (!Array.isArray(value)) {
     fail('content no es un arreglo');
@@ -129,6 +132,44 @@ export function parseContentBlocks(value: unknown): ContentBlock[] {
           fail('tabla de contenido inválida');
         }
         return { type: 'table', header, rows: block.rows as string[][] };
+      }
+      case 'image': {
+        if (
+          !isString(block.src) ||
+          !/^https?:\/\//i.test(block.src) ||
+          !Number.isInteger(block.width) ||
+          !Number.isInteger(block.height) ||
+          Number(block.width) < 1 ||
+          Number(block.height) < 1 ||
+          Number(block.width) > 10000 ||
+          Number(block.height) > 10000
+        ) {
+          fail('imagen de contenido inválida');
+        }
+        const alt = nonEmpty(block.alt, 'alt de imagen');
+        const caption = block.caption === undefined ? undefined : defaultString(block.caption);
+        const localSrc = block.localSrc === undefined ? undefined : defaultString(block.localSrc);
+        const mediaId = block.mediaId === undefined ? undefined : defaultString(block.mediaId);
+        return {
+          type: 'image',
+          src: block.src,
+          ...(localSrc ? { localSrc } : {}),
+          mime: imageMime(block.mime),
+          width: Number(block.width),
+          height: Number(block.height),
+          alt,
+          ...(caption ? { caption } : {}),
+          ...(mediaId ? { mediaId } : {}),
+        };
+      }
+      case 'video': {
+        const url = nonEmpty(block.url, 'url de video');
+        if (!youtubeVideoId(url)) fail('video de YouTube inválido');
+        return {
+          type: 'video',
+          url,
+          title: nonEmpty(block.title, 'título de video'),
+        };
       }
       default:
         fail(`tipo de bloque desconocido: ${String(block.type)}`);

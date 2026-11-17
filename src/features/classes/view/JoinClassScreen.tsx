@@ -19,6 +19,7 @@ const ERROR_MESSAGES: Record<Exclude<JoinClassError, null>, string> = {
   code: 'El código debe tener 6 caracteres.',
   link: 'Pega el enlace de invitación completo o un código de 6 caracteres.',
   not_found: 'No encontramos una clase con ese código.',
+  unpublished: 'El grupo todavía no está disponible. Pídele a tu docente que lo publique.',
   rate_limited: 'Demasiados intentos. Espera un momento y vuelve a intentarlo.',
   config: 'La app no tiene configurado el servicio de contenido.',
   network: 'No hay conexión. Inténtalo de nuevo.',

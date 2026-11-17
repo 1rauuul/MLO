@@ -163,7 +163,7 @@ export function apiV3BaseUrl(): string {
   if (!base) {
     return '';
   }
-  return base.endsWith('/v2') ? `${base.slice(0, -3)}v3` : `${base}/api/mlo/v3`;
+  return base.endsWith('/v2') ? `${base.slice(0, -2)}v3` : `${base}/api/mlo/v3`;
 }
 
 export const http = createHttpClient({ baseUrl: apiBaseUrl() });

@@ -41,12 +41,26 @@ export interface ExerciseConfig {
   crossword?: { rows: number; cols: number; entries: CrosswordEntry[] };
 }
 
+export type ImageMime = 'image/jpeg' | 'image/png' | 'image/webp';
+
 export type ContentBlock =
   | { type: 'p'; text: string }
   | { type: 'h'; text: string }
   | { type: 'bullets'; items: string[] }
   | { type: 'numbers'; items: string[] }
-  | { type: 'table'; header: string[]; rows: string[][] };
+  | { type: 'table'; header: string[]; rows: string[][] }
+  | {
+      type: 'image';
+      src: string;
+      localSrc?: string;
+      mime: ImageMime;
+      width: number;
+      height: number;
+      alt: string;
+      caption?: string;
+      mediaId?: string;
+    }
+  | { type: 'video'; url: string; title: string };
 
 export interface Unit {
   id: string;

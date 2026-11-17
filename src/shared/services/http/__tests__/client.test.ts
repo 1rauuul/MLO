@@ -1,5 +1,6 @@
 import {
   apiBaseUrl,
+  apiV3BaseUrl,
   ConfigError,
   createHttpClient,
   HttpError,
@@ -112,5 +113,15 @@ describe('apiBaseUrl', () => {
   it('devuelve vacío si no está configurada', () => {
     delete process.env.EXPO_PUBLIC_API_URL;
     expect(apiBaseUrl()).toBe('');
+  });
+
+  it('cambia /v2 por /v3 sin perder la barra', () => {
+    process.env.EXPO_PUBLIC_API_URL = 'https://api.test/api/mlo/v2';
+    expect(apiV3BaseUrl()).toBe('https://api.test/api/mlo/v3');
+  });
+
+  it('usa /api/mlo/v3 cuando la base no termina en /v2', () => {
+    process.env.EXPO_PUBLIC_API_URL = 'https://api.test';
+    expect(apiV3BaseUrl()).toBe('https://api.test/api/mlo/v3');
   });
 });

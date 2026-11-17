@@ -13,10 +13,22 @@ import {
   parseCourseManifest,
   parseGroupRelease,
 } from '@/shared/services/content/coursesV3';
+import { SCHEMA_DDL } from '@/shared/services/db/schema';
+
+// Solo Node >= 22.5 trae node:sqlite; en otros entornos se omite.
+const { DatabaseSync } = (() => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('node:sqlite') as typeof import('node:sqlite');
+  } catch {
+    return { DatabaseSync: null };
+  }
+})();
 
 const X03_DIR = join(__dirname, '..', 'remote', '__fixtures__', 'v3', 'x03');
 const X02_DIR = join(__dirname, '..', 'remote', '__fixtures__', 'v3', 'x02');
 const X05_DIR = join(__dirname, '..', 'remote', '__fixtures__', 'v3', 'x05');
+const V3_DIR = join(__dirname, '..', 'remote', '__fixtures__', 'v3');
 
 function loadRelease(dir: string, file: string, catalogId: string) {
   const raw = JSON.parse(readFileSync(join(dir, file), 'utf8')) as unknown;
@@ -438,5 +450,82 @@ describe('applyStoredV3Content', () => {  it('aplica el manifiesto guardado y sa
           statement.params[1] === 'otro',
       ),
     ).toBe(false);
+  });
+});
+
+const maybeSqlite = DatabaseSync ? it : it.skip;
+
+describe('alcance del release de curso', () => {
+  maybeSqlite('reaplicar un curso no archiva ni borra el contenido del grupo', async () => {
+    const sqlite = new DatabaseSync!(':memory:');
+    sqlite.exec(SCHEMA_DDL);
+    const adapter = {
+      execAsync: async (sql: string) => sqlite.exec(sql),
+      runAsync: async (sql: string, ...params: unknown[]) => {
+        const result = sqlite.prepare(sql).run(...(params as never[]));
+        return {
+          changes: Number(result.changes),
+          lastInsertRowId: Number(result.lastInsertRowid),
+        };
+      },
+      getFirstAsync: async (sql: string, ...params: unknown[]) =>
+        sqlite.prepare(sql).get(...(params as never[])) ?? null,
+      getAllAsync: async (sql: string, ...params: unknown[]) =>
+        sqlite.prepare(sql).all(...(params as never[])),
+      withTransactionAsync: async (task: () => Promise<void>) => {
+        sqlite.exec('BEGIN');
+        try {
+          await task();
+          sqlite.exec('COMMIT');
+        } catch (error) {
+          sqlite.exec('ROLLBACK');
+          throw error;
+        }
+      },
+    } as unknown as SQLiteDatabase;
+
+    const course = loadRelease(V3_DIR, 'valid-course-base-ref.json', 'demo');
+    const group = parseGroupRelease(
+      JSON.parse(readFileSync(join(V3_DIR, 'valid-group-content.json'), 'utf8')) as unknown,
+      'demo',
+    );
+
+    await applyV3Release(adapter, course, 'demo');
+    const now = new Date().toISOString();
+    await adapter.runAsync(
+      `INSERT INTO class_cache
+         (class_id, class_code, class_name, teacher_name, version, hash, published_at,
+          course_catalog_id, archived, release_v3, applied_hash, fetched_at)
+       VALUES (?, 'ABC123', 'Grupo A', 'Docente', 1, 'h', ?, 'demo', 0, '{}', 'h', ?)`,
+      'grp-demo-a',
+      now,
+      now,
+    );
+    await applyV3GroupRelease(adapter, group, 'grp-demo-a');
+
+    await applyV3Release(adapter, course, 'demo');
+
+    const lesson = sqlite
+      .prepare("SELECT archived_at FROM lessons WHERE id = 'g-l1'")
+      .get() as { archived_at: string | null };
+    const topic = sqlite
+      .prepare("SELECT archived_at FROM topics WHERE id = 'g-t1'")
+      .get() as { archived_at: string | null };
+    const unit = sqlite
+      .prepare("SELECT archived_at FROM units WHERE id = 'g-u1'")
+      .get() as { archived_at: string | null };
+    const examples = sqlite
+      .prepare("SELECT COUNT(*) AS total FROM examples WHERE group_id = 'grp-demo-a'")
+      .get() as { total: number };
+    const exercises = sqlite
+      .prepare("SELECT COUNT(*) AS total FROM exercises WHERE group_id = 'grp-demo-a'")
+      .get() as { total: number };
+
+    expect(lesson.archived_at).toBeNull();
+    expect(topic.archived_at).toBeNull();
+    expect(unit.archived_at).toBeNull();
+    expect(examples.total).toBeGreaterThan(0);
+    expect(exercises.total).toBeGreaterThan(0);
+    sqlite.close();
   });
 });

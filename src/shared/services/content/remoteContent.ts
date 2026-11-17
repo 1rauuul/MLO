@@ -5,6 +5,8 @@ import type { HttpClient } from '@/shared/services/http/client';
 import { ConfigError, HttpError, ParseError } from '@/shared/services/http/client';
 import { isRecord, isString } from '@/shared/utils/validate';
 
+import { cacheMediaInLessonPayload } from '@/shared/services/content/mediaCache';
+
 import {
   parseClassPreview,
   parseClassRelease,
@@ -286,7 +288,7 @@ export async function refreshCatalog(
       }
       idOwners.set(id, entry.lessonId);
     }
-    payloads.push(payload);
+    payloads.push(await cacheMediaInLessonPayload(db, payload));
   }
 
   const now = new Date().toISOString();
@@ -376,6 +378,7 @@ export type ContentError =
 
 export type ClassError =
   | 'not_found'
+  | 'unpublished'
   | 'rate_limited'
   | 'config'
   | 'network'
@@ -388,6 +391,9 @@ export function isClassError(error: unknown): ClassError {
   if (error instanceof HttpError) {
     if (error.status === 404) {
       return 'not_found';
+    }
+    if (error.status === 409) {
+      return 'unpublished';
     }
     if (error.status === 429) {
       return 'rate_limited';

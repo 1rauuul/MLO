@@ -9,6 +9,7 @@ import {
 } from '@/features/classes/model/classRepository';
 import { applyV3GroupRelease } from '@/shared/services/content/applyV3Content';
 import { fetchGroupRelease, parseGroupRelease, registerJoinedCourse } from '@/shared/services/content/coursesV3';
+import { cacheMediaInGroupRelease } from '@/shared/services/content/mediaCache';
 import { fetchClassPreview } from '@/shared/services/content/remoteContent';
 import { HttpError, ParseError } from '@/shared/services/http/client';
 import type { HttpClient } from '@/shared/services/http/client';
@@ -150,6 +151,7 @@ export async function stageClassRelease(
     return { changed: false, initial: false };
   }
 
+  release = await cacheMediaInGroupRelease(db, release);
   const initial = !stored?.release_v3;
   await db.runAsync(
     `UPDATE class_cache SET
@@ -275,6 +277,7 @@ export async function refreshClassRelease(
     return false;
   }
 
+  release = await cacheMediaInGroupRelease(db, release);
   await applyV3GroupRelease(db, release, classId);
   return true;
 }

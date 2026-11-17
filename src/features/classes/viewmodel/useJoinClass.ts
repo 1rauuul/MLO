@@ -22,6 +22,7 @@ export type JoinClassError =
   | 'link'
   | 'code'
   | 'not_found'
+  | 'unpublished'
   | 'rate_limited'
   | 'invalid'
   | 'no_account'

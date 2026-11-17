@@ -77,6 +77,15 @@ CREATE TABLE IF NOT EXISTS class_cache (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_class_cache_code ON class_cache(class_code);
 
+-- Copia local de las imágenes publicadas. El release guarda la URL remota y
+-- localSrc en el bloque; esta tabla permite reutilizarla entre releases.
+CREATE TABLE IF NOT EXISTS media_cache (
+  url TEXT PRIMARY KEY,
+  local_uri TEXT NOT NULL,
+  mime TEXT NOT NULL,
+  fetched_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS class_extras_cache (
   class_id TEXT NOT NULL REFERENCES class_cache(class_id) ON DELETE CASCADE,
   extra_id TEXT NOT NULL,

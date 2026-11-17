@@ -127,8 +127,9 @@ async function deleteMissing(
   keepIds: string[],
 ): Promise<void> {
   const keep = keepIds.length > 0 ? ` AND id NOT IN (${placeholders(keepIds)})` : '';
+  // El release de curso no toca el contenido propio de los grupos.
   await db.runAsync(
-    `DELETE FROM ${table} WHERE lesson_id IN
+    `DELETE FROM ${table} WHERE group_id IS NULL AND lesson_id IN
        (SELECT id FROM lessons WHERE catalog_id = ?)${keep}`,
     catalogId,
     ...keepIds,
@@ -477,16 +478,20 @@ export async function applyV3Release(
     const topicIds = topics.map(topic => topic.id);
     const evaluationIds = evaluations.map(evaluation => evaluation.id);
 
+    // Todo el archivado del release de curso ignora el contenido propio de los
+    // grupos: ese contenido se archiva solo desde el release de su grupo.
     const keepLessons = lessonIds.length > 0 ? ` AND id NOT IN (${placeholders(lessonIds)})` : '';
     await db.runAsync(
-      `UPDATE lessons SET archived_at = ? WHERE catalog_id = ? AND archived_at IS NULL${keepLessons}`,
+      `UPDATE lessons SET archived_at = ?
+       WHERE catalog_id = ? AND group_id IS NULL AND archived_at IS NULL${keepLessons}`,
       now,
       catalogId,
       ...lessonIds,
     );
     const keepTopics = topicIds.length > 0 ? ` AND id NOT IN (${placeholders(topicIds)})` : '';
     await db.runAsync(
-      `UPDATE topics SET archived_at = ? WHERE catalog_id = ? AND archived_at IS NULL${keepTopics}`,
+      `UPDATE topics SET archived_at = ?
+       WHERE catalog_id = ? AND group_id IS NULL AND archived_at IS NULL${keepTopics}`,
       now,
       catalogId,
       ...topicIds,
@@ -494,7 +499,8 @@ export async function applyV3Release(
     const keepEvaluations =
       evaluationIds.length > 0 ? ` AND id NOT IN (${placeholders(evaluationIds)})` : '';
     await db.runAsync(
-      `UPDATE evaluations SET archived_at = ? WHERE archived_at IS NULL AND lesson_id IN
+      `UPDATE evaluations SET archived_at = ?
+       WHERE group_id IS NULL AND archived_at IS NULL AND lesson_id IN
          (SELECT id FROM lessons WHERE catalog_id = ?)${keepEvaluations}`,
       now,
       catalogId,
@@ -502,14 +508,17 @@ export async function applyV3Release(
     );
     await db.runAsync(
       `DELETE FROM questions WHERE evaluation_id IN
-         (SELECT id FROM evaluations WHERE archived_at IS NOT NULL AND lesson_id IN
-            (SELECT id FROM lessons WHERE catalog_id = ?))`,
+         (SELECT id FROM evaluations
+           WHERE group_id IS NULL AND archived_at IS NOT NULL AND lesson_id IN
+             (SELECT id FROM lessons WHERE catalog_id = ?))`,
       catalogId,
     );
     await db.runAsync(
-      `UPDATE units SET archived_at = ? WHERE catalog_id = ? AND archived_at IS NULL
+      `UPDATE units SET archived_at = ?
+       WHERE catalog_id = ? AND group_id IS NULL AND archived_at IS NULL
        AND id NOT IN (
-         SELECT DISTINCT unit_id FROM lessons WHERE catalog_id = ? AND archived_at IS NULL
+         SELECT DISTINCT unit_id FROM lessons
+          WHERE catalog_id = ? AND group_id IS NULL AND archived_at IS NULL
        )`,
       now,
       catalogId,

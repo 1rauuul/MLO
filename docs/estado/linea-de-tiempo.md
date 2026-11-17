@@ -1,10 +1,12 @@
 # Línea de tiempo de cambios
 
 **Proyecto:** MLO — Ingeniería de Software (OAM)  
-**Fuente:** 42 sesiones de OpenCode del proyecto (16 principales + 26 subagentes, 195 mensajes
-del usuario) entre el 21 de septiembre y el 22 de octubre de 2026, contrastadas con el historial
-de git. Las fechas son locales (America/Mexico_City).  
-**Corte:** 22 de octubre de 2026.
+**Fuente:** 60 sesiones de OpenCode del proyecto (29 principales + 31 subagentes, 301 mensajes
+del usuario, 6 090 mensajes en total) entre el 21 de septiembre y el 13 de noviembre de 2026
+(base local de OpenCode), contrastadas con los 37 commits del historial de git. Las fechas son
+locales (America/Mexico_City).  
+**Corte:** 13 de noviembre de 2026.  
+**Actualización:** 17 de noviembre de 2026 (medios en lecciones y cierre de pendientes).
 
 ## Resumen por fases
 
@@ -17,7 +19,15 @@ de git. Las fechas son locales (America/Mexico_City).
 | 4 | 8–9 oct | Auditoría técnica y estabilización de datos | «Analisis» | `47dd6ae` |
 | 5 | 10–13 oct | Iconos, diagramas, documentación y refactor MVVM | «UI implements», «Errors», «Diagramas», «Refactor MVVM» | `66e52c8`, `63935fe`, `ef4cf6a`, `e3cb366`, `ca01431` |
 | 6 | 15 oct | Login, backup de progreso y banco de preguntas 1.2 | «UI implements», «Esquema de ejercicios» | `5d262d2`, `ef19472`, `e7d8a71` |
-| 7 | 21–22 oct | Evaluación, salidas seguras, fuente bibliográfica y APK de demo | «Añadir fuente…», «Generar build APK» | `200128d` + cambios sin commit |
+| 7 | 21–22 oct | Evaluación, salidas seguras, fuente bibliográfica y APK de demo | «Añadir fuente…», «Generar build APK» | `200128d`, `e67e35f` |
+| 8 | 23–26 oct | Planes de revisión y migración a Expo SDK 58 | «Implementa el plan de revisión», «Línea de tiempo…» | `44a7df9`, `8ea6df9` |
+| 9 | 26–31 oct | Modelo híbrido, contenido remoto y clases del panel docente | «Comparativa de consumo de servicios», «Agregar contenido…», «hot fixes app» | `170d2dd`, `bb915de`, `ce04717` |
+| 10 | 31 oct–4 nov | Pulido de producto, icono y documentación del reporte | «hot fixes app», «Línea de tiempo…» | `f4659b5` |
+| 11 | 5–6 nov | Contrato v3 del CMS y features X-01…X-07 | «Contrato local de contenido CMS» + 5 subagentes | `15e3b74` … `0f7de7c` |
+| 12 | 7–11 nov | UI de cursos y experiencia de aprendizaje | «Creación y renderizado…», «No puedo ver el contenido en clase» | `73b8246`, `f7bb4dd` |
+| 13 | 12 nov | Alumno en N cursos y estabilización de SQLite | «SQLiteProvider and network errors» | `4be6eba` |
+| 14 | 12–13 nov | Contenido del CMS que no llega a la app | «Contenido del CMS no llega a la app» | sin commit |
+| 15 | 13 nov | Memoria externa (Kindex) y esta línea de tiempo | «OpenCode Kindex MCP setup», «Línea de tiempo del proyecto MLO» | — |
 
 ## Detalle cronológico
 
@@ -137,22 +147,165 @@ Sesión: **«Generar build APK para una demo»**.
 - **Tamaño:** `expo-build-properties` con `arm64-v8a`, Android 12+, R8 y shrinks; retiro de
   dependencias sin uso. APK final de ~33.2 MB (antes 118.1 MB), build EAS
   `12688b6f-e408-4207-8c01-ae0d7dc16c39`.
-- Documentado en `docs/informe-cambios-demo-apk.md`. **Estos cambios siguen sin commit.**
+- Documentado en `docs/informe-cambios-demo-apk.md`. Todo el trabajo, junto con los diagramas
+  SVG y el capítulo del reporte, quedó en el commit `e67e35f` («MLO v1», 22 oct).
 
-### 22 oct — Esta línea de tiempo
-- Sesión **«Línea de tiempo de cambios entre sesiones»**: se revisan las 42 sesiones y el
-  historial git, y se genera este documento.
+### 23–26 oct — Planes de revisión y migración a SDK 58
+Sesiones: **«Implementa el plan de revisión»** (junto con «Línea de tiempo…») y
+**«Comparativa de consumo de servicios»**.
+
+- **23 oct:** ejecución de `docs/planes/PLAN-fix-review.md` y
+  `docs/planes/PLAN-optimizacion-servicios.md`: corrección de ids de preguntas, duplicados de
+  1.2, sorteo de ejemplos, mezcla de «ordenar», `ErrorBoundary` y `useAsyncResource`. Commit
+  `44a7df9` («V1.1 handle services»).
+- **26 oct:** migración a **Expo SDK 58** (React Native 0.88, React 19.3, Expo Router 58, Jest
+  30, TypeScript 6): `File.write()` asíncrono, tab bar sin `navigation`, `usePreventRemove` en
+  lugar de `beforeRemove`, `TextInputInstance`, `.npmrc` con `legacy-peer-deps`, R8 para Quick
+  Crypto y fallback en Expo Go. Documentado en `docs/informe-migracion-sdk58.md`; commit
+  `8ea6df9`.
+- **26 oct:** comparativa del consumo de servicios contra `PLAN-sistema-maestro.md`; se crean
+  `docs/planes/COMPARATIVA-consumo-servicios-vs-plan-maestro.md`, `PLAN-sistema-maestro.md` y
+  `PLAN-mlo-contenido-remoto.md`. Preparación del modelo híbrido (`DATA_MODE`, `DataProvider`,
+  cliente HTTP, `remoteContent`, validador y `ContentSyncProvider`); commit `170d2dd`.
+
+### 27–31 oct — Clases del panel docente y modelo híbrido
+Sesiones: **«Agregar contenido adicional al MLO»**, **«Modelo de base de datos en Markdown»**,
+**«hot fixes app»**, **«Separar la base del núcleo y el CMS»**.
+
+- **27 oct:** el panel docente pasa a publicar **clases** en lugar de grupos: endpoints
+  `/classes`, preview/join con `course`, caché por clase (`class_cache`, `class_extras_cache`,
+  `account_classes`), `classRepository`, `classSync` y validadores de release. Se retira
+  `groups` y se renombran rutas y pantallas (`join-class.tsx`, `JoinClassScreen`). Respaldos v4
+  con la identidad del alumno (`accounts.external_key`). Documentación
+  `docs/contenido/como-agregar-contenido.md`, `apk-con-contenido-remoto.md`, `PLAN-clases.md`
+  y `PLAN-ejemplos-independientes.md`; commit `bb915de`.
+- **29 oct:** extracción del modelo de datos a Markdown (`docs/arquitectura/esquema-bd-mlo.md`)
+  y pruebas con el proyecto publicado en Vercel (`mlo-enrichment`).
+- **31 oct:** «hot fixes» de producto: `ConfirmModal` reutilizable, regla de tema completado
+  (lecciones + ejemplos vistos + práctica ≥ 80 % + evaluación ≥ 80 %), ejercicios de ordenar
+  con arrastre a la izquierda y colores distintos, y consolidación del modo híbrido
+  (`ce04717`, «MLO is hybrid»).
+- **4 nov:** nuevo icono de la app (`assets/images/icon.png` y variantes Android) y avance del
+  reporte (`capitulo-4-resultados.md`); commit `f4659b5`.
+
+### 5–7 nov — Contrato v3 del CMS y features X-01…X-07
+Sesión principal: **«Contrato local de contenido CMS para MLO»**, con 5 sesiones de subagente
+(MLO espera brief, MLO-01, X-05, X-06, X-07), coordinadas con el CMS (`mlo-teachers`).
+
+- **X-01 — contrato versionado:** v3 convive con v2, hash SHA-256 sobre JSON canónico, fixtures
+  copiados sin re-serializar y prueba de paridad con el CMS (`contractV3.ts`,
+  `__fixtures__/v3/`). Commits `15e3b74` y `402f0a2`.
+- **X-02 — cursos autorizados:** `GET /api/mlo/v3/courses` con `X-MLO-Student-Key`; el alumno
+  solo ve cursos publicados y autorizados; una sincronización vacía ya no cae al curso base
+  (`courseRepository`, `useCourses`, `coursesV3`). Commit `aab7c80`.
+- **X-03 — subtemas y actividades:** jerarquía curso → unidad → subtema, con lecciones,
+  ejemplos, ejercicios y evaluaciones colgando del subtema; `position` para respetar el orden
+  editorial; N evaluaciones por subtema y evaluaciones de puras preguntas (`applyV3Content`,
+  `TopicScreen`, `TopicRow`). Commits `6701aee` y `a0bd351`.
+- **X-04 — grupos/clases v3:** release de grupo versionado, membresía única por curso, salida y
+  reactivación, archivo lógico con conservación de progreso y filtros por `group_id` para no
+  exponer contenido retirado; `DATABASE_VERSION` 20. Commit `7258feb`.
+- **MLO-01 — retroalimentación:** al terminar la evaluación se muestra resultado, respuesta
+  correcta y explicación por reactivo; el reintento crea un intento nuevo sin borrar los
+  anteriores. Commit `5a7a667`.
+- **X-05 — bibliografía APA 7:** `references[]` en el release, tabla `content_references`,
+  deduplicación por id y bloque `Bibliography`; se asegura la referencia Sommerville 2011 del
+  curso base. Commits `350cb75` y `40fd017`.
+- **X-06 — avisos de contenido nuevo:** comparación de `version`/`hash` al abrir y cada hora en
+  primer plano, con «Actualizar ahora» / «Más tarde» y botón manual (sin SSE/WebSocket). Commit
+  `94766db`.
+- **X-07 — invitaciones:** reclamo de enlace o código de 6 caracteres
+  (`POST /api/mlo/v3/invitations/claim`), errores
+  `invalid/expired/used/revoked/full/already_member`, y
+  `membership.courseCatalogId` para no hardcodear `base`. Commit `0f7de7c`.
+
+### 7 nov — UI de cursos
+Sesión: **«No puedo ver el contenido en clase»**.
+
+- Pantalla de curso (`CourseScreen`, `CourseCard`, ruta `curso/[id].tsx`) con biblioteca de
+  cursos (`useCourseLibrary`), tarjetas de curso y porcentaje por unidad/subtema; el alumno ve
+  sus cursos y la opción de unirse a una clase. Commit `73b8246`.
+- Documentación del contrato para el CMS (`docs/api/contrato-contenido-cms.md` y
+  `docs/api/decisiones-contrato-cms.md`).
+
+### 7–11 nov — Experiencia de aprendizaje
+Sesión: **«Creación y renderizado de lecciones, ejemplos y evaluaciones»**.
+
+- Ejemplos y ejercicios limitados a 10 por flujo; al terminar los 10 ejemplos el flujo sigue a
+  ejercicios y no regresa a ejemplos.
+- Ejercicios de relación con marco verde/rojo en lugar de palomitas y taches; ajustes de
+  arrastre y colores en «ordenar»; retoques de tokens y tarjetas de curso. Commit `f7bb4dd`
+  («mejorar experiencia de aprendizaje»).
+
+### 12 nov — Alumno en N cursos y estabilización de SQLite
+Sesión: **«SQLiteProvider and network errors»**.
+
+- Un alumno puede estar en **una clase por curso y en varios cursos**; la membresía guarda
+  `course_catalog_id`, la tarjeta muestra el nombre del curso del CMS y el respaldo v5 incluye
+  identidad, clases y curso de cada clase (compatible con v1–v4).
+- Corrección de los errores `no such table: content_references` y `no such column: catalog_id`
+  en móvil: migraciones idempotentes hasta `DATABASE_VERSION` 21 y nueva prueba de esquema
+  (`migration.schema.test.ts`). Commit `4be6eba`.
+
+### 12–13 nov — Contenido del CMS que no llega a la app
+Sesión: **«Contenido del CMS no llega a la app»** (continúa en la madrugada del 13).
+
+- Se corrige la URL base v3: `…/api/mlo/v2` pasaba a `…/api/mlov3` por un `slice` incorrecto;
+  ahora se sustituye solo el segmento `v2` por `v3`.
+- Se añade el estado `unpublished` (HTTP 409) al release de clase y al join, para distinguir
+  «clase sin publicar» de «no encontrada».
+- El release de curso deja de archivar el contenido propio de las clases: todo el archivado y
+  borrado filtra `group_id IS NULL`; el contenido de grupo solo se archiva desde el release de
+  su grupo. Así deja de desaparecer lo que el alumno ve en clase.
+- Pruebas nuevas en `applyV3Content.test.ts`, `remoteContent.test.ts` y `client.test.ts`.
+  Todo ese trabajo se integró en la entrega del 16–17 nov.
+
+### 13 nov — Memoria externa y esta línea de tiempo
+- Sesión **«OpenCode Kindex MCP setup»**: se instala y configura el MCP `kindex` como memoria
+  persistente entre sesiones y se revisan las conversaciones de MLO y `mlo-teachers` para
+  volcarlas al grafo. No toca el código de la app.
+- Sesión **«Línea de tiempo del proyecto MLO»**: se revisan las 60 sesiones y el historial git,
+  y se actualiza este documento.
+
+### 16–17 nov — Medios en lecciones y cierre de pendientes
+Sesiones de implementación del CMS y la app para el contenido multimedia; la app recibe el
+contrato v3 con los bloques nuevos.
+
+- **Medios en lecciones.** El CMS publica bloques `image` (con URL firmada y dimensiones) y
+  `video` (solo YouTube). El contrato v3 pasa de 5 a 7 tipos de bloque. El curso base conserva
+  sus cinco tipos para no romper clientes antiguos.
+- **Render en la app.** `ContentBlock` suma `image` y `video`; `RichContent` muestra la imagen
+  (`localSrc` primero) y el video con miniatura y modal (`VideoPlayer` con
+  `react-native-webview`). `youtube.ts` canonicaliza los enlaces.
+- **Offline.** Nueva tabla `media_cache` (el esquema se aplica también a instalaciones
+  existentes con `CREATE TABLE IF NOT EXISTS`). Al sincronizar se descargan las imágenes del
+  release; si una falla, la sincronización continúa y se usa la URL remota.
+- **Contenido de grupos.** El release de curso ya no archiva ni borra el contenido propio de los
+  grupos (`group_id IS NULL`); ese contenido solo se archiva desde el release de su grupo.
+- **Unión a grupo.** El `409 unpublished` distingue una clase sin publicar de una inexistente,
+  con mensaje propio en la pantalla de unirse.
+- **Verificación.** 573/573 pruebas de la app y TypeScript limpio; el CMS queda con 143/143,
+  lint y build en verde. La suite `updateNotice` tuvo un timeout aislado que no se reprodujo.
+  El recorrido manual del editor de actividades (cuatro tipos, ejemplo y «Usar esta muestra»)
+  se hizo en navegador sin guardar datos de prueba.
 
 ## Estado del repositorio
 
-- `main` en `200128d` («Fix: Evaluation engine»), con las ramas `fix/estabilizacion-datos` y
-  `refactor/mvvm-features` ya integradas como marcadores.
-- 26 archivos modificados y varios sin seguimiento corresponden al trabajo del APK
-  (`eas.json`, `passwordKdf.ts`, `docs/informe-cambios-demo-apk.md`, diagramas SVG).
+- `main` con la entrega del 17 nov que integra medios, el `409 unpublished`, el archivado por
+  grupo y este documento. Árbol limpio, sin cambios pendientes.
+- La base local sigue en `DATABASE_VERSION` 21; `media_cache` se crea con
+  `CREATE TABLE IF NOT EXISTS` también en instalaciones existentes.
+- Contrato de contenido en v3 con 7 tipos de bloque (v2 sigue soportado para el curso base y
+  releases legacy).
 
 ## Pendientes señalados en las propias sesiones
 
-- Contenido completo de las unidades 2–5 (hoy solo introductorio).
-- Cobertura verificada de las 9 categorías LOM (ficha descriptiva parcial).
-- Validación del APK en dispositivo y soporte de 32 bits/emuladores x86_64 si se necesita.
-- Commits pendientes del trabajo del APK y de esta documentación.
+- Probar en dispositivo la sincronización de imágenes (offline), el reproductor de YouTube y el
+  `409` al unirse a un grupo sin publicar.
+- Revisar el contenido completo de las unidades 2–5: hoy depende de lo que publique el CMS; el
+  curso base v3 ya trae 25 subtemas.
+- Soporte de APK de 32 bits o emuladores x86_64 si se necesita; validación del APK en un
+  dispositivo físico.
+- Cobertura verificada de las 9 categorías LOM (la ficha descriptiva sigue parcial).
+- Evidencia del reporte (capturas y métricas) para los capítulos 3 y 4; el capítulo 3 se ha ido
+  actualizando desde la sesión «Línea de tiempo…».

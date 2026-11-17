@@ -4,6 +4,8 @@ import { ParseError, type HttpClient } from '@/shared/services/http/client';
 import { isRecord, isString } from '@/shared/utils/validate';
 
 import type { ContentBlock } from '@/shared/model/entities';
+import { cacheMediaInManifest } from '@/shared/services/content/mediaCache';
+import { parseContentBlocks } from '@/shared/services/content/remote/validateLessonPayload';
 
 import {
   assertV3Envelope,
@@ -164,6 +166,13 @@ function parseBaseRef(value: unknown): CourseManifest['baseRef'] {
   return { catalogId: value.catalogId, version: value.version, hash: value.hash };
 }
 
+function parseLessons(value: unknown[]): unknown[] {
+  return value.map(lesson => {
+    if (!isRecord(lesson) || !Array.isArray(lesson.content)) return lesson;
+    return { ...lesson, content: parseContentBlocks(lesson.content) };
+  });
+}
+
 export function parseCourseManifest(value: unknown, catalogId: string): CourseManifest {
   let envelope: V3Envelope;
   try {
@@ -218,7 +227,7 @@ export function parseCourseManifest(value: unknown, catalogId: string): CourseMa
     baseRef: parseBaseRef(record.baseRef),
     units: record.units as unknown[],
     topics: record.topics as unknown[],
-    lessons: record.lessons as unknown[],
+    lessons: parseLessons(record.lessons as unknown[]),
     evaluations: record.evaluations as unknown[],
     questions: record.questions as unknown[],
     exercises: record.exercises as unknown[],
@@ -280,7 +289,7 @@ export function parseGroupRelease(value: unknown, catalogId: string): GroupManif
     if (!isRecord(item) || !isString(item.lessonId) || !Array.isArray(item.blocks)) {
       fail('addition inválida');
     }
-    return { lessonId: item.lessonId, blocks: item.blocks as ContentBlock[] };
+    return { lessonId: item.lessonId, blocks: parseContentBlocks(item.blocks) };
   });
   return {
     ...envelope,
@@ -297,7 +306,7 @@ export function parseGroupRelease(value: unknown, catalogId: string): GroupManif
     },
     units: record.units as unknown[],
     topics: record.topics as unknown[],
-    lessons: record.lessons as unknown[],
+    lessons: parseLessons(record.lessons as unknown[]),
     evaluations: record.evaluations as unknown[],
     questions: record.questions as unknown[],
     exercises: record.exercises as unknown[],
@@ -521,6 +530,9 @@ export async function refreshCourseList(
       course.catalogId,
       await fetchCourseManifest(client, course.catalogId, account.external_key),
     );
+  }
+  for (const [catalogId, manifest] of manifests) {
+    manifests.set(catalogId, await cacheMediaInManifest(db, manifest));
   }
 
   const synced = await hasCourseSync(db, account.id);

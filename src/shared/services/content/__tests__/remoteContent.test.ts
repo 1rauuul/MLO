@@ -88,6 +88,7 @@ describe('contrato v2', () => {
   it('clasifica los errores de clase y de contenido por separado', () => {
     expect(isClassError(new HttpError(429, ''))).toBe('rate_limited');
     expect(isClassError(new HttpError(404, ''))).toBe('not_found');
+    expect(isClassError(new HttpError(409, ''))).toBe('unpublished');
     expect(isContentError(new HttpError(404, ''))).toBe('content_missing');
     expect(isContentError(new HttpError(429, ''))).toBe('rate_limited');
     expect(isClassError(new ConfigError())).toBe('config');
