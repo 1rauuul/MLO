@@ -1,0 +1,75 @@
+The field "cli.appVersionSource" is not set, but it will be required in the future. Learn more: https://docs.expo.dev/build-reference/app-versions/
+Resolved "preview" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+No environment variables with visibility "Plain text" and "Sensitive" found for the "preview" environment on EAS.
+Environment variables loaded from the "preview" build profile "env" configuration: EXPO_PUBLIC_DATA_MODE, EXPO_PUBLIC_API_URL.
+
+
+
+The field "cli.appVersionSource" is not set, but it will be required in the future. Learn more: https://docs.expo.dev/build-reference/app-versions/
+✔ Using remote Android credentials (Expo server)
+✔ Using Keystore from configuration: Build Credentials EfEqzElh-8 (default)
+
+Compressing project files and uploading to EAS Build. Learn more: https://expo.fyi/eas-build-archive
+- Compressing project files
+- Uploading to EAS Build (0 / 3.5 MB)
+✔ Uploaded to EAS 1s
+- Computing project fingerprint
+⌛️ Computing the project fingerprint is taking longer than expected...
+⏩ To skip this step, set the environment variable: EAS_SKIP_AUTO_FINGERPRINT=1
+✔ Computed project fingerprint
+
+See logs: https://expo.dev/accounts/1raul/projects/MLO-Ingenieria-software/builds/636b4ac6-5c0a-484b-8233-17343557f9a7
+
+Waiting for build to complete. You can press Ctrl+C to exit.
+- Waiting for build to complete.
+✔ Build finished
+[
+  {
+    "id": "636b4ac6-5c0a-484b-8233-17343557f9a7",
+    "status": "FINISHED",
+    "platform": "ANDROID",
+    "artifacts": {
+      "buildUrl": "https://expo.dev/artifacts/eas/wZW7tp7mFutBurzImWE8w28KqWSwYugacVFibDHKykE.apk",
+      "applicationArchiveUrl": "https://expo.dev/artifacts/eas/wZW7tp7mFutBurzImWE8w28KqWSwYugacVFibDHKykE.apk"
+    },
+    "fingerprint": {
+      "id": "01a1ec85-feb6-7539-b3c6-de3fbb621eab",
+      "hash": "c2d9d80ca88bbcf91e028c0ebc40a7616bda1e74"
+    },
+    "initiatingActor": {
+      "id": "38c46e36-12b3-49a6-b9d6-7880995001d6",
+      "displayName": "1raul"
+    },
+    "logFiles": [
+      "https://storage.googleapis.com/eas-workflows-production/logs/6468ad6e-6e5c-4335-a578-5e27d21cba9b/636b4ac6-5c0a-484b-8233-17343557f9a7/2026-11-18T09%3A38%3A00Z-4cac9565-9f7a-4889-862c-6a441cdd810e.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20261118%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20261118T094250Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=7ea773944991e26af62cec77a97199ce35037f001618b50db273683f926428b232609e7c85503c09e4b6cbd3664d585618d0e8d96dd7b4917abf07788aaf49517c02a74c2a2eecf0a87896cf4e3bbbb716921af072a157712343c1e333c17f2be62c062263e26836418985ef2a46dd36e5b1b6d71d49fc1ddd87c812578cabc2079b25c46774e15dec217e79d514a3c34f8b1151d58c9a64a0a628bbe8600673a084b69ae5aa723fc1dc2e64520f0367ded1850d6481b66b169b90ac5ad1c634ecdc6b29fd25ec7d4deb6371346085107fddaac8a6e57eef0c5400d9583cf52970ae2de6d1c2212ed732502bd6f820cafe8b5310936de52d8a1d923d97fa4692"
+    ],
+    "app": {
+      "id": "6468ad6e-6e5c-4335-a578-5e27d21cba9b",
+      "name": "MLO-Ingenieria-software",
+      "slug": "MLO-Ingenieria-software",
+      "ownerAccount": {
+        "id": "5087f873-ce2d-4de9-a307-0935f12093a3",
+        "name": "1raul"
+      }
+    },
+    "distribution": "INTERNAL",
+    "buildProfile": "preview",
+    "appIdentifier": "com.mlo.ingenieriasoftware",
+    "sdkVersion": "58.0.0",
+    "appVersion": "1.0.0",
+    "appBuildVersion": "7",
+    "gitCommitHash": "8de189e160be1d92e6d801d55b131e7a30aef2b4",
+    "gitCommitMessage": "feat: portada, perfil y ajustes de contenido\n\n- SplashSlides con logos de CINVESTAV, splash nativo retirado y versionCode 6.\n- Perfil: Mostrar curso base persistente; salir del curso desde la pantalla del curso.\n- Leccion de una sola pantalla; imagen con marco; codigo de union en mayusculas.\n- applyV3Content restaura unidades usadas por grupos; pruebas del caso.\n- Linea de tiempo actualizada. 581 tests en verde.",
+    "priority": "NORMAL",
+    "createdAt": "2026-11-18T09:37:49.482Z",
+    "updatedAt": "2026-11-18T09:48:37.858Z",
+    "completedAt": "2026-11-18T09:48:37.684Z",
+    "expirationDate": "2026-12-02T09:37:49.547Z",
+    "isForIosSimulator": false,
+    "metrics": {
+      "buildWaitTime": 2852,
+      "buildQueueTime": 12795,
+      "buildDuration": 632555
+    }
+  }
+]

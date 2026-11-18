@@ -1,6 +1,6 @@
-import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/shared/components/AppText';
 import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
@@ -8,17 +8,15 @@ import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { Screen } from '@/shared/components/Screen';
 import { SectionHeading } from '@/shared/components/SectionHeading';
 import { Toggle } from '@/features/profile/view/Toggle';
-import type { LearningStyle } from '@/shared/model/entities';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { initials } from '@/features/auth/viewmodel/auth.logic';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
 import { useCatalog } from '@/features/modules/viewmodel/useCatalog';
 import { useLearnerProfile } from '@/features/profile/viewmodel/useLearnerProfile';
+import { useProgressSync } from '@/features/profile/viewmodel/useProgressSync';
 import { useRecentResults } from '@/features/profile/viewmodel/useRecentResults';
-import { useProgressBackup } from '@/features/profile/viewmodel/useProgressBackup';
 import { useSession } from '@/features/auth/viewmodel/useSession';
-
-const LEARNING_STYLES: LearningStyle[] = ['Activo', 'Reflexivo', 'Teórico', 'Pragmático'];
+import { isHybrid } from '@/shared/services/data/dataMode';
 
 interface DialogState {
   title: string;
@@ -31,16 +29,20 @@ interface DialogState {
 
 export default function ProfileScreen() {
   const { colors, radius, spacing } = useTheme();
-  const router = useRouter();
   const { account, logout, resetProgress } = useAuth();
   const [dialog, setDialog] = useState<DialogState | null>(null);
-  const { style, setStyle, darkMode, setDarkMode, largeText, setLargeText, showBaseCourse, setShowBaseCourse } =
-    useLearnerProfile();
+  const { darkMode, setDarkMode, showBaseCourse, setShowBaseCourse } = useLearnerProfile();
   const { clear: clearLocation } = useSession();
   const { lessonsByUnit, completionMap, refresh } = useCatalog();
   const { averageScore, refresh: refreshResults } = useRecentResults();
-  const { exportProgress, importProgress, isBusy: backupBusy, error: backupError, message: backupMessage } =
-    useProgressBackup();
+  const {
+    saveProgress,
+    syncProgress,
+    busyAction,
+    isBusy,
+    error: syncError,
+    message: syncMessage,
+  } = useProgressSync();
 
   useFocusEffect(
     useCallback(() => {
@@ -68,19 +70,15 @@ export default function ProfileScreen() {
       },
     });
 
-  const onImportProgress = () =>
+  const onSyncProgress = () =>
     setDialog({
-      title: 'Importar progreso',
+      title: 'Sincronizar progreso',
       message:
-        'Se reemplazarán tus ejercicios, evaluaciones y lecciones completadas por los del archivo seleccionado.',
-      confirmLabel: 'Importar',
+        'Se reemplazará tu progreso local por el guardado en la nube. Esta acción no se puede deshacer.',
+      confirmLabel: 'Sincronizar',
+      destructive: true,
       onConfirm: () => {
-        void importProgress().then(imported => {
-          if (imported) {
-            return Promise.all([refresh(), refreshResults()]);
-          }
-          return undefined;
-        });
+        void syncProgress();
       },
     });
 
@@ -131,43 +129,6 @@ export default function ProfileScreen() {
         />
       </View>
 
-      <SectionHeading eyebrow="Estilo de aprendizaje" title="¿Cómo te resulta mejor?" />
-      <View style={styles.styleSelector}>
-        {LEARNING_STYLES.map(option => {
-          const active = option === style;
-          return (
-            <Pressable
-              key={option}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              onPress={() => setStyle(option)}
-              style={[
-                styles.stylePill,
-                {
-                  backgroundColor: active ? colors.primary : colors.card,
-                  borderColor: active ? colors.primary : colors.line,
-                  borderRadius: radius.pill,
-                },
-              ]}>
-              <AppText
-                color={active ? colors.onPrimary : colors.text}
-                weight="600"
-                style={styles.stylePillText}>
-                {option}
-              </AppText>
-            </Pressable>
-          );
-        })}
-      </View>
-      <AppText variant="small" style={{ marginTop: spacing.sm }}>
-        {`Personalizaremos los ejemplos y recomendaciones hacia un enfoque ${style.toLowerCase()}.`}
-      </AppText>
-      <SecondaryButton
-        label="Cuestionario CHAEA"
-        onPress={() => router.push('/personalizacion' as Href)}
-        style={{ marginTop: spacing.sm }}
-      />
-
       <SectionHeading eyebrow="Accesibilidad" title="Ajustes de lectura" />
       <View style={styles.list}>
         <SettingRow
@@ -175,34 +136,46 @@ export default function ProfileScreen() {
           subtitle="Reduce el brillo para estudiar"
           control={<Toggle on={darkMode} onToggle={() => setDarkMode(!darkMode)} label="Apariencia oscura" />}
         />
-        <SettingRow
-          title="Texto ampliado"
-          subtitle="Facilita la lectura prolongada"
-          control={<Toggle on={largeText} onToggle={() => setLargeText(!largeText)} label="Texto ampliado" />}
-        />
       </View>
 
       <SectionHeading eyebrow="Cuenta" title="Sesión" />
       <View style={styles.list}>
         <SettingRow title={learnerName} subtitle={`@${accountUsername}`} control={null} />
       </View>
-      <SectionHeading eyebrow="Respaldo local" title="Tu progreso" />
+
+      <SectionHeading eyebrow="Sincronización" title="Tu progreso" />
       <AppText variant="small">
-        Exporta tus avances para conservarlos antes de cambiar de teléfono o borrar los datos de la app.
+        Guarda tu avance en la nube y recupéralo en este dispositivo cuando lo necesites.
       </AppText>
-      <View style={[styles.backupActions, { marginTop: spacing.md }]}>
-        <SecondaryButton label="Exportar progreso" onPress={() => void exportProgress()} loading={backupBusy} />
-        <SecondaryButton label="Importar progreso" onPress={onImportProgress} loading={backupBusy} />
-      </View>
-      {backupError ? (
-        <AppText variant="small" color={colors.danger} accessibilityLiveRegion="polite">
-          {backupError}
-        </AppText>
-      ) : backupMessage ? (
-        <AppText variant="small" color={colors.success} accessibilityLiveRegion="polite">
-          {backupMessage}
+      {!isHybrid() ? (
+        <AppText variant="small" style={{ marginTop: spacing.sm }}>
+          Necesitas conexión y el modo híbrido para guardar o sincronizar.
         </AppText>
       ) : null}
+      <View style={[styles.backupActions, { marginTop: spacing.md }]}>
+        <SecondaryButton
+          label="Guardar progreso"
+          onPress={() => void saveProgress()}
+          loading={busyAction === 'save'}
+          disabled={!isHybrid() || isBusy}
+        />
+        <SecondaryButton
+          label="Sincronizar"
+          onPress={onSyncProgress}
+          loading={busyAction === 'sync'}
+          disabled={!isHybrid() || isBusy}
+        />
+      </View>
+      {syncError ? (
+        <AppText variant="small" color={colors.danger} accessibilityLiveRegion="polite">
+          {syncError}
+        </AppText>
+      ) : syncMessage ? (
+        <AppText variant="small" color={colors.success} accessibilityLiveRegion="polite">
+          {syncMessage}
+        </AppText>
+      ) : null}
+
       <View style={[styles.sessionActions, { marginTop: spacing.md }]}>
         <PrimaryButton label="Cerrar sesión" onPress={() => void logout()} />
         <SecondaryButton label="Reiniciar mi progreso" onPress={onResetProgress} />
@@ -277,19 +250,6 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 4,
   },
-  styleSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  stylePill: {
-    paddingHorizontal: 16,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-  stylePillText: { fontSize: 13 },
   list: { gap: 12 },
   settingRow: {
     flexDirection: 'row',

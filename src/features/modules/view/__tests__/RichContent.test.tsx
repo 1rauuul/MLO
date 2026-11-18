@@ -75,6 +75,10 @@ describe('RichContent multimedia', () => {
     const { getByTestId, getByText } = render(<RichContent blocks={[video]} />);
     fireEvent.press(getByTestId('lesson-video'));
     expect(getByTestId('video-player')).toBeTruthy();
+    expect(getByTestId('webview').props.source).toEqual({
+      uri: 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&playsinline=1&rel=0',
+      headers: { Referer: 'https://com.mlo.ingenieriasoftware' },
+    });
     expect(getByText('Cerrar')).toBeTruthy();
   });
 

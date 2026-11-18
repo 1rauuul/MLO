@@ -6,6 +6,9 @@ import { AppText } from '@/shared/components/AppText';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { youtubeEmbedUrl } from '@/shared/utils/youtube';
 
+/** El WebView no envía Referer; sin él YouTube responde «error 153». */
+const APP_REFERER = 'https://com.mlo.ingenieriasoftware';
+
 export function VideoPlayer({
   videoId,
   title,
@@ -55,7 +58,10 @@ export function VideoPlayer({
             </View>
           ) : (
             <WebView
-              source={{ uri: youtubeEmbedUrl(videoId) }}
+              source={{
+                uri: youtubeEmbedUrl(videoId),
+                headers: { Referer: APP_REFERER },
+              }}
               style={styles.webview}
               allowsInlineMediaPlayback
               mediaPlaybackRequiresUserAction={false}

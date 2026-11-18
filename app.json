@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.mlo.ingenieriasoftware",
-      "versionCode": 6,
+      "versionCode": 7,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground-transparent.png",
@@ -34,7 +34,6 @@
         }
       ],
       "expo-sqlite",
-      "expo-sharing",
       "react-native-quick-crypto",
       [
         "expo-build-properties",

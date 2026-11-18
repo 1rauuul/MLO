@@ -18,21 +18,21 @@ export interface ThemeValue {
 const ThemeContext = createContext<ThemeValue | null>(null);
 
 export function AppThemeProvider({ children }: { children: ReactNode }) {
-  const { darkMode, largeText } = useLearnerProfile();
+  const { darkMode } = useLearnerProfile();
 
   const value = useMemo<ThemeValue>(() => {
     const mode: ThemeMode = darkMode ? 'dark' : 'light';
     return {
       mode,
       colors: palette[mode],
-      largeText,
-      scale: largeText ? 1.15 : 1,
+      largeText: true,
+      scale: 1.15,
       spacing,
       radius,
       typography,
       fonts,
     };
-  }, [darkMode, largeText]);
+  }, [darkMode]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

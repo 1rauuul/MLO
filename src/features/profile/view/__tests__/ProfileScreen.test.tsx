@@ -9,6 +9,8 @@ const mockClearLocation = jest.fn();
 const mockRefreshCatalog = jest.fn(async () => {});
 const mockRefreshResults = jest.fn(async () => {});
 const mockSetShowBaseCourse = jest.fn();
+const mockSaveProgress = jest.fn();
+const mockSyncProgress = jest.fn();
 
 let mockCatalog: Record<string, unknown> = {};
 
@@ -35,12 +37,8 @@ jest.mock('@/features/auth/viewmodel/useSession', () => ({
 }));
 jest.mock('@/features/profile/viewmodel/useLearnerProfile', () => ({
   useLearnerProfile: () => ({
-    style: 'Pragmático',
-    setStyle: jest.fn(),
     darkMode: true,
     setDarkMode: jest.fn(),
-    largeText: false,
-    setLargeText: jest.fn(),
     showBaseCourse: true,
     setShowBaseCourse: mockSetShowBaseCourse,
   }),
@@ -48,15 +46,17 @@ jest.mock('@/features/profile/viewmodel/useLearnerProfile', () => ({
 jest.mock('@/features/profile/viewmodel/useRecentResults', () => ({
   useRecentResults: () => ({ averageScore: 75, refresh: mockRefreshResults }),
 }));
-jest.mock('@/features/profile/viewmodel/useProgressBackup', () => ({
-  useProgressBackup: () => ({
-    exportProgress: jest.fn(),
-    importProgress: jest.fn(async () => false),
+jest.mock('@/features/profile/viewmodel/useProgressSync', () => ({
+  useProgressSync: () => ({
+    saveProgress: mockSaveProgress,
+    syncProgress: mockSyncProgress,
+    busyAction: null,
     isBusy: false,
     error: null,
     message: null,
   }),
 }));
+jest.mock('@/shared/services/data/dataMode', () => ({ isHybrid: () => true }));
 jest.mock('@/shared/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }));
 jest.mock('@/shared/theme/ThemeProvider', () => ({
   useTheme: () => ({
@@ -129,7 +129,7 @@ beforeEach(() => {
 });
 
 describe('ProfileScreen', () => {
-  it('muestra estadísticas y cuenta sin la sección de clases', () => {
+  it('muestra estadísticas y cuenta sin clases ni estilo de aprendizaje', () => {
     const { getByText, getAllByText, queryByText } = render(<ProfileScreen />);
 
     expect(getByText('1/2')).toBeTruthy();
@@ -137,6 +137,8 @@ describe('ProfileScreen', () => {
     expect(getAllByText('@valentina').length).toBeGreaterThan(0);
     expect(queryByText('Grupo A')).toBeNull();
     expect(queryByText('Unirme a una clase')).toBeNull();
+    expect(queryByText('Estilo de aprendizaje')).toBeNull();
+    expect(queryByText('Texto ampliado')).toBeNull();
   });
 
   it('permite mostrar u ocultar el curso base', () => {
@@ -146,6 +148,16 @@ describe('ProfileScreen', () => {
     fireEvent.press(getByLabelText('Mostrar curso base'));
 
     expect(mockSetShowBaseCourse).toHaveBeenCalledWith(false);
+  });
+
+  it('permite guardar y sincronizar el progreso', () => {
+    const { getByText } = render(<ProfileScreen />);
+
+    fireEvent.press(getByText('Guardar progreso'));
+    expect(mockSaveProgress).toHaveBeenCalled();
+
+    fireEvent.press(getByText('Sincronizar'));
+    expect(getByText(/Se reemplazará tu progreso local/)).toBeTruthy();
   });
 
   it('reinicia progreso limpiando la ubicación de sesión', async () => {

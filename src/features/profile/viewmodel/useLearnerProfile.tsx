@@ -19,11 +19,9 @@ interface LearnerProfileContextValue {
   isLoading: boolean;
   style: LearningStyle;
   darkMode: boolean;
-  largeText: boolean;
   showBaseCourse: boolean;
   setStyle: (style: LearningStyle) => void;
   setDarkMode: (value: boolean) => void;
-  setLargeText: (value: boolean) => void;
   setShowBaseCourse: (value: boolean) => void;
   saveQuestionnaire: (style: LearningStyle) => void;
 }
@@ -95,7 +93,6 @@ export function LearnerProfileProvider({ children }: { children: ReactNode }) {
 
   const setStyle = useCallback((style: LearningStyle) => update({ learningStyle: style }), [update]);
   const setDarkMode = useCallback((darkMode: boolean) => update({ darkMode }), [update]);
-  const setLargeText = useCallback((largeText: boolean) => update({ largeText }), [update]);
   const setShowBaseCourse = useCallback(
     (value: boolean) => {
       setShowBaseCourseState(value);
@@ -110,15 +107,13 @@ export function LearnerProfileProvider({ children }: { children: ReactNode }) {
       isLoading,
       style: profile?.learningStyle ?? FALLBACK_STYLE,
       darkMode: profile?.darkMode ?? true,
-      largeText: profile?.largeText ?? false,
       showBaseCourse,
       setStyle,
       setDarkMode,
-      setLargeText,
       setShowBaseCourse,
       saveQuestionnaire: setStyle,
     }),
-    [profile, isLoading, showBaseCourse, setStyle, setDarkMode, setLargeText, setShowBaseCourse],
+    [profile, isLoading, showBaseCourse, setStyle, setDarkMode, setShowBaseCourse],
   );
 
   return <LearnerProfileContext.Provider value={value}>{children}</LearnerProfileContext.Provider>;
