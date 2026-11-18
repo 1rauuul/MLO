@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { useRepositories } from '@/shared/services/data/DataProvider';
+import { useContentSync } from '@/shared/services/content/ContentSyncProvider';
 import type { Lesson, Topic, Unit } from '@/shared/model/entities';
 import type { BibliographyReference } from '@/features/modules/model/bibliography.logic';
 
@@ -22,6 +23,7 @@ interface CatalogResult {
 export function useCatalog(catalogId: string = BASE_CATALOG_ID): CatalogResult {
   const { lessons, progress, classes, bibliography } = useRepositories();
   const { account } = useAuth();
+  const { updated } = useContentSync();
   const [units, setUnits] = useState<Unit[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [lessonsByUnit, setLessonsByUnit] = useState<Record<string, Lesson[]>>({});
@@ -74,6 +76,12 @@ export function useCatalog(catalogId: string = BASE_CATALOG_ID): CatalogResult {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (updated) {
+      void refresh();
+    }
+  }, [updated, refresh]);
 
   return {
     units,

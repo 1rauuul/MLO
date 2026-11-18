@@ -110,19 +110,26 @@ function ImageBlock({ block }: { block: Extract<ContentBlock, { type: 'image' }>
 
   return (
     <View style={{ gap: spacing.xs }}>
-      <Image
-        testID="lesson-image"
-        accessibilityLabel={block.alt}
-        source={{ uri: block.localSrc ? mediaLocalUri(block.localSrc) : block.src }}
-        resizeMode="contain"
-        onError={() => setFailed(true)}
+      <View
         style={{
-          width: '100%',
-          aspectRatio: Math.max(1, block.width) / Math.max(1, block.height),
+          padding: spacing.sm,
           borderRadius: radius.control,
           backgroundColor: colors.soft,
-        }}
-      />
+        }}>
+        <Image
+          testID="lesson-image"
+          accessibilityLabel={block.alt}
+          source={{ uri: block.localSrc ? mediaLocalUri(block.localSrc) : block.src }}
+          resizeMode="contain"
+          onError={() => setFailed(true)}
+          style={{
+            width: '100%',
+            aspectRatio: Math.max(1, block.width) / Math.max(1, block.height),
+            borderRadius: radius.control,
+            backgroundColor: colors.card,
+          }}
+        />
+      </View>
       {block.caption ? (
         <AppText variant="small" color={colors.muted} style={styles.center}>
           {block.caption}

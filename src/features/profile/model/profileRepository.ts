@@ -51,3 +51,22 @@ export async function createDefaultProfile(db: SQLiteDatabase, accountId: number
     accountId,
   );
 }
+
+const SHOW_BASE_COURSE_KEY = 'show_base_course';
+
+export async function selectShowBaseCourse(db: SQLiteDatabase): Promise<boolean> {
+  const row = await db.getFirstAsync<{ value: string }>(
+    'SELECT value FROM meta WHERE key = ?',
+    SHOW_BASE_COURSE_KEY,
+  );
+  return row ? row.value === '1' : true;
+}
+
+export async function saveShowBaseCourse(db: SQLiteDatabase, value: boolean): Promise<void> {
+  await db.runAsync(
+    `INSERT INTO meta (key, value) VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    SHOW_BASE_COURSE_KEY,
+    value ? '1' : '0',
+  );
+}

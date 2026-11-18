@@ -117,8 +117,10 @@ export default function JoinClassScreen() {
           </AppText>
           <TextInput
             value={input}
-            onChangeText={value => setInput(value)}
-            autoCapitalize="none"
+            onChangeText={value =>
+              setInput(/^[A-Za-z0-9]{0,6}$/.test(value.trim()) ? value.toUpperCase() : value)
+            }
+            autoCapitalize="characters"
             autoCorrect={false}
             maxLength={200}
             placeholder="Enlace de invitación o ABC123"
@@ -195,6 +197,6 @@ export default function JoinClassScreen() {
 }
 
 const styles = StyleSheet.create({
-  input: { borderWidth: 1, paddingHorizontal: 14, minHeight: 48, fontSize: 16 },
+  input: { borderWidth: 1, paddingHorizontal: 14, minHeight: 48, fontSize: 16, textAlign: 'center' },
   card: { borderWidth: 1, padding: 16, gap: 6 },
 });

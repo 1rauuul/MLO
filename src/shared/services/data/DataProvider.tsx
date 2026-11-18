@@ -95,7 +95,9 @@ import {
 import {
   createDefaultProfile,
   saveProfile,
+  saveShowBaseCourse,
   selectProfile,
+  selectShowBaseCourse,
 } from '@/features/profile/model/profileRepository';
 
 /**
@@ -279,6 +281,8 @@ export function createRepositories(db: SQLiteDatabase) {
       selectProfile: (accountId: number) => selectProfile(db, accountId),
       saveProfile: (profile: Parameters<typeof saveProfile>[1]) => saveProfile(db, profile),
       createDefaultProfile: (accountId: number) => createDefaultProfile(db, accountId),
+      selectShowBaseCourse: () => selectShowBaseCourse(db),
+      saveShowBaseCourse: (value: boolean) => saveShowBaseCourse(db, value),
     },
   };
 }

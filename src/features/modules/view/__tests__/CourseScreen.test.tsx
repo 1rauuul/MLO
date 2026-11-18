@@ -1,9 +1,10 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import CourseScreen from '@/features/modules/view/CourseScreen';
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
+const mockLeaveClass = jest.fn(async () => {});
 let mockCatalog: Record<string, unknown> = {};
 
 jest.mock('expo-router', () => ({
@@ -25,6 +26,25 @@ jest.mock('@/features/modules/viewmodel/useCourses', () => ({
         empty: false,
       },
     ],
+    refresh: jest.fn(),
+  }),
+}));
+jest.mock('@/features/classes/viewmodel/useClasses', () => ({
+  useClasses: () => ({
+    classes: [
+      {
+        classId: 'c1',
+        classCode: 'ABC123',
+        className: 'Grupo A',
+        teacherName: 'Profesora Ríos',
+        version: 1,
+        joinedAt: '2026-01-01',
+        courseCatalogId: 'base',
+      },
+    ],
+    isLoading: false,
+    refresh: jest.fn(),
+    leaveClass: mockLeaveClass,
   }),
 }));
 jest.mock('@/features/modules/viewmodel/useCatalog', () => ({
@@ -113,6 +133,21 @@ describe('CourseScreen', () => {
       pathname: '/tema/[id]',
       params: { id: 't2' },
     });
+  });
+
+  it('permite salir del curso con confirmación', async () => {
+    const { getByText, getByRole } = render(<CourseScreen />);
+
+    fireEvent.press(getByText('Salir del curso'));
+    expect(getByText(/Saldrás de la clase Grupo A/)).toBeTruthy();
+
+    fireEvent.press(getByRole('button', { name: 'Salir' }));
+
+    await waitFor(() =>
+      expect(mockLeaveClass).toHaveBeenCalledWith(
+        expect.objectContaining({ className: 'Grupo A' }),
+      ),
+    );
   });
 
   it('muestra el error del catálogo', () => {

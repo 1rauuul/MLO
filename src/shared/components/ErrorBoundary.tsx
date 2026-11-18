@@ -1,12 +1,18 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  /** Avisa al arranque para que la portada no tape la pantalla de error. */
+  onError?: () => void;
+}
+
 interface ErrorBoundaryState {
   hasError: boolean;
 }
 
 /** Red de seguridad de UI: evita que un error de render tumbe toda la app. */
-export class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { hasError: false };
 
   static getDerivedStateFromError(): ErrorBoundaryState {
@@ -14,6 +20,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBound
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
+    this.props.onError?.();
     if (__DEV__) {
       console.error('[ui] render error', error, info.componentStack);
     }

@@ -7,6 +7,7 @@ import {
   displayCourseTitle,
 } from '@/features/modules/model/catalog';
 import { useCourses } from '@/features/modules/viewmodel/useCourses';
+import { useLearnerProfile } from '@/features/profile/viewmodel/useLearnerProfile';
 import { useRepositories } from '@/shared/services/data/DataProvider';
 
 export interface CourseLibraryEntry {
@@ -42,6 +43,7 @@ export function useCourseLibrary(): CourseLibraryResult {
     isLoading,
     error,
   } = useCourses();
+  const { showBaseCourse } = useLearnerProfile();
   const [percents, setPercents] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -95,13 +97,14 @@ export function useCourseLibrary(): CourseLibraryResult {
           isBase: course.catalogId === BASE_CATALOG_ID,
         };
       })
+      .filter(entry => showBaseCourse || !entry.isBase)
       .sort(
         (a, b) =>
           Number(b.className !== null) - Number(a.className !== null) ||
           Number(a.isBase) - Number(b.isBase) ||
           a.title.localeCompare(b.title, 'es'),
       );
-  }, [courses, classes, percents, activeCatalogId]);
+  }, [courses, classes, percents, activeCatalogId, showBaseCourse]);
 
   return { entries, activeCatalogId, isLoading, error, refresh, selectCourse };
 }

@@ -8,17 +8,15 @@ import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { Screen } from '@/shared/components/Screen';
 import { SectionHeading } from '@/shared/components/SectionHeading';
 import { Toggle } from '@/features/profile/view/Toggle';
-import type { AccountClass, LearningStyle } from '@/shared/model/entities';
+import type { LearningStyle } from '@/shared/model/entities';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { initials } from '@/features/auth/viewmodel/auth.logic';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
-import { useClasses } from '@/features/classes/viewmodel/useClasses';
 import { useCatalog } from '@/features/modules/viewmodel/useCatalog';
 import { useLearnerProfile } from '@/features/profile/viewmodel/useLearnerProfile';
 import { useRecentResults } from '@/features/profile/viewmodel/useRecentResults';
 import { useProgressBackup } from '@/features/profile/viewmodel/useProgressBackup';
 import { useSession } from '@/features/auth/viewmodel/useSession';
-import { isHybrid } from '@/shared/services/data/dataMode';
 
 const LEARNING_STYLES: LearningStyle[] = ['Activo', 'Reflexivo', 'Teórico', 'Pragmático'];
 
@@ -36,9 +34,9 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { account, logout, resetProgress } = useAuth();
   const [dialog, setDialog] = useState<DialogState | null>(null);
-  const { style, setStyle, darkMode, setDarkMode, largeText, setLargeText } = useLearnerProfile();
+  const { style, setStyle, darkMode, setDarkMode, largeText, setLargeText, showBaseCourse, setShowBaseCourse } =
+    useLearnerProfile();
   const { clear: clearLocation } = useSession();
-  const { classes, refresh: refreshClasses, leaveClass } = useClasses();
   const { lessonsByUnit, completionMap, refresh } = useCatalog();
   const { averageScore, refresh: refreshResults } = useRecentResults();
   const { exportProgress, importProgress, isBusy: backupBusy, error: backupError, message: backupMessage } =
@@ -48,8 +46,7 @@ export default function ProfileScreen() {
     useCallback(() => {
       void refresh();
       void refreshResults();
-      void refreshClasses();
-    }, [refresh, refreshResults, refreshClasses]),
+    }, [refresh, refreshResults]),
   );
 
   const learnerName = account?.displayName ?? 'Estudiante';
@@ -67,29 +64,6 @@ export default function ProfileScreen() {
         void resetProgress().then(() => {
           clearLocation();
           return Promise.all([refresh(), refreshResults()]);
-        });
-      },
-    });
-
-  const onLeaveClass = (klass: AccountClass) =>
-    setDialog({
-      title: `Salir de ${klass.className}`,
-      message:
-        'Dejarás de ver el contenido extra de esta clase. El progreso del curso base se conserva y puedes volver a unirte con el código.',
-      confirmLabel: 'Salir',
-      destructive: true,
-      onConfirm: () => {
-        if (!account) {
-          return;
-        }
-        void leaveClass(klass).catch(() => {
-          setDialog({
-            title: 'No se pudo salir',
-            message: 'Necesitas conexión para que el maestro deje de verte en la lista.',
-            confirmLabel: 'Entendido',
-            cancelLabel: null,
-            onConfirm: () => {},
-          });
         });
       },
     });
@@ -142,48 +116,18 @@ export default function ProfileScreen() {
         ))}
       </View>
 
-      <SectionHeading
-        eyebrow="Clases"
-        title={
-          isHybrid() && classes.length > 0
-            ? `${classes.length} ${classes.length === 1 ? 'clase' : 'clases'}`
-            : 'Curso base'
-        }
-      />
-      <AppText variant="small">
-        {!isHybrid()
-          ? 'Las clases necesitan conexión. Activa EXPO_PUBLIC_DATA_MODE=hybrid y reinicia la app para unirte con el código de tu maestro.'
-          : classes.length > 0
-            ? 'Ves el contenido base y el contenido extra de estas clases.'
-            : 'No estás en ninguna clase. Usas el curso base de MLO.'}
-      </AppText>
-      {isHybrid() && classes.length > 0 ? (
-        <View style={[styles.list, { marginTop: spacing.md }]}>
-          {classes.map(klass => (
-            <View
-              key={klass.classId}
-              style={[
-                styles.settingRow,
-                { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control },
-              ]}>
-              <View style={styles.flex}>
-                <AppText weight="600">{klass.className}</AppText>
-                <AppText variant="small">
-                  {[klass.teacherName ? `Maestro: ${klass.teacherName}` : null, `Código ${klass.classCode}`]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </AppText>
-              </View>
-              <SecondaryButton label="Salir" onPress={() => onLeaveClass(klass)} />
-            </View>
-          ))}
-        </View>
-      ) : null}
-      <View style={{ marginTop: spacing.md }}>
-        <SecondaryButton
-          label="Unirme a una clase"
-          disabled={!isHybrid()}
-          onPress={() => router.push('/join-class' as Href)}
+      <SectionHeading eyebrow="Cursos" title="Curso base" />
+      <View style={styles.list}>
+        <SettingRow
+          title="Mostrar curso base"
+          subtitle="Ingeniería de software"
+          control={
+            <Toggle
+              on={showBaseCourse}
+              onToggle={() => setShowBaseCourse(!showBaseCourse)}
+              label="Mostrar curso base"
+            />
+          }
         />
       </View>
 

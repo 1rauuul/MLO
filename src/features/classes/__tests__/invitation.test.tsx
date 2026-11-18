@@ -178,6 +178,27 @@ describe('token de invitación', () => {
   });
 });
 
+describe('campo de código', () => {
+  const label = 'Enlace de invitación o código de la clase';
+
+  it('muestra el código en mayúsculas', () => {
+    const view = render(<JoinClassScreen />);
+
+    fireEvent.changeText(view.getByLabelText(label), 'abc123');
+
+    expect(view.getByLabelText(label).props.value).toBe('ABC123');
+  });
+
+  it('conserva el enlace de invitación sin alterarlo', () => {
+    const view = render(<JoinClassScreen />);
+    const link = `mloingenieriasoftware://join-class?token=${TOKEN}`;
+
+    fireEvent.changeText(view.getByLabelText(label), link);
+
+    expect(view.getByLabelText(label).props.value).toBe(link);
+  });
+});
+
 describe('reclamo de invitación', () => {
   it('acepta el enlace, guarda la membresía y navega a módulos', async () => {
     const claim = claimSuccess();

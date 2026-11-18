@@ -8,6 +8,7 @@ const mockResetProgress = jest.fn(async () => {});
 const mockClearLocation = jest.fn();
 const mockRefreshCatalog = jest.fn(async () => {});
 const mockRefreshResults = jest.fn(async () => {});
+const mockSetShowBaseCourse = jest.fn();
 
 let mockCatalog: Record<string, unknown> = {};
 
@@ -24,28 +25,6 @@ jest.mock('@/features/auth/viewmodel/useAuth', () => ({
   }),
 }));
 jest.mock('@/features/modules/viewmodel/useCatalog', () => ({ useCatalog: () => mockCatalog }));
-jest.mock('@/features/classes/viewmodel/useClasses', () => ({
-  useClasses: () => ({
-    classes: [
-      {
-        classId: 'c1',
-        classCode: 'ABC123',
-        className: 'Grupo A',
-        teacherName: 'Profesora Ríos',
-        version: 1,
-        joinedAt: '2026-01-01',
-        courseCatalogId: 'base',
-      },
-    ],
-    isLoading: false,
-    refresh: jest.fn(),
-    leaveClass: jest.fn(),
-  }),
-}));
-let mockIsHybrid = true;
-jest.mock('@/shared/services/data/dataMode', () => ({
-  isHybrid: () => mockIsHybrid,
-}));
 jest.mock('@/features/auth/viewmodel/useSession', () => ({
   useSession: () => ({
     location: { unitId: null, lessonId: null, lessonCode: null, section: null },
@@ -62,6 +41,8 @@ jest.mock('@/features/profile/viewmodel/useLearnerProfile', () => ({
     setDarkMode: jest.fn(),
     largeText: false,
     setLargeText: jest.fn(),
+    showBaseCourse: true,
+    setShowBaseCourse: mockSetShowBaseCourse,
   }),
 }));
 jest.mock('@/features/profile/viewmodel/useRecentResults', () => ({
@@ -144,31 +125,27 @@ function makeCatalog(overrides: Record<string, unknown>) {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockIsHybrid = true;
   makeCatalog({});
 });
 
 describe('ProfileScreen', () => {
-  it('muestra estadísticas, cuenta y clases', () => {
-    const { getByText, getAllByText } = render(<ProfileScreen />);
+  it('muestra estadísticas y cuenta sin la sección de clases', () => {
+    const { getByText, getAllByText, queryByText } = render(<ProfileScreen />);
 
     expect(getByText('1/2')).toBeTruthy();
     expect(getByText('75%')).toBeTruthy();
     expect(getAllByText('@valentina').length).toBeGreaterThan(0);
-    expect(getByText('Grupo A')).toBeTruthy();
-    expect(getByText('Unirme a una clase')).toBeTruthy();
+    expect(queryByText('Grupo A')).toBeNull();
+    expect(queryByText('Unirme a una clase')).toBeNull();
   });
 
-  it('muestra la opción de clases también en modo local', () => {
-    mockIsHybrid = false;
-    const { getByText } = render(<ProfileScreen />);
+  it('permite mostrar u ocultar el curso base', () => {
+    const { getByLabelText, getByText } = render(<ProfileScreen />);
 
-    expect(getByText('Unirme a una clase')).toBeTruthy();
-    expect(
-      getByText(
-        /Las clases necesitan conexión/,
-      ),
-    ).toBeTruthy();
+    expect(getByText('Mostrar curso base')).toBeTruthy();
+    fireEvent.press(getByLabelText('Mostrar curso base'));
+
+    expect(mockSetShowBaseCourse).toHaveBeenCalledWith(false);
   });
 
   it('reinicia progreso limpiando la ubicación de sesión', async () => {

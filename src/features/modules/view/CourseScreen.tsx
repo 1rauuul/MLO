@@ -3,6 +3,8 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/shared/components/AppText';
+import { SecondaryButton } from '@/shared/components/Buttons';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { ContentUpdateButton } from '@/shared/components/ContentUpdateNotice';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Screen } from '@/shared/components/Screen';
@@ -17,6 +19,7 @@ import {
   BASE_CATALOG_ID,
   displayCourseTitle,
 } from '@/features/modules/model/catalog';
+import { useClasses } from '@/features/classes/viewmodel/useClasses';
 import { useCatalog } from '@/features/modules/viewmodel/useCatalog';
 import { useCourses } from '@/features/modules/viewmodel/useCourses';
 
@@ -25,11 +28,15 @@ export default function CourseScreen() {
   const catalogId = (Array.isArray(params.id) ? params.id[0] : params.id) ?? '';
   const router = useRouter();
   const { colors, spacing } = useTheme();
-  const { courses } = useCourses();
+  const { courses, refresh: refreshCourses } = useCourses();
+  const { classes, leaveClass } = useClasses();
   const course = courses.find(item => item.catalogId === catalogId);
+  const klass = classes.find(item => item.courseCatalogId === catalogId) ?? null;
   const { units, topics, lessonsByUnit, completionMap, references, isLoading, error, refresh } =
     useCatalog(catalogId);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -113,6 +120,24 @@ export default function CourseScreen() {
     (topicsByUnit[topic.unitId] ??= []).push(topic);
   }
 
+  const leave = () => {
+    if (!klass) {
+      return;
+    }
+    setConfirmLeave(false);
+    setLeaveError(null);
+    void leaveClass(klass)
+      .then(async () => {
+        await Promise.all([refreshCourses(), refresh()]);
+        router.back();
+      })
+      .catch(() =>
+        setLeaveError(
+          'No se pudo salir. Necesitas conexión para que el maestro deje de verte en la lista.',
+        ),
+      );
+  };
+
   return (
     <Screen contentStyle={styles.content}>
       {header}
@@ -170,6 +195,43 @@ export default function CourseScreen() {
       <Bibliography references={references ?? []} />
 
       <ContentUpdateButton style={{ marginTop: spacing.lg }} />
+
+      {klass ? (
+        <View style={{ marginTop: spacing.md }}>
+          <SecondaryButton
+            label="Salir del curso"
+            labelColor={colors.danger}
+            onPress={() => {
+              setLeaveError(null);
+              setConfirmLeave(true);
+            }}
+          />
+          {leaveError ? (
+            <AppText
+              variant="small"
+              color={colors.danger}
+              accessibilityLiveRegion="polite"
+              style={{ marginTop: spacing.sm }}>
+              {leaveError}
+            </AppText>
+          ) : null}
+        </View>
+      ) : null}
+
+      <ConfirmModal
+        visible={confirmLeave}
+        title="Salir del curso"
+        message={
+          klass
+            ? `Saldrás de la clase ${klass.className} de este curso. Se ocultará el contenido extra de la clase; tu progreso del curso base se conserva.`
+            : ''
+        }
+        confirmLabel="Salir"
+        cancelLabel="Cancelar"
+        destructive
+        onCancel={() => setConfirmLeave(false)}
+        onConfirm={leave}
+      />
     </Screen>
   );
 }

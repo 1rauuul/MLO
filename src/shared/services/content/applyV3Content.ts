@@ -518,7 +518,7 @@ export async function applyV3Release(
        WHERE catalog_id = ? AND group_id IS NULL AND archived_at IS NULL
        AND id NOT IN (
          SELECT DISTINCT unit_id FROM lessons
-          WHERE catalog_id = ? AND group_id IS NULL AND archived_at IS NULL
+          WHERE catalog_id = ? AND archived_at IS NULL
        )`,
       now,
       catalogId,
@@ -676,6 +676,18 @@ export async function applyV3GroupRelease(
         referenceIdsJson(lesson.referenceIds),
       );
     }
+
+    // Un curso sin lecciones propias archiva sus unidades; si el grupo aporta
+    // una lección bajo esa unidad, debe volver a mostrarse.
+    await db.runAsync(
+      `UPDATE units SET archived_at = NULL
+       WHERE catalog_id = ? AND group_id IS NULL AND archived_at IS NOT NULL
+         AND id IN (SELECT unit_id FROM lessons
+                     WHERE catalog_id = ? AND group_id = ? AND archived_at IS NULL)`,
+      catalogId,
+      catalogId,
+      groupId,
+    );
 
     for (const example of examples) {
       await insertExample(

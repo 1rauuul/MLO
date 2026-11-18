@@ -289,10 +289,28 @@ contrato v3 con los bloques nuevos.
   El recorrido manual del editor de actividades (cuatro tipos, ejemplo y «Usar esta muestra»)
   se hizo en navegador sin guardar datos de prueba.
 
+### 18 nov — Portada, perfil y ajustes de contenido
+- **Portada.** `SplashSlides` muestra los logos de CINVESTAV al abrir la app; el splash nativo se
+  retira cuando el contenido está listo. `versionCode` sube a 6 y el fondo del splash cambia.
+- **Perfil.** Se elimina la lista de clases y la unión desde el perfil; queda el ajuste
+  **Mostrar curso base**, persistido en `meta` (`show_base_course`). La biblioteca filtra el
+  curso base cuando está apagado.
+- **Curso.** La pantalla del curso ofrece **Salir del curso** con confirmación; al salir se
+  refrescan los cursos y el catálogo.
+- **Lección.** Se quita el paginado Concepto/Síntesis: el contenido se lee completo en una sola
+  pantalla y el contenido extra de las clases queda debajo.
+- **Medios y códigos.** Las imágenes se muestran con marco y fondo suave; el campo de unión
+  acepta el código en mayúsculas y lo centra.
+- **Contenido de grupos.** `applyV3Content` vuelve a mostrar una unidad del curso padre cuando un
+  grupo agrega una lección bajo ella; las pruebas cubren el caso.
+- **Verificación.** 581/581 pruebas y TypeScript limpio. El panel queda con 145/145, lint, tsc y
+  build en verde.
+
 ## Estado del repositorio
 
-- `main` con la entrega del 17 nov que integra medios, el `409 unpublished`, el archivado por
-  grupo y este documento. Árbol limpio, sin cambios pendientes.
+- `main` con la entrega del 18 nov (portada, perfil, salida del curso, lección de una pantalla y
+  unidad de grupo) sobre la del 17 nov (medios y `409 unpublished`). Árbol limpio, sin cambios
+  pendientes.
 - La base local sigue en `DATABASE_VERSION` 21; `media_cache` se crea con
   `CREATE TABLE IF NOT EXISTS` también en instalaciones existentes.
 - Contrato de contenido en v3 con 7 tipos de bloque (v2 sigue soportado para el curso base y
@@ -300,6 +318,8 @@ contrato v3 con los bloques nuevos.
 
 ## Pendientes señalados en las propias sesiones
 
+- Probar en dispositivo la portada, el ajuste **Mostrar curso base**, **Salir del curso** y la
+  lección de una sola pantalla.
 - Probar en dispositivo la sincronización de imágenes (offline), el reproductor de YouTube y el
   `409` al unirse a un grupo sin publicar.
 - Revisar el contenido completo de las unidades 2–5: hoy depende de lo que publique el CMS; el

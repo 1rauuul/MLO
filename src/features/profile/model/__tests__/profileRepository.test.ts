@@ -1,6 +1,12 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { createDefaultProfile, saveProfile, selectProfile } from '@/features/profile/model/profileRepository';
+import {
+  createDefaultProfile,
+  saveProfile,
+  saveShowBaseCourse,
+  selectProfile,
+  selectShowBaseCourse,
+} from '@/features/profile/model/profileRepository';
 
 function makeDb(overrides: Record<string, jest.Mock> = {}) {
   const calls = {
@@ -66,6 +72,28 @@ describe('profileRepository', () => {
     expect(calls.runAsync).toHaveBeenCalledWith(
       expect.stringContaining('ON CONFLICT(account_id) DO NOTHING'),
       7,
+    );
+  });
+
+  it('selectShowBaseCourse es true por defecto y respeta el valor guardado', async () => {
+    const { db } = makeDb();
+    await expect(selectShowBaseCourse(db)).resolves.toBe(true);
+
+    const { db: hiddenDb } = makeDb({
+      getFirstAsync: jest.fn(async () => ({ value: '0' })),
+    });
+    await expect(selectShowBaseCourse(hiddenDb)).resolves.toBe(false);
+  });
+
+  it('saveShowBaseCourse guarda la preferencia en meta', async () => {
+    const { db, calls } = makeDb();
+
+    await saveShowBaseCourse(db, false);
+
+    expect(calls.runAsync).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO meta'),
+      'show_base_course',
+      '0',
     );
   });
 });

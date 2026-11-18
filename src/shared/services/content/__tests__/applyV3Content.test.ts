@@ -455,34 +455,39 @@ describe('applyStoredV3Content', () => {  it('aplica el manifiesto guardado y sa
 
 const maybeSqlite = DatabaseSync ? it : it.skip;
 
+function makeSqliteAdapter() {
+  const sqlite = new DatabaseSync!(':memory:');
+  sqlite.exec(SCHEMA_DDL);
+  const adapter = {
+    execAsync: async (sql: string) => sqlite.exec(sql),
+    runAsync: async (sql: string, ...params: unknown[]) => {
+      const result = sqlite.prepare(sql).run(...(params as never[]));
+      return {
+        changes: Number(result.changes),
+        lastInsertRowId: Number(result.lastInsertRowid),
+      };
+    },
+    getFirstAsync: async (sql: string, ...params: unknown[]) =>
+      sqlite.prepare(sql).get(...(params as never[])) ?? null,
+    getAllAsync: async (sql: string, ...params: unknown[]) =>
+      sqlite.prepare(sql).all(...(params as never[])),
+    withTransactionAsync: async (task: () => Promise<void>) => {
+      sqlite.exec('BEGIN');
+      try {
+        await task();
+        sqlite.exec('COMMIT');
+      } catch (error) {
+        sqlite.exec('ROLLBACK');
+        throw error;
+      }
+    },
+  } as unknown as SQLiteDatabase;
+  return { sqlite, adapter };
+}
+
 describe('alcance del release de curso', () => {
   maybeSqlite('reaplicar un curso no archiva ni borra el contenido del grupo', async () => {
-    const sqlite = new DatabaseSync!(':memory:');
-    sqlite.exec(SCHEMA_DDL);
-    const adapter = {
-      execAsync: async (sql: string) => sqlite.exec(sql),
-      runAsync: async (sql: string, ...params: unknown[]) => {
-        const result = sqlite.prepare(sql).run(...(params as never[]));
-        return {
-          changes: Number(result.changes),
-          lastInsertRowId: Number(result.lastInsertRowid),
-        };
-      },
-      getFirstAsync: async (sql: string, ...params: unknown[]) =>
-        sqlite.prepare(sql).get(...(params as never[])) ?? null,
-      getAllAsync: async (sql: string, ...params: unknown[]) =>
-        sqlite.prepare(sql).all(...(params as never[])),
-      withTransactionAsync: async (task: () => Promise<void>) => {
-        sqlite.exec('BEGIN');
-        try {
-          await task();
-          sqlite.exec('COMMIT');
-        } catch (error) {
-          sqlite.exec('ROLLBACK');
-          throw error;
-        }
-      },
-    } as unknown as SQLiteDatabase;
+    const { sqlite, adapter } = makeSqliteAdapter();
 
     const course = loadRelease(V3_DIR, 'valid-course-base-ref.json', 'demo');
     const group = parseGroupRelease(
@@ -528,4 +533,107 @@ describe('alcance del release de curso', () => {
     expect(exercises.total).toBeGreaterThan(0);
     sqlite.close();
   });
+
+  maybeSqlite(
+    'una lección de grupo mantiene visible la unidad del curso sin lecciones',
+    async () => {
+      const { sqlite, adapter } = makeSqliteAdapter();
+      const course = parseCourseManifest(
+        {
+          schemaVersion: 3,
+          kind: 'course',
+          catalogId: 'demo',
+          courseId: 'course-1',
+          releaseId: 'demo-1',
+          version: 1,
+          publishedAt: '2026-11-18T00:00:00.000Z',
+          hash: 'a'.repeat(64),
+          baseRef: null,
+          course: { title: 'Software', description: '', visibility: 'published' },
+          units: [
+            {
+              id: 'demo-u1',
+              number: 1,
+              title: 'Unidad',
+              description: '',
+              difficulty: 'Fundamental',
+              color: 'blue',
+              position: 0,
+            },
+          ],
+          topics: [
+            { id: 'demo-t1', unitId: 'demo-u1', title: 'Subtema', summary: '', position: 0 },
+          ],
+          lessons: [],
+          evaluations: [],
+          questions: [],
+          exercises: [],
+          examples: [],
+          references: [],
+          notices: [],
+        },
+        'demo',
+      );
+      const group = parseGroupRelease(
+        {
+          schemaVersion: 3,
+          kind: 'group',
+          catalogId: 'demo',
+          groupId: 'grp-demo-a',
+          releaseId: 'demo-grp-demo-a-1',
+          version: 1,
+          publishedAt: '2026-11-18T00:01:00.000Z',
+          hash: 'b'.repeat(64),
+          courseRef: { version: 1, hash: 'a'.repeat(64) },
+          group: { name: 'Grupo A', visibility: 'published' },
+          units: [],
+          topics: [],
+          lessons: [
+            {
+              id: 'g-l1',
+              topicId: 'demo-t1',
+              code: '1.1',
+              title: 'wdw',
+              eyebrow: '',
+              body: '',
+              content: [],
+              position: 0,
+            },
+          ],
+          evaluations: [],
+          questions: [],
+          exercises: [],
+          examples: [],
+          additions: [],
+          references: [],
+          notices: [],
+        },
+        'demo',
+      );
+      const unitState = () =>
+        sqlite
+          .prepare("SELECT archived_at FROM units WHERE id = 'demo-u1'")
+          .get() as { archived_at: string | null };
+      const visibleLessons = () =>
+        (
+          sqlite
+            .prepare(
+              "SELECT COUNT(*) AS total FROM lessons WHERE unit_id = 'demo-u1' AND archived_at IS NULL",
+            )
+            .get() as { total: number }
+        ).total;
+
+      await applyV3Release(adapter, course, 'demo');
+      expect(unitState().archived_at).not.toBeNull();
+
+      await applyV3GroupRelease(adapter, group, 'grp-demo-a');
+      expect(unitState().archived_at).toBeNull();
+      expect(visibleLessons()).toBe(1);
+
+      await applyV3Release(adapter, course, 'demo');
+      expect(unitState().archived_at).toBeNull();
+      expect(visibleLessons()).toBe(1);
+      sqlite.close();
+    },
+  );
 });

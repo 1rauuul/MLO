@@ -74,9 +74,10 @@ beforeEach(() => {
 });
 
 it('Terminar completa la lección y abre el hub del siguiente subtema', () => {
-  const { getByRole } = render(<LessonDetailScreen />);
+  const { getByRole, queryByRole } = render(<LessonDetailScreen />);
 
-  fireEvent.press(getByRole('button', { name: 'Síntesis' }));
+  expect(queryByRole('button', { name: 'Concepto' })).toBeNull();
+  expect(queryByRole('button', { name: 'Síntesis' })).toBeNull();
   fireEvent.press(getByRole('button', { name: 'Terminar' }));
 
   expect(mockMarkCompleted).toHaveBeenCalledWith('lesson-1');
@@ -87,7 +88,6 @@ it('Terminar vuelve a la pantalla principal si no hay siguiente subtema', () => 
   mockUnitLessons = [lessonOne];
   const { getByRole } = render(<LessonDetailScreen />);
 
-  fireEvent.press(getByRole('button', { name: 'Síntesis' }));
   fireEvent.press(getByRole('button', { name: 'Terminar' }));
 
   expect(mockNavigate).toHaveBeenCalledWith('/');

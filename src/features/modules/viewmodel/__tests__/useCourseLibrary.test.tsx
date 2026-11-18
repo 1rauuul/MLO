@@ -73,6 +73,15 @@ jest.mock('@/shared/services/data/DataProvider', () => ({
   }),
 }));
 
+let mockShowBaseCourse = true;
+jest.mock('@/features/profile/viewmodel/useLearnerProfile', () => ({
+  useLearnerProfile: () => ({ showBaseCourse: mockShowBaseCourse }),
+}));
+
+beforeEach(() => {
+  mockShowBaseCourse = true;
+});
+
 describe('useCourseLibrary', () => {
   it('calcula el avance por curso y pone las clases primero', async () => {
     const { result } = renderHook(() => useCourseLibrary());
@@ -116,5 +125,13 @@ describe('useCourseLibrary', () => {
     await result.current.selectCourse('base');
 
     expect(mockSelectCourse).toHaveBeenCalledWith('base');
+  });
+
+  it('oculta el curso base cuando la preferencia está apagada', async () => {
+    mockShowBaseCourse = false;
+    const { result } = renderHook(() => useCourseLibrary());
+
+    await waitFor(() => expect(result.current.entries).toHaveLength(1));
+    expect(result.current.entries.map(entry => entry.catalogId)).toEqual(['demo']);
   });
 });

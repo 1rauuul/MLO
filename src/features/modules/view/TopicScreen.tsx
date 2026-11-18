@@ -131,7 +131,7 @@ export default function TopicHubScreen() {
       key: 'lesson',
       icon: 'lesson',
       label: 'Lecciones',
-      note: 'Concepto y síntesis',
+      note: 'Contenido de la lección',
       accent: colors.primary,
       onPress: () =>
         router.push({ pathname: '/lecciones/[id]', params: { id: lessons[0]!.id } }),

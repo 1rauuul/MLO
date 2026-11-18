@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { SplashScreen, Stack } from 'expo-router';
 import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
@@ -6,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { ContentUpdateNotice } from '@/shared/components/ContentUpdateNotice';
+import { SplashSlides } from '@/shared/components/SplashSlides';
 import { DATABASE_NAME, migrateAndSeed } from '@/shared/services/db/database';
 import { ContentSyncProvider } from '@/shared/services/content/ContentSyncProvider';
 import { DataProvider } from '@/shared/services/data/DataProvider';
@@ -18,6 +20,13 @@ import { SessionProvider } from '@/features/auth/viewmodel/useSession';
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [ready, setReady] = useState(false);
+
+  // La portada de slides ya está montada: el splash nativo puede retirarse.
+  useEffect(() => {
+    SplashScreen.hide();
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -30,8 +39,8 @@ export default function RootLayout() {
                     <LearnerProfileProvider>
                       <AppThemeProvider>
                         <StatusBar style="auto" />
-                        <ErrorBoundary>
-                          <RootNavigator />
+                        <ErrorBoundary onError={() => setReady(true)}>
+                          <RootNavigator onReady={() => setReady(true)} />
                         </ErrorBoundary>
                         <ContentUpdateNotice />
                       </AppThemeProvider>
@@ -42,17 +51,20 @@ export default function RootLayout() {
             </ContentSyncProvider>
           </DataProvider>
         </SQLiteProvider>
+        {!ready && <SplashSlides />}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
 
-function RootNavigator() {
+function RootNavigator({ onReady }: { onReady: () => void }) {
   const { account, isLoading } = useAuth();
 
-  if (!isLoading) {
-    SplashScreen.hide();
-  }
+  useEffect(() => {
+    if (!isLoading) {
+      onReady();
+    }
+  }, [isLoading, onReady]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

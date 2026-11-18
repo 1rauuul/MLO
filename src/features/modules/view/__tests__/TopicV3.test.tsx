@@ -111,7 +111,7 @@ describe('TopicScreen', () => {
     expect(getByText('En progreso')).toBeTruthy();
     expect(getByLabelText('Ejemplos. Demostración guiada')).toBeTruthy();
     expect(getByLabelText('Ejercicios. Práctica lo aprendido')).toBeTruthy();
-    expect(queryByLabelText('Lecciones. Concepto y síntesis')).toBeNull();
+    expect(queryByLabelText('Lecciones. Contenido de la lección')).toBeNull();
     expect(queryByLabelText('Evaluación. Comprueba tu avance')).toBeNull();
   });
 
@@ -152,7 +152,7 @@ describe('TopicScreen', () => {
     const { getByLabelText, queryByText } = render(<TopicScreen />);
 
     expect(queryByText('Primera lección')).toBeNull();
-    fireEvent.press(getByLabelText('Lecciones. Concepto y síntesis'));
+    fireEvent.press(getByLabelText('Lecciones. Contenido de la lección'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/lecciones/[id]',
       params: { id: 'demo-l1.1' },
