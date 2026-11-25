@@ -6,7 +6,7 @@ del usuario, 6 090 mensajes en total) entre el 21 de septiembre y el 13 de novie
 (base local de OpenCode), contrastadas con los 37 commits del historial de git. Las fechas son
 locales (America/Mexico_City).  
 **Corte:** 13 de noviembre de 2026.  
-**Actualización:** 25 de noviembre de 2026 (ajustes de auth, rate limits y vinculación).  
+**Actualización:** 26 de noviembre de 2026 (cierre pre-deadline: API v3 única, SecureStore, CI).  
 **Historial del CMS:** [`historial-cms.md`](./historial-cms.md).
 
 ## Resumen por fases
@@ -377,24 +377,46 @@ contrato v3 con los bloques nuevos.
 - **Verificación.** Panel 184/184 (`test:db` 11/11), lint, tsc y build en verde; app 579/579 y
   TypeScript limpio. El recorrido manual en navegador/dispositivo queda pendiente.
 
+### 26 nov — Cierre pre-deadline: API v3 única, SecureStore y CI
+
+- **API v3 única.** El CMS retiró `/api/mlo/v2/**`; las clases se sirven en
+  `/api/mlo/v3/classes/*` y el panel las llama grupos (`/grupos`). La app dejó de tener
+  cliente v2: `apiBaseUrl()` es la base v3 tal cual y `httpV3` cubre cursos, clases,
+  releases, cuentas y progreso.
+- **CMS.** Migraciones registradas en `schema_migrations` con `db:migrate`, `--status` y
+  `--baseline`; `join` limitado a 100 peticiones por IP y 1000 globales cada 15 minutos;
+  CORS con `CORS_ALLOWED_ORIGIN`; CI de test, lint, `tsc` y build; prueba E2E HTTP v3 de
+  preview, join, release y manifest.
+- **App.** El token de alumno vive en `expo-secure-store` (con migración de la fila
+  antigua en SQLite y fallback en web) y `remote_session` conserva el resto del estado.
+- **CI/CD.** CI con `tsc`, Jest y lint; `eas.json` define `EXPO_PUBLIC_DATA_MODE=hybrid` y
+  `EXPO_PUBLIC_API_URL=https://mlo-enrichment.vercel.app/api/mlo/v3` en `preview` y
+  `production`; workflow manual de EAS preview. No se generó ningún build.
+- **Verificación.** CMS 185 pruebas (`test:db` 13, incluida la E2E v3), lint, `tsc` y build
+  en verde; app 581 pruebas, `tsc` y lint limpios. La prueba en dispositivo sigue
+  pendiente.
+- **Git.** CMS en `50b1558` y app en `2fcc592` antes de los commits de documentación de
+  esta entrada.
+
 ## Estado del repositorio
 
-- App en `7885ffc` (25 nov) con las cuentas remotas, el contenido empaquetado retirado, el aviso
-  de actualización y los ajustes de vinculación (`needsRemoteLink` por `remote_session`).
-- CMS (`mlo-teachers`) en `33380b3` (25 nov) con las cuentas de alumno, el progreso en la nube y
-  los ajustes de auth, rate limits y vinculación; los commits de documentación de este registro
-  van después de esos HEAD.
-- La base local sube a `DATABASE_VERSION` 24 por `remote_session` y `accounts.email`; el
-  contenido base ya no se empaqueta en el APK.
-- Contrato de contenido en v3; las cuentas viven en el CMS y el progreso se restaura desde la
-  nube. El curso base y los releases legacy v2 ya no se consumen en el APK.
+- App en `2fcc592` (26 nov) con el cliente único v3, el token en SecureStore y el CI;
+  los commits de documentación de este registro van después de ese HEAD.
+- CMS (`mlo-teachers`) en `50b1558` (26 nov) con la API v2 retirada, las migraciones
+  registradas, el rate limit de `join` y el CI; la documentación va en commits
+  posteriores.
+- La base local sigue en `DATABASE_VERSION` 24; el token de alumno ya no se guarda en
+  SQLite sino en `expo-secure-store`.
+- Contrato de contenido en v3 y **única API HTTP**; los releases v2 quedan como datos
+  históricos y ya no se consumen.
 
 ## Pendientes señalados en las propias sesiones
 
 - Probar en dispositivo el flujo completo de cuentas: registrar, avanzar, sincronizar, borrar
   datos, entrar y restaurar; vincular una cuenta antigua; sin red después de entrar; token
   caducado; límite de intentos.
-- Mover el token de SQLite a `expo-secure-store` (la API ya está aislada).
+- Probar en dispositivo la migración del token de SQLite a SecureStore.
+- Generar y validar un build EAS `preview` y uno `production` (no se han generado).
 - Recuperación y cambio de contraseña quedaron fuera de alcance; tampoco hay merge de progreso
   entre dispositivos (gana la última escritura).
 - Probar en dispositivo la portada, **Salir del curso** y la lección de una sola pantalla.

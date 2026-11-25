@@ -157,3 +157,26 @@ Se derivan de `docs/planes/COMPARATIVA-consumo-servicios-vs-plan-maestro.md`.
 - **Imágenes:** fuera de alcance hasta que MLO tenga un bloque de imagen y su validador.
 - **Ejemplos independientes** (`exA1.2`, `exA1.3`, `exA1.4`): se retiran del release; la UI de
   MLO solo muestra el ejemplo cuyo id coincide con un ejercicio.
+
+---
+
+## C12. Cuentas remotas, API v3 única y SecureStore (2026-11-26)
+
+Esta decisión **actualiza C9 y C10**; no borra su registro histórico.
+
+- **API v3 única.** El CMS retiró `/api/mlo/v2/**`. La app tiene un solo cliente v3
+  (`EXPO_PUBLIC_API_URL=https://<host>/api/mlo/v3`); cursos, clases, releases, cuentas y
+  progreso usan `httpV3`. Los releases v2 quedan como datos históricos internos.
+- **Cuentas y progreso remotos.** Sí hay cuentas de alumno (registro, login, logout,
+  vinculación y recuperación) y sincronización de progreso por alumno en
+  `student_progress`. La app sigue siendo offline-first: SQLite manda y sin red conserva
+  el estado local.
+- **Token en SecureStore.** El token de alumno se guarda en `expo-secure-store`; las
+  filas antiguas con token en SQLite se migran y el token se borra de SQLite. En web se
+  usa el fallback del almacenamiento seguro.
+- **CI/CD.** CI con `tsc`, Jest y lint; EAS `preview`/`production` en modo `hybrid` con la
+  API v3. El build se lanza a mano.
+- **Para el reporte:** describir la app como **offline-first con servicios opcionales y
+  cuentas remotas**, no como una app sin red. El modo `local` sigue siendo el
+  comportamiento por defecto del código, pero los perfiles de distribución usan
+  `hybrid`.

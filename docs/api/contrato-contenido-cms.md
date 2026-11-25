@@ -1,5 +1,9 @@
 # Contrato de contenido CMS → MLO
 
+> **Documento histórico (2026-11-07).** Describe el estado v2 y el contenido
+> empaquetado, que ya no existen. La app usa un cliente único v3 y el contenido base
+> llega del CMS. Contrato vigente: `mlo-teachers/docs/contracts/mlo-v3.md`.
+
 Documento de análisis del estado actual del repositorio. Describe cómo MLO
 consume, valida, persiste y renderiza el contenido que recibe del CMS: cursos
 publicados, lecciones, ejemplos, ejercicios, evaluaciones, preguntas y contenido

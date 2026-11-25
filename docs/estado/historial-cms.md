@@ -4,6 +4,44 @@ Registro legible de los cambios del panel y su impacto en la app. El estado deta
 panel vive en el repositorio `mlo-teachers` (`PLAN.md`); los contratos, en
 `mlo-teachers/docs/contracts/`; y la cronología de la app en `linea-de-tiempo.md`.
 
+## 2026-11-26 · Cierre pre-deadline: API v3 única, migraciones registradas y CI
+
+### Panel (`mlo-teachers`)
+
+- **API v3 única.** Se eliminaron las rutas `/api/mlo/v2/**`; la API pública quedó solo
+  en `/api/mlo/v3`. El panel renombró las clases a **grupos** en la interfaz
+  (`/grupos`, `/grupos/[id]`, `/grupos/[id]/contenido`). Las tablas `releases` y
+  `class_releases` se conservan como datos históricos/internos y no se borraron filas.
+- **Rate limit de `join`.** `POST /api/mlo/v3/classes/{code}/join` responde `429
+  rate_limited` al superar 100 peticiones por IP o 1000 globales cada 15 minutos.
+- **CORS configurable.** `CORS_ALLOWED_ORIGIN` define el origen permitido con `Vary:
+  Origin`; sin la variable, desarrollo permite `*` y producción no emite CORS. La API
+  admite `Authorization`, `X-MLO-Student-Key` y `Content-Type`.
+- **Migraciones registradas.** `npm run db:migrate` aplica las pendientes en una
+  transacción por archivo y las registra en `schema_migrations`; `--status` lista las
+  pendientes y `--baseline` marca una base existente. `npm test` descubre
+  `lib/**/*.test.ts` y excluye los `*.db.test.ts`.
+- **Prueba E2E HTTP v3.** Siembra curso, tema, lección, release, grupo y extra
+  temporales; prueba preview, join, release y manifest; limpia todo al final.
+- **CI.** `.github/workflows/ci.yml` ejecuta test, lint, `tsc` y build en cada push y PR.
+- **Documentación.** README, `PLAN.md`, `DESPLIEGUE-GCLOUD.md` y el contrato v3
+  actualizados al estado real (v3 única, `/grupos`, migraciones y requisitos de entorno).
+
+### App (`MLO-Ingenieria-software`)
+
+- **Cliente único v3.** `apiBaseUrl()` devuelve la base v3 tal cual; se eliminaron el
+  cliente `http` v2 y la conversión de `/v2` a `/v3`. Cursos, clases, releases, cuentas y
+  progreso usan `httpV3`.
+- **SecureStore.** El token de alumno se guarda en `expo-secure-store`; al leer una fila
+  antigua con token en SQLite se migra y se borra de SQLite. En web se usa el fallback
+  del almacenamiento seguro. `remote_session` conserva caducidad, huella y estado de
+  sincronización.
+- **CI/CD.** CI con `tsc`, Jest y lint; `eas.json` usa `hybrid` y la API v3 en `preview`
+  y `production`; workflow manual de EAS preview. No se generó ningún build.
+- **Verificación.** CMS 185 pruebas (`test:db` 13, incluida la E2E v3), lint, `tsc` y build
+  en verde; app 581 pruebas, `tsc` y lint limpios. La prueba en dispositivo queda
+  pendiente.
+
 ## 2026-11-24 · Cuentas de alumno, progreso en la nube y pulido del panel
 
 ### Panel (`mlo-teachers`)

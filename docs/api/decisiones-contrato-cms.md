@@ -1,5 +1,9 @@
 # Decisiones de contrato CMS → MLO
 
+> **Documento histórico (2026-11-05).** Las decisiones se tomaron sobre el contrato v2.
+> El contrato vigente está en `mlo-teachers/docs/contracts/mlo-v3.md`; la API v2 se
+> retiró y la app solo usa `/api/mlo/v3`.
+
 - **Fecha:** 2026-11-05
 - **Estado:** decisiones de producto cerradas; bloque de invitaciones pendiente.
 - **Documento base:** [contrato-contenido-cms.md](./contrato-contenido-cms.md)

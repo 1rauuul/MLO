@@ -1,5 +1,11 @@
 # Estado del proyecto — OAM Ingeniería de Software
 
+> **Documento histórico.** Su corte es de septiembre–octubre de 2026 y conserva
+> afirmaciones de entonces que ya no aplican (app sin red, sin cuentas remotas,
+> contrato v2). La fuente actual del estado es
+> [`linea-de-tiempo.md`](./linea-de-tiempo.md) para la app y
+> [`historial-cms.md`](./historial-cms.md) para el CMS.
+
 > Documento de seguimiento derivado de `prototipo/PlanDesarrollo.md`.
 > Fecha de corte: 13 de septiembre de 2026.
 > Alcance ejecutado en esta sesión: **Fases 0–3 (núcleo funcional)**.

@@ -1,5 +1,10 @@
 # Cómo agregar contenido al MLO
 
+> **Guía parcialmente histórica.** La Ruta A (contenido empaquetado en el APK) ya no
+> existe: el contenido base vive en el CMS. La Ruta B sigue vigente, pero la app solo
+> consume la **API v3**. El contrato exacto está en
+> `mlo-teachers/docs/contracts/mlo-v3.md`. Fecha de esta revisión: 2026-11-26.
+
 Guía para quien necesite subir lecciones, ejemplos, ejercicios o evaluaciones nuevas.
 Explica primero qué es MLO y cómo viaja el contenido, y después el paso a paso por
 cada una de las dos rutas posibles.
@@ -33,7 +38,7 @@ El contenido se guarda en las tablas `units`, `lessons`, `examples`, `exercises`
 
 | | **Ruta A — contenido incluido** | **Ruta B — contenido publicado** |
 |---|---|---|
-| Dónde vive | En el código de la app | En un servidor que cumple el contrato v2 |
+| Dónde vive | En el código de la app | En un servidor que cumple el contrato v3 |
 | Quién lo edita | Un desarrollador | Un maestro desde el panel (fuera de este repo) |
 | Cuándo llega al alumno | Al instalar o al reabrir la app con la nueva versión | Al unirse a un grupo o al reabrir con red, sin actualizar la app |
 | Requiere `hybrid` | No | Sí (`EXPO_PUBLIC_DATA_MODE=hybrid`) |
@@ -45,7 +50,7 @@ pendiente al arrancar.
 
 ---
 
-## 3. Ruta A — agregar contenido incluido (offline)
+## 3. Ruta A - agregar contenido incluido (histórico)
 
 ### 3.1 Archivos que se tocan
 
@@ -181,80 +186,57 @@ listas, actualiza también esa expectativa. Si añades contenido a un banco, rev
 
 ## 4. Ruta B — publicar contenido desde el sistema del maestro
 
-El servidor (`mlo-admin`: Next.js + Payload + PostgreSQL) es un **sistema aparte**;
-este repo solo lo consume. Cualquier servicio que cumpla el contrato v2 sirve.
+El CMS (`mlo-teachers`: Next.js + PostgreSQL) es un **sistema aparte**; este repo
+solo lo consume. Cualquier servicio que cumpla el contrato v3 sirve.
 
 ### 4.1 Del panel al teléfono
 
-1. El maestro crea un **curso** (`catalog`) con su `key` (5 caracteres; `base` para el
-   curso base).
-2. Captura **unidades → lecciones → ejercicios / preguntas / evaluación**.
+1. El maestro crea un **curso** con su `key` (5 caracteres; `base` para el curso base).
+2. Captura **unidades → temas → lecciones → ejemplos, ejercicios y evaluaciones**.
 3. Publica una **versión** (`release`). Es inmutable: guarda la foto completa del curso
-   y sus hashes. MLO nunca lee borradores ni documentos sueltos.
-4. Crea un **grupo** con un **código de 6 caracteres** (sin `0/O/1/I/L`) que apunta al
-   curso.
-5. El alumno entra a **Perfil → Unirme a un grupo**, escribe el código y confirma.
-   La app descarga el curso completo, lo valida y lo aplica de inmediato.
-6. En adelante, los cambios publicados se descargan en segundo plano (al abrir la app
-   y, como mucho, cada 15 minutos al volver a primer plano) y se aplican en el
-   **siguiente arranque**, sin red.
+   y su hash. MLO nunca lee borradores ni documentos sueltos.
+4. Crea un **grupo** con un **código de 6 caracteres** (sin `0/O/1/I/L`) y lo vincula a
+   un curso.
+5. El alumno abre la pantalla del curso, elige unirse, escribe el código y confirma.
+   La app descarga el curso y el release del grupo, los valida y los aplica.
+6. En adelante, los cambios publicados se descargan en segundo plano y se aplican en
+   el **siguiente arranque**, sin red.
 
 ### 4.2 Activar la descarga en la app
 
-`EXPO_PUBLIC_DATA_MODE=hybrid` y `EXPO_PUBLIC_API_URL=https://<host>/api/mlo/v2`
-(sin secretos, sin barra final). En local va en `.env`; para builds de EAS hay que
-declararlas en el `env` del perfil `preview` de `eas.json` (hoy no están). Ver
-`.env.example`. Con `local`, la pantalla de unión a grupo no se muestra.
+`EXPO_PUBLIC_DATA_MODE=hybrid` y `EXPO_PUBLIC_API_URL=https://<host>/api/mlo/v3`
+(sin secretos, sin barra final). En local va en `.env`; para builds de EAS ya está en
+el `env` de los perfiles `preview` y `production` de `eas.json`. Ver `.env.example`.
 
 ### 4.3 Qué debe devolver el servidor
 
-Tres endpoints: `GET /groups/{code}`, `GET /catalogs/{catalogId}/manifest` y
-`GET /catalogs/{catalogId}/lessons/{lessonId}`. El detalle completo está en
-[`docs/api/contrato.md`](../api/contrato.md); el mínimo de una lección es:
+La app usa estas rutas de `/api/mlo/v3`:
 
-```json
-{
-  "schemaVersion": 2,
-  "catalogId": "k7f3q",
-  "lessonId": "k7f3q-l2.1",
-  "hash": "a1b2c3d4",
-  "unit": { "id": "k7f3q-u2", "number": 2, "title": "…", "description": "…",
-            "difficulty": "Intermedio", "color": "violet" },
-  "lesson": { "id": "k7f3q-l2.1", "unitId": "k7f3q-u2", "code": "2.1",
-              "title": "…", "eyebrow": "…", "body": "…", "codeSample": "",
-              "contextTitle": "…", "contextBody": "…", "synthesis": ["…"],
-              "content": [{ "type": "p", "text": "…" }], "position": 0 },
-  "evaluation": { "id": "k7f3q-ev2.1", "lessonId": "k7f3q-l2.1", "title": "…",
-                  "description": "…", "questionCount": 10, "exerciseCount": 5 },
-  "exercises": [],
-  "examples": [],
-  "questions": [{ "evaluationId": "k7f3q-ev2.1",
-                  "question": { "id": "k7f3q-q1", "type": "mcq", "prompt": "…",
-                                "options": ["…", "…"], "answer": 0, "explanation": "…" } }]
-}
-```
+- `GET /courses` — cursos publicados y autorizados para el alumno.
+- `GET /catalogs/{catalogId}/manifest` — release v3 completo: unidades, temas,
+  lecciones, ejemplos, ejercicios, evaluaciones, preguntas y referencias.
+- `GET /classes/{code}`, `POST /classes/{code}/join` y `GET /classes/{code}/release` —
+  vista previa, unión y snapshot del grupo.
+- Las rutas de cuentas, progreso e invitaciones viven bajo `/auth`, `/students/me` y
+  `/invitations`.
 
-`evaluation` puede ser `null`, y entonces `questions` debe ser `[]` (lección de solo
-lectura). El manifest declara `version`, `hash` y una entrada por lección
-(`lessonId`, `unitId`, `hash`).
+No hay endpoint por lección: todo el contenido viaja en el manifest del release. El
+detalle de campos, tipos y hash está en el contrato v3; el fixture real de referencia
+es `src/shared/services/content/remote/__fixtures__/panelRelease.json`.
 
 ### 4.4 Reglas que descartan contenido
 
-Si cualquiera falla, **se descarta la lección entera** (y no avanza el manifest):
+Si cualquiera falla, **se descarta el release entero** y se conserva el anterior:
 
-- `schemaVersion` distinto de `2`, o `catalogId`/`lessonId` que no coinciden con lo
-  pedido.
-- El `hash` de la lección no coincide con el del manifest.
-- Ids vacíos, repetidos en la lección, o ya usados por **otro curso**. Los ids
-  publicados son globales: `{key del curso}-{id local}` (`k7f3q-l1.2`); en el curso
-  base no llevan prefijo.
-- `lesson.id`, `unit.id`, cada `exercise.lessonId`, cada `example.lessonId` y
-  `evaluation.lessonId` deben ser coherentes entre sí.
-- `question.id` es obligatorio.
+- `schemaVersion` distinto de `3`, `catalogId` que no coincide o `hash` del release
+  alterado.
+- Ids vacíos, repetidos o ya usados por **otro curso**. Los ids publicados son globales:
+  `{key del curso}-{id local}` (`k7f3q-l1.2`); en el curso base no llevan prefijo.
+- Jerarquía rota: una lección, ejemplo, ejercicio o evaluación que apunta a un tema o
+  curso inexistente, o una pregunta que apunta a una evaluación de otro tema.
 - Una evaluación publicada debe traer al menos una pregunta; `questionCount` y
   `exerciseCount` deben ser enteros mayores que 0.
-- Tipo de bloque desconocido (no hay bloques de imagen) o tabla con filas de largo
-  distinto al encabezado.
+- Tipo de bloque desconocido o tabla con filas de largo distinto al encabezado.
 - `order` con menos de 2 elementos, repetidos o vacíos; `fill` con una oración sin
   `{{…}}` o con banco inválido; `match` con menos de 2 pares o lados repetidos;
   `crossword` fuera de la cuadrícula, con palabras que no sean `A-ZÑ` o con cruces en
@@ -262,17 +244,17 @@ Si cualquiera falla, **se descarta la lección entera** (y no avanza el manifest
 - Ejemplos sin pasos completos (`text` y `why` no vacíos) o con `hints` que no sean
   arreglo de textos.
 
-Además: un manifiesto vacío, con hash vacío, con lecciones repetidas, que repite
-versión con otro hash o que retrocede de versión se descarta. Los `4xx` no se
-reintentan; la red y los `5xx` sí.
+Además: un release vacío, con hash vacío, con ids repetidos, que repite versión con otro
+hash o que retrocede de versión se descarta. Los `4xx` no se reintentan; la red y los
+`5xx` sí.
 
 ### 4.5 Cómo comprobar sin servidor real
 
-Usa el fixture del contrato (`src/shared/services/http/fixtures.ts`) en los tests
-existentes: `remoteContent.test.ts`, `remote/__tests__/applyLessonPayload.test.ts` y
-`ContentSyncProvider.test.tsx`. Para ver el estado en el dispositivo, revisa las
-tablas `remote_catalogs` (último manifest) y `remote_lessons` (`applied_hash` nulo o
-distinto de `hash` = pendiente de aplicar). Los fallos solo se registran con `__DEV__`.
+Usa el fixture real del panel
+(`src/shared/services/content/remote/__fixtures__/panelRelease.json`) en los tests de
+sincronización y en `ContentSyncProvider`. Para el estado del dispositivo, revisa las
+tablas de contenido y sincronización de SQLite; los fallos solo se registran con
+`__DEV__`.
 
 Para dejar un APK consumiendo este contenido (variables, `eas.json`, pruebas de humo y
 qué revisar), sigue [`apk-con-contenido-remoto.md`](apk-con-contenido-remoto.md).

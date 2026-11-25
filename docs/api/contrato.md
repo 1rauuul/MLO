@@ -1,5 +1,9 @@
 # Contrato de API v2 — contenido publicado con maestros, cursos y clases
 
+> **Documento histórico.** La API v2 se retiró el 2026-11-26 y este contrato ya no se
+> sirve. El contrato vigente está en `mlo-teachers/docs/contracts/mlo-v3.md` (repo del
+> CMS) y la app solo usa `/api/mlo/v3`. Se conserva como registro de la forma v2.
+
 Revisión 2.2 (2026-10-27): las clases reemplazan a los grupos. Cada clase publica
 su propio snapshot de contenido extra y el alumno puede pertenecer a varias; el
 contenido se combina localmente sobre el curso base. El `schemaVersion` sigue

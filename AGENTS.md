@@ -7,9 +7,10 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v58.0.0/ before 
 ## Stack de producción
 
 Expo SDK 58 (React Native 0.88) + Expo Router + expo-sqlite + TypeScript estricto + Jest/jest-expo
-con `@testing-library/react-native`. Offline-first: **sin red por defecto** (`DATA_MODE = 'local'`).
-Los servicios solo se consultan con `DATA_MODE = 'hybrid'`; SQLite sigue siendo la fuente de verdad
-local y el contenido llega desde los cursos y clases del CMS (el APK no empaqueta contenido base).
+con `@testing-library/react-native`. Offline-first: `DATA_MODE = 'local'` por defecto
+(ninguna petición HTTP); los perfiles de distribución usan `hybrid`, que consulta el CMS y
+sincroniza cuentas y progreso. SQLite sigue siendo la fuente de verdad local y el contenido
+llega desde los cursos y grupos del CMS (el APK no empaqueta contenido base).
 Sin RA, sin sensores nativos, sin empaquetado SCORM/LOM en runtime.
 
 ## Arquitectura (MVVM por features, MLO-AR sin RA)
@@ -35,9 +36,10 @@ Reglas:
   `SQLiteDatabase` como primer argumento; `createRepositories(db)` las liga a los puertos.
 - Con `DATA_MODE='local'` no se ejecuta ninguna petición HTTP. El contenido remoto se valida con
   `shared/utils/validate.ts` (`parse*Seed`) y nunca reemplaza el contenido local si falla.
-- El contrato v2 vive en `docs/api/contrato.md`: el cliente acepta `version` string o entera,
-  normaliza los códigos de clase a mayúsculas y los campos vacíos omitidos, y descarta una
-  lección si su hash o sus ids no coinciden con el manifest y el curso.
+- El contrato v3 vive en `mlo-teachers/docs/contracts/mlo-v3.md`: el cliente acepta
+  `version` string o entera, normaliza los códigos de clase a mayúsculas y los campos
+  vacíos omitidos, y descarta una lección si su hash o sus ids no coinciden con el
+  manifest y el curso. La API v2 se retiró.
 - **El arranque nunca espera a la red.** `migrateAndSeed` solo crea el esquema y aplica los
   releases v3 ya guardados; `ContentSyncProvider` descarga cursos y clases en segundo plano y
   `applyPendingContent` aplica lo pendiente cuando el alumno confirma.

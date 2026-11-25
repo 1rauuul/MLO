@@ -1,7 +1,18 @@
 # MLO — Introducción a la Ingeniería de Software
 
-App móvil offline-first (Expo SDK 58 + React Native 0.88) para el curso de Introducción a la
-Ingeniería de Software. Sin red, sin RA, sin sensores nativos.
+App móvil **offline-first** (Expo SDK 58 + React Native 0.88) para el curso de
+Introducción a la Ingeniería de Software. SQLite es la fuente de verdad local; con
+`EXPO_PUBLIC_DATA_MODE=hybrid` descarga el contenido publicado y sincroniza el progreso
+contra la **API v3** del CMS. Sin RA ni sensores nativos.
+
+## Estado
+
+- Cliente único **v3**: `EXPO_PUBLIC_API_URL=https://<host>/api/mlo/v3` (sin barra final).
+- Cuentas de alumno con token en **`expo-secure-store`** (con migración desde SQLite y
+  fallback en web); progreso en la nube.
+- CI de GitHub Actions (`.github/workflows/ci.yml`): `tsc`, Jest y lint en cada push y PR.
+- EAS configurado para `preview` (APK) y `production` (AAB) con modo `hybrid`; el build
+  se lanza a mano y no se ha generado en esta entrega.
 
 ## Ejecutar
 
@@ -14,6 +25,7 @@ npm run demo:web     # genera una demo web estática en dist/
 npm run demo:web:serve # genera y sirve la demo sin expo start
 npm run demo:apk     # genera un APK Android instalable con EAS
 npm test             # Jest
+npm run lint         # Expo lint
 npx tsc --noEmit     # typecheck estricto
 ```
 
@@ -34,8 +46,10 @@ npx eas-cli login
 npm run demo:apk
 ```
 
-El perfil `preview` está configurado en [`eas.json`](eas.json) para producir un APK.
-La compilación se realiza en EAS y al terminar muestra un enlace para descargarlo.
+El perfil `preview` está configurado en [`eas.json`](eas.json) para producir un APK y
+`production` para un AAB; ambos usan la API v3. La compilación se realiza en EAS y al
+terminar muestra un enlace para descargarlo. También existe el workflow manual
+[`.github/workflows/eas-preview.yml`](.github/workflows/eas-preview.yml).
 
 ## Estructura
 
@@ -53,3 +67,6 @@ Detalles, reglas de dependencias y convenciones en `AGENTS.md`.
 ## Documentación
 
 - Índice completo: [`docs/README.md`](docs/README.md)
+- Estado actual: [`docs/estado/linea-de-tiempo.md`](docs/estado/linea-de-tiempo.md) y
+  [`docs/estado/historial-cms.md`](docs/estado/historial-cms.md)
+- Contrato v3: `mlo-teachers/docs/contracts/mlo-v3.md` (repo del CMS)

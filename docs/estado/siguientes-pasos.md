@@ -1,5 +1,11 @@
 # Siguientes pasos propuestos — MLO Ingeniería de Software
 
+> **Documento histórico.** Propuesta con corte al 2026-10-08. Varias brechas y
+> supuestos ya se resolvieron o cambiaron (cuentas remotas, progreso en la nube,
+> API v3 única, SecureStore). La fuente actual del estado es
+> [`linea-de-tiempo.md`](./linea-de-tiempo.md) y
+> [`historial-cms.md`](./historial-cms.md); este documento se conserva como registro.
+
 > Fecha: 2026-10-08. Documento de propuesta; no modifica código.
 > Fuentes: `docs/estado/estado-proyecto.md`, `docs/reviews/review.md`, `docs/reviews/review-auditoria.md`,
 > `docs/arquitectura/oam-react-native.md`, `docs/arquitectura/comparacion-propuesto-vs-implementado.md`.
