@@ -377,7 +377,7 @@ contrato v3 con los bloques nuevos.
 
 - App en `7885ffc` (25 nov) con las cuentas remotas, el contenido empaquetado retirado, el aviso
   de actualización y los ajustes de vinculación (`needsRemoteLink` por `remote_session`).
-- CMS (`mlo-teachers`) en `33380b3` (24 nov) con las cuentas de alumno, el progreso en la nube y
+- CMS (`mlo-teachers`) en `33380b3` (25 nov) con las cuentas de alumno, el progreso en la nube y
   los ajustes de auth, rate limits y vinculación; los commits de documentación de este registro
   van después de esos HEAD.
 - La base local sube a `DATABASE_VERSION` 24 por `remote_session` y `accounts.email`; el
