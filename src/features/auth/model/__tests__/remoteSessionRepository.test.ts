@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import type { SQLiteDatabase } from 'expo-sqlite';
+import { Platform } from 'react-native';
 
 import {
   clearRemoteToken,
@@ -90,6 +91,7 @@ describe('remoteSessionRepository', () => {
     expect(calls.runAsync).toHaveBeenCalledWith(
       expect.stringContaining('ON CONFLICT(account_id) DO UPDATE'),
       7,
+      null,
       '2026-12-24T00:00:00.000Z',
       1,
       1,
@@ -130,5 +132,40 @@ describe('remoteSessionRepository', () => {
       expect.stringContaining('DELETE FROM remote_session'),
       expect.anything(),
     );
+  });
+
+  describe('en web', () => {
+    const originalOS = Platform.OS;
+
+    beforeEach(() => {
+      (Platform as unknown as { OS: string }).OS = 'web';
+    });
+
+    afterEach(() => {
+      (Platform as unknown as { OS: string }).OS = originalOS;
+    });
+
+    it('guarda, lee y limpia el token en SQLite sin tocar SecureStore', async () => {
+      const { db, calls } = makeDb({ row: { ...row, token: 'web-tok' } });
+      await saveRemoteSession(db, {
+        accountId: 7,
+        token: 'web-tok',
+        expiresAt: '2026-12-24T00:00:00.000Z',
+      });
+      expect(calls.runAsync).toHaveBeenCalledWith(
+        expect.stringContaining('ON CONFLICT(account_id) DO UPDATE'),
+        7,
+        'web-tok',
+        '2026-12-24T00:00:00.000Z',
+        0,
+        0,
+        expect.any(String),
+      );
+      await expect(selectRemoteSession(db, 7)).resolves.toMatchObject({ token: 'web-tok' });
+      await clearRemoteToken(db, 7);
+      expect(secure.setItemAsync).not.toHaveBeenCalled();
+      expect(secure.getItemAsync).not.toHaveBeenCalled();
+      expect(secure.deleteItemAsync).not.toHaveBeenCalled();
+    });
   });
 });

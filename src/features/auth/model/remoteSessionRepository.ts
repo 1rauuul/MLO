@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import type { SQLiteDatabase } from 'expo-sqlite';
+import { Platform } from 'react-native';
 
 export interface RemoteSession {
   accountId: number;
@@ -50,6 +51,10 @@ export async function selectRemoteSession(
   );
   if (!row) return null;
 
+  // SecureStore no existe en web: la demo web guarda el token en SQLite.
+  // En nativo el token nunca toca SQLite (salvo migración de tokens antiguos).
+  if (Platform.OS === 'web') return mapRemoteSession(row);
+
   const session = mapRemoteSession(row);
 
   // Tokens guardados antes de esta entrega siguen en SQLite. Si SecureStore falla
@@ -78,18 +83,22 @@ export async function saveRemoteSession(
     forceRemote?: boolean;
   },
 ): Promise<void> {
-  // Primero SecureStore: si falla, no queda una fila sin token guardado.
-  await SecureStore.setItemAsync(tokenKey(input.accountId), input.token);
+  // En nativo primero SecureStore: si falla, no queda una fila sin token.
+  // En web el token va a SQLite porque SecureStore no está disponible.
+  if (Platform.OS !== 'web') {
+    await SecureStore.setItemAsync(tokenKey(input.accountId), input.token);
+  }
   await db.runAsync(
     `INSERT INTO remote_session
        (account_id, token, expires_at, pending_restore, force_remote, created_at)
-     VALUES (?, NULL, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(account_id) DO UPDATE SET
-       token = NULL,
+       token = excluded.token,
        expires_at = excluded.expires_at,
        pending_restore = excluded.pending_restore,
        force_remote = excluded.force_remote`,
     input.accountId,
+    Platform.OS === 'web' ? input.token : null,
     input.expiresAt,
     input.pendingRestore ? 1 : 0,
     input.forceRemote ? 1 : 0,
@@ -130,7 +139,9 @@ export async function clearRemoteToken(
   db: SQLiteDatabase,
   accountId: number,
 ): Promise<void> {
-  await SecureStore.deleteItemAsync(tokenKey(accountId));
+  if (Platform.OS !== 'web') {
+    await SecureStore.deleteItemAsync(tokenKey(accountId));
+  }
   await db.runAsync(
     'UPDATE remote_session SET token = NULL, expires_at = NULL WHERE account_id = ?',
     accountId,
