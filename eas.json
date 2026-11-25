@@ -7,12 +7,16 @@
       },
       "env": {
         "EXPO_PUBLIC_DATA_MODE": "hybrid",
-        "EXPO_PUBLIC_API_URL": "https://mlo-enrichment.vercel.app/api/mlo/v2"
+        "EXPO_PUBLIC_API_URL": "https://mlo-enrichment.vercel.app/api/mlo/v3"
       }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_DATA_MODE": "hybrid",
+        "EXPO_PUBLIC_API_URL": "https://mlo-enrichment.vercel.app/api/mlo/v3"
       }
     }
   }

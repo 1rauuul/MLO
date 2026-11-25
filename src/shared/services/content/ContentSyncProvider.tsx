@@ -19,7 +19,7 @@ import {
   hasPendingContent,
 } from '@/shared/services/content/remote/applyStagedContent';
 import { isHybrid } from '@/shared/services/data/dataMode';
-import { apiBaseUrl, http, httpV3 } from '@/shared/services/http/client';
+import { apiBaseUrl, httpV3 } from '@/shared/services/http/client';
 import {
   isContentUpdatesBlocked,
   useContentUpdatesBlocked,
@@ -92,8 +92,8 @@ export function ContentSyncProvider({ children }: { children: ReactNode }) {
     }
     if (online) {
       try {
-        // La vista previa v2 asocia cada clase con su curso del CMS.
-        const repaired = await refreshClassMemberships(db, http);
+        // Las clases del CMS se asocian a su curso para reparar membresías.
+        const repaired = await refreshClassMemberships(db, httpV3);
         if (repaired) {
           changed = (await refreshCourseList(db, httpV3)) || changed;
         }

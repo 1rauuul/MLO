@@ -8,14 +8,13 @@ configuración de compilación ni un servidor con contenido.
 
 | Pieza | Estado |
 |---|---|
-| Cliente del contrato v2 (`GET /groups/{code}`, manifest, lección) | Implementado |
+| Cliente del contrato v3 (manifest, lección, cursos y grupos) | Implementado |
 | Pantalla "Unirme a un grupo" y curso activo por cuenta | Implementado |
 | Descarga en segundo plano + área de espera + aplicación al arrancar | Implementado |
-| `eas.json` con `EXPO_PUBLIC_DATA_MODE=hybrid` y `EXPO_PUBLIC_API_URL` | **Falta** |
+| `eas.json` con `EXPO_PUBLIC_DATA_MODE=hybrid` y `EXPO_PUBLIC_API_URL` | Implementado |
 | Servidor desplegado con un release publicado y un grupo con código | **Falta** (fuera de este repo) |
 
-Sin los dos últimos puntos, el APK sale en `local`: no hace ninguna petición, oculta
-la entrada de grupos y no descarga nada.
+Sin el servidor desplegado, el APK sale en `hybrid` pero no encuentra ningún release ni grupo.
 
 ## Los cuatro pasos
 
@@ -62,12 +61,11 @@ En el panel:
 Prueba de humo antes de tocar la app (los endpoints no llevan secretos):
 
 ```powershell
-curl.exe -s "https://<host>/api/mlo/v2/catalogs/<catalogId>/manifest"
-curl.exe -s "https://<host>/api/mlo/v2/catalogs/<catalogId>/lessons/<lessonId>"
-curl.exe -s "https://<host>/api/mlo/v2/groups/<CODIGO>"
+curl.exe -s "https://<host>/api/mlo/v3/catalogs/<catalogId>/manifest"
+curl.exe -s "https://<host>/api/mlo/v3/courses"
 ```
 
-Deben responder JSON con `schemaVersion: 2`. El manifest no puede venir vacío ni con
+El manifest debe responder JSON con `schemaVersion: 2`. No puede venir vacío ni con
 `hash` vacío, y `lessons[].hash` debe coincidir con el `hash` de cada lección.
 
 > **Cuidado con el curso `base`.** La app refresca siempre `base` además de los cursos
@@ -91,11 +89,15 @@ En `eas.json`, dentro del perfil `preview` (el que usa `npm run demo:apk`):
       "android": { "buildType": "apk" },
       "env": {
         "EXPO_PUBLIC_DATA_MODE": "hybrid",
-        "EXPO_PUBLIC_API_URL": "https://<host>/api/mlo/v2"
+        "EXPO_PUBLIC_API_URL": "https://mlo-enrichment.vercel.app/api/mlo/v3"
       }
     },
     "production": {
-      "android": { "buildType": "app-bundle" }
+      "android": { "buildType": "app-bundle" },
+      "env": {
+        "EXPO_PUBLIC_DATA_MODE": "hybrid",
+        "EXPO_PUBLIC_API_URL": "https://mlo-enrichment.vercel.app/api/mlo/v3"
+      }
     }
   }
 }
@@ -106,8 +108,8 @@ Notas:
 - `.env` está en `.gitignore` y EAS no lo sube: en la nube manda el `env` de
   `eas.json` (o las variables del proyecto en EAS). El `.env` local sirve para
   `npm start`.
-- La URL va sin barra final y **con** `/api/mlo/v2`; no lleva secretos.
-- `production` puede quedarse en `local` hasta validar; el modo se decide por perfil.
+- La URL va sin barra final y **con** `/api/mlo/v3`; no lleva secretos.
+- `production` usa el mismo modo y la misma base que `preview`; el modo se decide por perfil.
 
 Compilar:
 
@@ -119,7 +121,7 @@ Para probar antes, sin APK, con `.env`:
 
 ```
 EXPO_PUBLIC_DATA_MODE=hybrid
-EXPO_PUBLIC_API_URL=https://<host>/api/mlo/v2
+EXPO_PUBLIC_API_URL=https://mlo-enrichment.vercel.app/api/mlo/v3
 ```
 
 y `npm start` (reinicia el servidor de Metro al cambiar el `.env`).
@@ -169,7 +171,7 @@ En builds de desarrollo (`__DEV__`), los fallos de sincronización se registran 
 | Síntoma | Causa |
 |---|---|
 | No aparece "Unirme a un grupo" | El APK salió en `local`: falta `EXPO_PUBLIC_DATA_MODE=hybrid` en el perfil con el que se compiló |
-| "La app no tiene configurado el servicio de contenido" | `EXPO_PUBLIC_API_URL` vacía o con `/api/mlo/v2` mal escrito |
+| "La app no tiene configurado el servicio de contenido" | `EXPO_PUBLIC_API_URL` vacía o con `/api/mlo/v3` mal escrito |
 | El código da "no existe" | Código mal copiado (`0/O/1/I/L` no se usan) o grupo de otro entorno |
 | "El curso de este grupo todavía no está disponible" | El catálogo no tiene release publicado (404/410) |
 | "El contenido del grupo no es válido" | El payload no cumple el contrato (ver la guía de contenido y `docs/api/contrato.md`) |

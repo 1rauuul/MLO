@@ -162,26 +162,14 @@ export function apiBaseUrl(): string {
   return (process.env.EXPO_PUBLIC_API_URL ?? '').trim().replace(/\/+$/, '');
 }
 
-/** La base v2 sigue vigente; v3 vive en el mismo host, una versión al lado. */
-export function apiV3BaseUrl(): string {
-  const base = apiBaseUrl();
-  if (!base) {
-    return '';
-  }
-  return base.endsWith('/v2') ? `${base.slice(0, -2)}v3` : `${base}/api/mlo/v3`;
-}
-
-export const http = createHttpClient({
-  baseUrl: apiBaseUrl(),
-  getToken: getAuthToken,
-});
+/** La base ya apunta a /api/mlo/v3; no se transforma. */
 export const httpV3 = createHttpClient({
-  baseUrl: apiV3BaseUrl(),
+  baseUrl: apiBaseUrl(),
   getToken: getAuthToken,
 });
 /** Cliente de las rutas de cuenta: añade el Bearer de la sesión remota. */
 export const httpAuth = createHttpClient({
-  baseUrl: apiV3BaseUrl(),
+  baseUrl: apiBaseUrl(),
   getToken: getAuthToken,
 });
 /**
@@ -189,7 +177,7 @@ export const httpAuth = createHttpClient({
  * repetir la verificación de un código que ya se consumió.
  */
 export const httpRecovery = createHttpClient({
-  baseUrl: apiV3BaseUrl(),
+  baseUrl: apiBaseUrl(),
   timeoutMs: 15_000,
   retries: 0,
 });

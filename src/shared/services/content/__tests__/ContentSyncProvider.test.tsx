@@ -20,7 +20,6 @@ jest.mock('expo-sqlite', () => ({ useSQLiteContext: () => mockDb }));
 jest.mock('@/shared/services/data/dataMode', () => ({ isHybrid: () => mockHybrid }));
 jest.mock('@/shared/services/http/client', () => ({
   apiBaseUrl: () => 'https://api.test',
-  http: {},
   httpV3: {},
 }));
 jest.mock('@/shared/services/content/coursesV3', () => ({

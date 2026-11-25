@@ -9,7 +9,7 @@ Solo contenido. La sincronización de progreso, las cuentas remotas y la lectura
 de resultados por el maestro siguen fuera de alcance. SQLite es la fuente de
 verdad local y con `DATA_MODE=local` (por defecto) no se hace ninguna petición.
 
-- **URL base:** `EXPO_PUBLIC_API_URL = https://<host>/api/mlo/v2` (sin secretos).
+- **URL base:** `EXPO_PUBLIC_API_URL = https://<host>/api/mlo/v3` (sin secretos).
 - **Formato:** JSON UTF-8; fechas ISO-8601.
 - **Errores:** `{ "error": string, "message": string }`.
 - **`schemaVersion`:** debe ser `2`; cualquier otro valor se descarta.

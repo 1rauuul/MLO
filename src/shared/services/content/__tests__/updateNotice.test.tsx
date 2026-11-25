@@ -19,7 +19,6 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 jest.mock('@/shared/services/http/client', () => ({
   apiBaseUrl: () => 'https://api.test',
-  http: {},
   httpV3: {},
 }));
 jest.mock('@/shared/services/content/coursesV3', () => ({
