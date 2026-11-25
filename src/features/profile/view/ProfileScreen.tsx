@@ -165,7 +165,7 @@ export default function ProfileScreen() {
               label={isSyncing ? 'Sincronizando…' : 'Sincronizar ahora'}
               onPress={() => void syncNow()}
               loading={isSyncing}
-              disabled={isSyncing}
+              disabled={isSyncing || syncStatus === 'session_expired'}
             />
           </View>
         </>

@@ -133,6 +133,17 @@ describe('ProgressSyncProvider', () => {
     expect(result.current.error).toContain('sesión');
   });
 
+  it('distingue una fila sin token (sesión caducada) de una cuenta sin nube', async () => {
+    mockRepos.remote.select.mockResolvedValue({
+      ...session,
+      token: null,
+    });
+
+    const { result } = renderHook(() => useProgressSync(), { wrapper });
+
+    await waitFor(() => expect(result.current.status).toBe('session_expired'));
+  });
+
   it('marca sin conexión cuando falla la red', async () => {
     mockUpload.mockRejectedValue(new NetworkError());
 

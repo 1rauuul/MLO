@@ -104,8 +104,10 @@ export function ProgressSyncProvider({ children }: { children: ReactNode }) {
     }
     const session = await remote.select(account.id);
     setLastSyncedAt(session?.lastSyncedAt ?? null);
-    if (!session?.token) {
+    if (!session) {
       setStatus('unlinked');
+    } else if (!session.token) {
+      setStatus('session_expired');
     }
     return session;
   }, [account, remote]);
@@ -115,8 +117,12 @@ export function ProgressSyncProvider({ children }: { children: ReactNode }) {
       return;
     }
     const session = await remote.select(account.id);
-    if (!session?.token) {
+    if (!session) {
       setStatus('unlinked');
+      return;
+    }
+    if (!session.token) {
+      setStatus('session_expired');
       return;
     }
 
