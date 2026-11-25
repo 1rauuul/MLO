@@ -1,5 +1,9 @@
 # Diagramas de MLO — guía explicativa
 
+> **Documento histórico.** Cita SDK 57 y las tablas `remote_catalogs`/`remote_lessons`, que
+> ya no existen. El estado actual está en
+> [`docs/estado/linea-de-tiempo.md`](estado/linea-de-tiempo.md).
+
 Este documento explica **qué muestra cada diagrama, cómo leerlo y de dónde sale cada dato** del código. Todos los diagramas son archivos HTML autocontenidos (SVG en línea + CSS) y se abren directo en el navegador.
 
 - Proyecto: **MLO — Introducción a la Ingeniería de Software**

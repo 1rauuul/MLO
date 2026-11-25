@@ -1,5 +1,10 @@
 # Capítulo 3. Desarrollo
 
+> **Corte anterior al 26 nov 2026.** No incluye cuentas remotas, SecureStore, API v3 única
+> ni CI. El estado actual está en [`docs/estado/linea-de-tiempo.md`](../estado/linea-de-tiempo.md)
+> y [`docs/estado/historial-cms.md`](../estado/historial-cms.md); este capítulo se conserva
+> como registro académico.
+
 Este capítulo describe el procedimiento seguido para construir el objeto de aprendizaje móvil (OAM) de Introducción a la Ingeniería de Software. Las actividades se organizan mediante las cinco fases de MOAM: análisis, diseño, desarrollo, evaluación orientada al producto y publicación (Saldaña Hernández et al., 2018). Esta organización relaciona las decisiones pedagógicas con la arquitectura y la implementación del recurso.
 
 MOAM se utiliza como marco para ordenar y contrastar el proceso documentado. La implementación técnica se realizó de forma iterativa y algunas actividades se superpusieron. Por ello, la correspondencia con las fases no supone que todos sus pasos se ejecutaran de manera secuencial ni que todos sus entregables estén terminados. Se distinguen las actividades documentadas, las previstas en el plan de trabajo y aquellas cuya realización requiere evidencia adicional.

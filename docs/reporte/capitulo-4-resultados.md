@@ -1,5 +1,10 @@
 # Capítulo 4. Resultados
 
+> **Corte anterior al 26 nov 2026.** Las cifras y pruebas de este capítulo no incluyen la
+> API v3 única, SecureStore ni el CI. El estado actual está en
+> [`docs/estado/linea-de-tiempo.md`](../estado/linea-de-tiempo.md) y
+> [`docs/estado/historial-cms.md`](../estado/historial-cms.md).
+
 Este capítulo presenta el objeto de aprendizaje móvil obtenido, el estado de los objetivos y la verificación técnica descrita en el borrador del proyecto. Las cifras y las pruebas manuales que se conservan proceden de ese documento y deben acompañarse con sus registros antes de la entrega final. La reorganización del reporte no implica que se hayan vuelto a ejecutar las pruebas.
 
 ## 4.1 Producto desarrollado y recorrido funcional
