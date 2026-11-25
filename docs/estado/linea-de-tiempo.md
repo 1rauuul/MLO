@@ -6,7 +6,7 @@ del usuario, 6 090 mensajes en total) entre el 21 de septiembre y el 13 de novie
 (base local de OpenCode), contrastadas con los 37 commits del historial de git. Las fechas son
 locales (America/Mexico_City).  
 **Corte:** 13 de noviembre de 2026.  
-**Actualización:** 24 de noviembre de 2026 (cuentas remotas y progreso en la nube).  
+**Actualización:** 25 de noviembre de 2026 (ajustes de auth, rate limits y vinculación).  
 **Historial del CMS:** [`historial-cms.md`](./historial-cms.md).
 
 ## Resumen por fases
@@ -355,11 +355,31 @@ contrato v3 con los bloques nuevos.
 - **Verificación.** 541/541 pruebas y TypeScript limpio; el CMS queda con 157/157, lint, tsc y
   build en verde.
 
+### 25 nov — Ajustes de auth, rate limits y vinculación
+- **Rate limits por IP en el CMS.** Límites por IP (ventana de 15 min) para aulas: login de
+  alumno 300, registro 100, vinculación 100 y login de docente 60; los límites globales siguen
+  como guard de fuerza bruta. Prueba real del limiter contra la base (`test:db`) e índice
+  `auth_rate_limits_created_idx`.
+- **Vinculación desde el panel.** `/grupos/[id]` emite un código de 6 dígitos (30 min, hasheado,
+  uno pendiente por alumno, solo docente dueño o admin); la columna **Cuenta** muestra la
+  insignia **En la nube** según `hasAccount` de `student_accounts` (no hay columna `linked`).
+- **Recuperación.** El código/token se guarda antes de enviar el correo; solo
+  `sent_at is not null` es utilizable; un fallo de envío conserva el código anterior y no deja
+  filas pendientes; dos solicitudes concurrentes envían un solo correo. Migraciones
+  `20261125000004` y `20261125000005`.
+- **App.** `needsRemoteLink` depende de la existencia de `remote_session` (incluidos los dos
+  fallbacks de login offline); una cuenta en la nube no muestra “Vincular cuenta” tras cerrar
+  sesión. `DATABASE_VERSION` 24.
+- **Verificación.** Panel 184/184 (`test:db` 8/8), lint, tsc y build en verde; app 578/578 y
+  TypeScript limpio. El recorrido manual en navegador/dispositivo queda pendiente.
+
 ## Estado del repositorio
 
-- `main` en `0ec32e6` («big commit», 24 nov) con la primera parte del progreso remoto y el aviso
-  de actualización; queda un lote sin commit con cuentas remotas, contenido empaquetado
-  retirado, Perfil, capturas y documentación.
+- App en `7885ffc` (25 nov) con las cuentas remotas, el contenido empaquetado retirado, el aviso
+  de actualización y los ajustes de vinculación (`needsRemoteLink` por `remote_session`).
+- CMS (`mlo-teachers`) en `33380b3` (24 nov) con las cuentas de alumno, el progreso en la nube y
+  los ajustes de auth, rate limits y vinculación; los commits de documentación de este registro
+  van después de esos HEAD.
 - La base local sube a `DATABASE_VERSION` 24 por `remote_session` y `accounts.email`; el
   contenido base ya no se empaqueta en el APK.
 - Contrato de contenido en v3; las cuentas viven en el CMS y el progreso se restaura desde la

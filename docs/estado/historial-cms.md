@@ -33,6 +33,35 @@ panel vive en el repositorio `mlo-teachers` (`PLAN.md`); los contratos, en
 > repo del panel; el commit `d46330a password manage` cubre la primera parte de progreso y
 > clases con Bearer.
 
+## 2026-11-25 · Rate limits por IP, vinculación desde el panel y recuperación con `sent_at`
+
+### Panel (`mlo-teachers`)
+
+- **Rate limits por IP para aulas.** Límites por IP en una ventana de 15 minutos: login de
+  alumno 300, registro 100, vinculación 100 y login de docente 60. Los límites globales (y por
+  correo para el docente) siguen siendo el guard contra fuerza bruta. Una prueba real contra la
+  base (`test:db`) verifica que una sala de 40 alumnos cabe en login/registro/vinculación desde
+  una IP y que el limiter bloquea al superar una regla pequeña; el índice
+  `auth_rate_limits_created_idx` acelera la limpieza.
+- **Código de vinculación desde el panel.** En `/grupos/[id]` el docente dueño o el admin emite
+  para un alumno un código de 6 dígitos (vence en 30 minutos) que se guarda hasheado
+  (`student_link_codes.code_hash`) con un solo pendiente por alumno. La columna **Cuenta**
+  muestra la insignia **En la nube** cuando el alumno ya tiene cuenta (por la existencia de
+  `student_accounts`, expuesto como `hasAccount`; no hay una columna `linked`).
+- **Recuperación con guardado previo.** El código/token se persiste **sin enviar** antes del
+  correo y solo un código con `sent_at is not null` es utilizable; un fallo de envío conserva el
+  código anterior y no deja filas pendientes, y dos solicitudes concurrentes envían un solo
+  correo. Migraciones `20261125000004` y `20261125000005`.
+
+### App (`MLO-Ingenieria-software`)
+
+- **Vinculación.** `needsRemoteLink` ahora depende de la existencia de la fila `remote_session`
+  (incluidos los dos fallbacks de login offline); una cuenta en la nube no vuelve a mostrar
+  “Vincular cuenta” tras cerrar sesión. `DATABASE_VERSION` 24.
+- **Verificación.** Panel 184/184 (`test:db` 8/8), `lint`, `tsc` y `build` en verde; la app
+  queda con 578/578 y TypeScript limpio. El recorrido manual en navegador/dispositivo queda
+  pendiente.
+
 ## 2026-11-18 · Editor de contenido del grupo y seguimiento de cambios
 
 ### Panel (`mlo-teachers`)
