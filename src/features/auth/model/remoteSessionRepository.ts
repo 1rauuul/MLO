@@ -1,3 +1,4 @@
+import * as SecureStore from 'expo-secure-store';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 export interface RemoteSession {
@@ -22,6 +23,10 @@ interface RemoteSessionRow {
   created_at: string;
 }
 
+function tokenKey(accountId: number): string {
+  return `mlo.remote.token.${accountId}`;
+}
+
 function mapRemoteSession(row: RemoteSessionRow): RemoteSession {
   return {
     accountId: row.account_id,
@@ -43,7 +48,24 @@ export async function selectRemoteSession(
     'SELECT * FROM remote_session WHERE account_id = ?',
     accountId,
   );
-  return row ? mapRemoteSession(row) : null;
+  if (!row) return null;
+
+  const session = mapRemoteSession(row);
+
+  // Tokens guardados antes de esta entrega siguen en SQLite. Si SecureStore falla
+  // se propaga el error y la fila conserva el token, así el próximo intento lo migra
+  // en vez de perder la sesión.
+  if (row.token) {
+    await SecureStore.setItemAsync(tokenKey(accountId), row.token);
+    await db.runAsync(
+      'UPDATE remote_session SET token = NULL WHERE account_id = ?',
+      accountId,
+    );
+    return session;
+  }
+
+  session.token = await SecureStore.getItemAsync(tokenKey(accountId));
+  return session;
 }
 
 export async function saveRemoteSession(
@@ -56,17 +78,18 @@ export async function saveRemoteSession(
     forceRemote?: boolean;
   },
 ): Promise<void> {
+  // Primero SecureStore: si falla, no queda una fila sin token guardado.
+  await SecureStore.setItemAsync(tokenKey(input.accountId), input.token);
   await db.runAsync(
     `INSERT INTO remote_session
        (account_id, token, expires_at, pending_restore, force_remote, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)
+     VALUES (?, NULL, ?, ?, ?, ?)
      ON CONFLICT(account_id) DO UPDATE SET
-       token = excluded.token,
+       token = NULL,
        expires_at = excluded.expires_at,
        pending_restore = excluded.pending_restore,
        force_remote = excluded.force_remote`,
     input.accountId,
-    input.token,
     input.expiresAt,
     input.pendingRestore ? 1 : 0,
     input.forceRemote ? 1 : 0,
@@ -107,6 +130,7 @@ export async function clearRemoteToken(
   db: SQLiteDatabase,
   accountId: number,
 ): Promise<void> {
+  await SecureStore.deleteItemAsync(tokenKey(accountId));
   await db.runAsync(
     'UPDATE remote_session SET token = NULL, expires_at = NULL WHERE account_id = ?',
     accountId,
