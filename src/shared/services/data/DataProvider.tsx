@@ -9,9 +9,17 @@ import {
   selectAccountById,
   selectAccountByUsername,
   selectSessionAccountId,
+  updateAccountEmail,
+  updateAccountIdentity,
   updateExternalKey,
   updatePasswordHash,
 } from '@/features/auth/model/accountRepository';
+import {
+  clearRemoteToken,
+  saveRemoteSession,
+  selectRemoteSession,
+  updateRemoteSync,
+} from '@/features/auth/model/remoteSessionRepository';
 import {
   insertEvaluationResult,
   selectEvaluationByLesson,
@@ -36,24 +44,20 @@ import {
   selectActiveGroup,
   selectLessonExtras,
 } from '@/features/classes/model/classRepository';
-import { applyStagedContent } from '@/shared/services/content/remote/applyStagedContent';
 import {
   refreshClassContent,
   refreshClassRelease,
 } from '@/shared/services/content/classSync';
 import {
   fetchClassPreview,
-  fetchClassRelease,
   joinClassRequest,
   leaveClassRequest,
-  refreshCatalog,
 } from '@/shared/services/content/remoteContent';
 import { claimInvitationRequest } from '@/shared/services/content/invitations';
 import { http, httpV3 } from '@/shared/services/http/client';
 import { refreshCourseList } from '@/shared/services/content/coursesV3';
 import { applyStoredV3Content } from '@/shared/services/content/applyV3Content';
 import {
-  ensureBaseCourse,
   loadAccountCourses,
   selectCourse,
 } from '@/features/modules/model/courseRepository';
@@ -95,9 +99,7 @@ import {
 import {
   createDefaultProfile,
   saveProfile,
-  saveShowBaseCourse,
   selectProfile,
-  selectShowBaseCourse,
 } from '@/features/profile/model/profileRepository';
 
 /**
@@ -118,7 +120,23 @@ export function createRepositories(db: SQLiteDatabase) {
         updatePasswordHash(db, accountId, passwordHash, salt),
       updateExternalKey: (accountId: number, externalKey: string) =>
         updateExternalKey(db, accountId, externalKey),
+      updateAccountEmail: (accountId: number, email: string | null) =>
+        updateAccountEmail(db, accountId, email),
+      updateAccountIdentity: (
+        accountId: number,
+        input: Parameters<typeof updateAccountIdentity>[2],
+      ) => updateAccountIdentity(db, accountId, input),
       clearSession: () => clearSession(db),
+    },
+    remote: {
+      select: (accountId: number) => selectRemoteSession(db, accountId),
+      save: (input: Parameters<typeof saveRemoteSession>[1]) =>
+        saveRemoteSession(db, input),
+      updateSync: (
+        accountId: number,
+        input: Parameters<typeof updateRemoteSync>[2],
+      ) => updateRemoteSync(db, accountId, input),
+      clearToken: (accountId: number) => clearRemoteToken(db, accountId),
     },
     evaluations: {
       selectEvaluationByLesson: (lessonId: string, groupId?: string | null) =>
@@ -204,7 +222,6 @@ export function createRepositories(db: SQLiteDatabase) {
       selectLessonCatalogId: (lessonId: string) => selectLessonCatalogId(db, lessonId),
     },
     courses: {
-      ensureBaseCourse: (accountId?: number) => ensureBaseCourse(db, accountId),
       loadAccountCourses: (accountId?: number) => loadAccountCourses(db, accountId),
       selectCourse: (accountId: number, catalogId: string) =>
         selectCourse(db, accountId, catalogId),
@@ -239,7 +256,6 @@ export function createRepositories(db: SQLiteDatabase) {
         claimInvitationRequest(httpV3, token, studentKey, studentName),
       leaveClass: (code: string, studentKey: string) =>
         leaveClassRequest(http, code, studentKey),
-      fetchClassRelease: (code: string) => fetchClassRelease(http, code),
       refreshClass: (
         classId: string,
         code: string,
@@ -247,9 +263,6 @@ export function createRepositories(db: SQLiteDatabase) {
         courseCatalogId?: string,
       ) => refreshClassRelease(db, httpV3, classId, code, studentKey, courseCatalogId),
       refreshClassContent: () => refreshClassContent(db, httpV3),
-      refreshCatalog: (catalogId: string, force?: boolean) =>
-        refreshCatalog(db, http, catalogId, force),
-      applyStagedContent: (catalogId?: string) => applyStagedContent(db, catalogId),
     },
     locations: {
       selectLocation: (accountId: number) => selectLocation(db, accountId),
@@ -281,8 +294,6 @@ export function createRepositories(db: SQLiteDatabase) {
       selectProfile: (accountId: number) => selectProfile(db, accountId),
       saveProfile: (profile: Parameters<typeof saveProfile>[1]) => saveProfile(db, profile),
       createDefaultProfile: (accountId: number) => createDefaultProfile(db, accountId),
-      selectShowBaseCourse: () => selectShowBaseCourse(db),
-      saveShowBaseCourse: (value: boolean) => saveShowBaseCourse(db, value),
     },
   };
 }

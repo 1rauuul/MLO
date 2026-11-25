@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth/viewmodel/useAuth';
 import { AUTH_MESSAGES } from '@/features/auth/viewmodel/auth.messages';
 import { validateUsername } from '@/features/auth/viewmodel/auth.logic';
 import { validarPassword } from '@/features/auth/viewmodel/password.logic';
+import { PasswordRequirements } from '@/features/auth/view/PasswordRequirements';
 import { AppText } from '@/shared/components/AppText';
 import { Icon } from '@/shared/components/Icon';
 import { PrimaryButton } from '@/shared/components/Buttons';
@@ -19,12 +20,14 @@ export default function RegisterScreen() {
   const { colors, radius, spacing } = useTheme();
   const firstNameRef = useRef<TextInputInstance>(null);
   const lastNameRef = useRef<TextInputInstance>(null);
+  const emailRef = useRef<TextInputInstance>(null);
   const usernameRef = useRef<TextInputInstance>(null);
   const passwordRef = useRef<TextInputInstance>(null);
   const confirmRef = useRef<TextInputInstance>(null);
   const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -46,6 +49,10 @@ export default function RegisterScreen() {
     errorKey === 'first_name_empty' ? AUTH_MESSAGES.first_name_empty : null;
   const lastNameError =
     errorKey === 'last_name_empty' ? AUTH_MESSAGES.last_name_empty : null;
+  const emailError =
+    errorKey === 'email_empty' || errorKey === 'email_invalid' || errorKey === 'email_taken'
+      ? AUTH_MESSAGES[errorKey]
+      : null;
   const usernameError =
     errorKey === 'username_taken' || errorKey === 'username_empty' || errorKey === 'username_short' || errorKey === 'username_invalid'
       ? AUTH_MESSAGES[errorKey]
@@ -62,7 +69,24 @@ export default function RegisterScreen() {
       : errorKey === 'password_mismatch'
         ? AUTH_MESSAGES.password_mismatch
         : null;
-  const formError = errorKey === 'storage_error' ? AUTH_MESSAGES.storage_error : null;
+  const fieldErrors = [
+    'first_name_empty',
+    'last_name_empty',
+    'email_empty',
+    'email_invalid',
+    'email_taken',
+    'username_empty',
+    'username_short',
+    'username_invalid',
+    'username_taken',
+    'password_short',
+    'password_weak',
+    'password_mismatch',
+  ];
+  const formError =
+    errorKey && !fieldErrors.includes(errorKey)
+      ? (AUTH_MESSAGES[errorKey] ?? null)
+      : null;
 
   const submit = async () => {
     if (submitting || !passwordValidation.valida) {
@@ -71,7 +95,14 @@ export default function RegisterScreen() {
     setErrorKey(null);
     setSubmitting(true);
     try {
-      const result = await register({ firstName, lastName, username, password, confirm });
+      const result = await register({
+        firstName,
+        lastName,
+        email,
+        username,
+        password,
+        confirm,
+      });
       if (result.ok) {
         setSuccessMessage('Cuenta creada. Entrando a tu ruta de aprendizaje...');
         redirectTimer.current = setTimeout(() => router.replace('/'), 900);
@@ -95,7 +126,9 @@ export default function RegisterScreen() {
       <View style={styles.hero}>
         <AppText variant="eyebrow">Primer acceso</AppText>
         <AppText variant="title">Crea tu cuenta</AppText>
-        <AppText variant="small">Todo se guarda de forma local y sin conexión.</AppText>
+        <AppText variant="small">
+          Tu cuenta se guarda en la nube y podrás entrar desde otro equipo.
+        </AppText>
       </View>
 
       <View
@@ -130,8 +163,26 @@ export default function RegisterScreen() {
           autoComplete="family-name"
           textContentType="familyName"
           returnKeyType="next"
-          onSubmitEditing={() => usernameRef.current?.focus()}
+          onSubmitEditing={() => emailRef.current?.focus()}
           placeholder="Ríos"
+        />
+        <TextField
+          ref={emailRef}
+          label="Correo"
+          value={email}
+          error={emailError ?? undefined}
+          onChangeText={value => {
+            setEmail(value);
+            clearError();
+          }}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          textContentType="emailAddress"
+          returnKeyType="next"
+          onSubmitEditing={() => usernameRef.current?.focus()}
+          placeholder="tu@correo.com"
         />
         <TextField
           ref={usernameRef}
@@ -160,6 +211,7 @@ export default function RegisterScreen() {
             clearError();
           }}
           secureTextEntry={!showPassword}
+          maxLength={128}
           autoComplete="new-password"
           textContentType="newPassword"
           returnKeyType="next"
@@ -176,25 +228,7 @@ export default function RegisterScreen() {
             </Pressable>
           }
         />
-        <View style={styles.requirements} accessibilityRole="list">
-          {passwordValidation.resultados.map(result => (
-            <View
-              key={result.id}
-              accessible
-              accessibilityLabel={`${result.texto}: ${result.cumple ? 'cumplido' : 'pendiente'}`}
-              style={styles.requirement}>
-              <Icon
-                name={result.cumple ? 'check' : 'circle'}
-                size={16}
-                color={result.cumple ? colors.success : colors.muted}
-                strokeWidth={result.cumple ? 2.5 : 1.8}
-              />
-              <AppText variant="small" color={result.cumple ? colors.success : colors.muted}>
-                {result.texto}
-              </AppText>
-            </View>
-          ))}
-        </View>
+        <PasswordRequirements password={password} />
         <TextField
           ref={confirmRef}
           label="Confirmar contraseña"
@@ -205,6 +239,7 @@ export default function RegisterScreen() {
             clearError();
           }}
           secureTextEntry={!showConfirm}
+          maxLength={128}
           autoComplete="new-password"
           textContentType="newPassword"
           returnKeyType="go"
@@ -254,7 +289,7 @@ export default function RegisterScreen() {
       <View style={[styles.notice, { marginTop: spacing.lg }]}>
         <Icon name="info" size={18} color={colors.warning} />
         <AppText variant="small" style={styles.flex}>
-          Si borras los datos o cambias de teléfono, no hay recuperación de la cuenta ni del progreso.
+          Usaremos tu correo para recuperar la contraseña si algún día la olvidas.
         </AppText>
       </View>
     </Screen>
@@ -265,8 +300,6 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, justifyContent: 'center', paddingBottom: 32 },
   hero: { gap: 4, marginBottom: 20 },
   card: { borderWidth: 1, padding: 20, gap: 14 },
-  requirements: { gap: 6, marginTop: -4 },
-  requirement: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   passwordToggle: {
     minWidth: 44,
     minHeight: 44,

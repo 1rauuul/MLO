@@ -4,6 +4,7 @@ import {
   isLegacyPasswordHash,
   legacyHashPassword,
   initials,
+  normalizeEmail,
   normalizeUsername,
   passwordMaterial,
   timingSafeEqual,
@@ -57,6 +58,12 @@ describe('normalizeUsername', () => {
   });
 });
 
+describe('normalizeEmail', () => {
+  it('recorta y pasa a minúsculas', () => {
+    expect(normalizeEmail('  Ana.Perez@Escuela.MX ')).toBe('ana.perez@escuela.mx');
+  });
+});
+
 describe('initials', () => {
   it('toma la primera y la última palabra', () => {
     expect(initials('Valentina Ríos')).toBe('VR');
@@ -73,9 +80,10 @@ describe('validateRegistration', () => {
   const base = {
     firstName: 'Ana',
     lastName: 'Pérez',
+    email: 'ana@escuela.mx',
     username: 'ana',
-    password: 'secreto1',
-    confirm: 'secreto1',
+    password: 'Secreto1!',
+    confirm: 'Secreto1!',
   };
   it('acepta datos válidos', () => {
     expect(validateRegistration(base)).toBeNull();
@@ -86,6 +94,12 @@ describe('validateRegistration', () => {
   it('rechaza apellidos vacíos', () => {
     expect(validateRegistration({ ...base, lastName: '  ' })).toBe('last_name_empty');
   });
+  it('rechaza correo vacío', () => {
+    expect(validateRegistration({ ...base, email: '  ' })).toBe('email_empty');
+  });
+  it('rechaza correo inválido', () => {
+    expect(validateRegistration({ ...base, email: 'ana@' })).toBe('email_invalid');
+  });
   it('rechaza usuario corto', () => {
     expect(validateRegistration({ ...base, username: 'ab' })).toBe('username_short');
   });
@@ -93,7 +107,12 @@ describe('validateRegistration', () => {
     expect(validateRegistration({ ...base, username: 'ana ríos' })).toBe('username_invalid');
   });
   it('rechaza contraseña corta', () => {
-    expect(validateRegistration({ ...base, password: '123', confirm: '123' })).toBe('password_short');
+    expect(validateRegistration({ ...base, password: 'Ab1!', confirm: 'Ab1!' })).toBe('password_short');
+  });
+  it('rechaza contraseña sin mayúscula', () => {
+    expect(
+      validateRegistration({ ...base, password: 'secreto1!', confirm: 'secreto1!' }),
+    ).toBe('password_weak');
   });
   it('rechaza confirmación distinta', () => {
     expect(validateRegistration({ ...base, confirm: 'otro' })).toBe('password_mismatch');

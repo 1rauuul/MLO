@@ -52,7 +52,10 @@ export default function LoginScreen() {
       : errorKey === 'invalid_credentials'
         ? AUTH_MESSAGES.invalid_credentials
         : null;
-  const formError = errorKey === 'storage_error' ? AUTH_MESSAGES.storage_error : null;
+  const formError =
+    errorKey && errorKey !== 'missing' && errorKey !== 'invalid_credentials'
+      ? (AUTH_MESSAGES[errorKey] ?? null)
+      : null;
 
   return (
     <Screen keyboardAvoiding contentStyle={styles.content}>
@@ -111,6 +114,18 @@ export default function LoginScreen() {
             </Pressable>
           }
         />
+        <View style={styles.forgotRow}>
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel="¿Olvidaste tu contraseña?"
+            disabled={submitting}
+            onPress={() => router.push('/forgot-password' as never)}
+            style={styles.link}>
+            <AppText variant="small" color={colors.primary} weight="700">
+              ¿Olvidaste tu contraseña?
+            </AppText>
+          </Pressable>
+        </View>
         {formError ? (
           <AppText variant="small" color={colors.danger} accessibilityLiveRegion="polite">
             {formError}
@@ -134,7 +149,7 @@ export default function LoginScreen() {
       <View style={[styles.notice, { marginTop: spacing.lg }]}>
         <Icon name="info" size={18} color={colors.muted} />
         <AppText variant="small" style={styles.flex}>
-          Tus datos se guardan solo en este dispositivo.
+          Tu cuenta y tu progreso se guardan en la nube.
         </AppText>
       </View>
     </Screen>
@@ -152,6 +167,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' },
+  forgotRow: { alignItems: 'flex-end', marginTop: -6 },
   link: { minHeight: 44, justifyContent: 'center' },
   notice: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   flex: { flex: 1 },

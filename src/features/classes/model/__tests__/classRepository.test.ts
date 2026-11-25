@@ -10,46 +10,7 @@ import {
   selectClassMemberships,
   selectExtrasByLesson,
   selectLessonExtras,
-  storeClassRelease,
 } from '@/features/classes/model/classRepository';
-
-const release = {
-  schemaVersion: 2 as const,
-  class: { id: 'c1', name: 'Grupo A', teacherName: 'Profesora Ríos' },
-  version: 2,
-  hash: 'hash-2',
-  publishedAt: '2026-10-27T00:00:00.000Z',
-  lessons: [
-    {
-      lessonId: 'l1.2',
-      code: '1.2',
-      extras: [
-        {
-          id: 'x-exercise',
-          type: 'exercise' as const,
-          content: {
-            id: 'x-exercise',
-            lessonId: 'l1.2',
-            type: 'order' as const,
-            prompt: 'Ordena',
-            instructions: '',
-            correctOrder: ['uno', 'dos'],
-            config: {},
-            explanation: '',
-          },
-        },
-        {
-          id: 'x-lesson',
-          type: 'lesson' as const,
-          content: {
-            title: 'Contexto',
-            blocks: [{ type: 'p' as const, text: 'Texto extra' }],
-          },
-        },
-      ],
-    },
-  ],
-};
 
 function makeDb(overrides: Record<string, unknown> = {}) {
   const statements: { sql: string; params: unknown[] }[] = [];
@@ -192,20 +153,6 @@ describe('classRepository', () => {
         courseCatalogId: 'base',
       },
     ]);
-  });
-
-  it('guarda el release y reemplaza los extras de la clase', async () => {
-    const { db, statements } = makeDb();
-
-    await storeClassRelease(db, 'ABC123', release);
-
-    const sql = statements.map(statement => statement.sql);
-    expect(sql.some(statement => statement.includes('INSERT INTO class_cache'))).toBe(true);
-    expect(sql.some(statement => statement.includes('DELETE FROM class_extras_cache'))).toBe(true);
-    expect(sql.filter(statement => statement.includes('INSERT INTO class_extras_cache'))).toHaveLength(2);
-    expect(statements.find(statement => statement.sql.includes('INSERT INTO class_cache'))?.params[1]).toBe(
-      'ABC123',
-    );
   });
 
   it('deduplica el mismo extra compartido por dos clases y suma sus etiquetas', async () => {

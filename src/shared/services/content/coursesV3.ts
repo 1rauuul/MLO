@@ -15,7 +15,6 @@ import {
 
 /** En el contrato, “grupo” sigue llamándose clase; el curso base no cambia. */
 const BASE_CATALOG_ID = 'base';
-const COURSES_SYNCED_PREFIX = 'courses_synced:';
 
 export const COURSE_LIST_SCHEMA_VERSION = 3;
 const STUDENT_KEY_HEADER = 'X-MLO-Student-Key';
@@ -81,6 +80,7 @@ interface CourseRow {
   published_at: string | null;
   empty: number;
   active: number;
+  has_class: number;
 }
 
 function fail(message: string): never {
@@ -358,54 +358,10 @@ function mapCourse(row: CourseRow): RemoteCourse {
   };
 }
 
-async function hasCourseSync(db: SQLiteDatabase, accountId: number): Promise<boolean> {
-  const row = await db.getFirstAsync<{ key: string }>(
-    'SELECT key FROM meta WHERE key = ?',
-    `${COURSES_SYNCED_PREFIX}${accountId}`,
-  );
-  return row !== null;
-}
-
-/**
- * El curso base empaquetado existe siempre. Si hay cuenta y todavía no tiene
- * cursos, se le asigna el base activo; el progreso no se toca. Una cuenta que
- * ya sincronizó no recupera el base: la lista vacía es una decisión del servidor.
- */
-export async function ensureBaseCourse(db: SQLiteDatabase, accountId?: number): Promise<void> {
-  if (accountId !== undefined && (await hasCourseSync(db, accountId))) {
-    return;
-  }
-  const now = new Date().toISOString();
-  await db.runAsync(
-    `INSERT INTO remote_courses
-       (catalog_id, title, status, uses_base, version, hash, published_at, empty, is_base, manifest, fetched_at)
-     VALUES ('base', 'Contenido base', 'published', 0, '', '', NULL, 0, 1, NULL, ?)
-     ON CONFLICT(catalog_id) DO NOTHING`,
-    now,
-  );
-  if (accountId === undefined) {
-    return;
-  }
-  const row = await db.getFirstAsync<{ count: number }>(
-    'SELECT COUNT(*) AS count FROM account_courses WHERE account_id = ?',
-    accountId,
-  );
-  if ((row?.count ?? 0) > 0) {
-    return;
-  }
-  await db.runAsync(
-    `INSERT INTO account_courses (account_id, catalog_id, active, added_at)
-     VALUES (?, 'base', 1, ?)
-     ON CONFLICT(account_id, catalog_id) DO UPDATE SET active = 1`,
-    accountId,
-    now,
-  );
-}
-
 /**
  * Registra localmente el curso de una clase recién unida. Permite mostrar el
  * nombre asignado en el CMS aunque el curso aún no tenga release v3 ni aparezca
- * todavía en `GET /courses`.
+ * todavía en `GET /courses`. El curso base solo entra por una clase del CMS.
  */
 export async function registerJoinedCourse(
   db: SQLiteDatabase,
@@ -413,7 +369,7 @@ export async function registerJoinedCourse(
   catalogId: string,
   title: string,
 ): Promise<void> {
-  if (!catalogId || catalogId === BASE_CATALOG_ID || title.trim().length === 0) {
+  if (!catalogId || title.trim().length === 0) {
     return;
   }
   const now = new Date().toISOString();
@@ -437,43 +393,44 @@ export async function registerJoinedCourse(
   );
 }
 
+/**
+ * Cursos del alumno. El curso base empaquetado ya no existe: solo aparece si
+ * una clase del CMS lo asignó (`account_classes`) y el CMS lo dio de alta.
+ */
 export async function loadAccountCourses(
   db: SQLiteDatabase,
   accountId?: number,
 ): Promise<AccountCourses> {
-  const synced = accountId !== undefined ? await hasCourseSync(db, accountId) : false;
-  if (!synced) {
-    await ensureBaseCourse(db, accountId);
+  if (!accountId) {
+    return { courses: [], activeCatalogId: '' };
   }
-  const rows = accountId
-    ? await db.getAllAsync<CourseRow>(
-        `SELECT rc.*, ac.active FROM account_courses ac
+  const rows = (
+    await db.getAllAsync<CourseRow>(
+      `SELECT rc.*, ac.active,
+              EXISTS (
+                SELECT 1 FROM account_classes acl
+                 WHERE acl.account_id = ? AND acl.course_catalog_id = rc.catalog_id
+                   AND acl.active = 1
+              ) AS has_class
+         FROM account_courses ac
          JOIN remote_courses rc ON rc.catalog_id = ac.catalog_id
-         WHERE ac.account_id = ?
-         ORDER BY rc.is_base DESC, rc.title`,
-        accountId,
-      )
-    : await db.getAllAsync<CourseRow>(
-        `SELECT rc.*, 0 AS active FROM remote_courses rc
-         WHERE rc.catalog_id = 'base'`,
-      );
+        WHERE ac.account_id = ?
+        ORDER BY rc.is_base DESC, rc.title`,
+      accountId,
+      accountId,
+    )
+  ).filter(row => row.catalog_id !== BASE_CATALOG_ID || row.has_class === 1);
   if (rows.length === 0) {
-    return synced
-      ? { courses: [], activeCatalogId: '' }
-      : { courses: [], activeCatalogId: BASE_CATALOG_ID };
+    return { courses: [], activeCatalogId: '' };
   }
   let activeCatalogId = rows.find(row => row.active === 1)?.catalog_id;
   if (!activeCatalogId) {
-    activeCatalogId = rows.some(row => row.catalog_id === BASE_CATALOG_ID)
-      ? BASE_CATALOG_ID
-      : rows[0]!.catalog_id;
-    if (accountId) {
-      await selectCourse(db, accountId, activeCatalogId);
-    }
+    activeCatalogId = rows[0]!.catalog_id;
+    await selectCourse(db, accountId, activeCatalogId);
   }
   return {
     courses: rows.map(mapCourse),
-    activeCatalogId: activeCatalogId ?? BASE_CATALOG_ID,
+    activeCatalogId,
   };
 }
 
@@ -535,7 +492,6 @@ export async function refreshCourseList(
     manifests.set(catalogId, await cacheMediaInManifest(db, manifest));
   }
 
-  const synced = await hasCourseSync(db, account.id);
   const previous = new Map(
     (
       await db.getAllAsync<{ catalog_id: string; version: string; hash: string }>(
@@ -550,7 +506,7 @@ export async function refreshCourseList(
   );
   const remoteCourses = list.courses.filter(course => course.catalogId !== BASE_CATALOG_ID);
   const changed =
-    synced &&
+    previous.size > 0 &&
     (remoteCourses.length !== previous.size ||
       remoteCourses.some(course => {
         const before = previous.get(course.catalogId);
@@ -566,6 +522,10 @@ export async function refreshCourseList(
     const previousActive = previous.find(row => row.active === 1)?.catalog_id;
 
     for (const course of list.courses) {
+      // El curso base vive solo en el CMS: el APK no guarda su manifiesto.
+      if (course.catalogId === BASE_CATALOG_ID) {
+        continue;
+      }
       await db.runAsync(
         `INSERT INTO remote_courses
            (catalog_id, title, status, uses_base, version, hash, published_at, empty, is_base, manifest, fetched_at)
@@ -598,7 +558,9 @@ export async function refreshCourseList(
       );
     }
 
-    const catalogIds = list.courses.map(course => course.catalogId);
+    const catalogIds = list.courses
+      .map(course => course.catalogId)
+      .filter(catalogId => catalogId !== BASE_CATALOG_ID);
     // Los cursos locales de una clase activa se conservan aunque el servidor aún
     // no los liste: son los que dan nombre a la tarjeta mientras se publica.
     const keepClassCourses = `catalog_id NOT IN (
@@ -642,14 +604,6 @@ export async function refreshCourseList(
         now,
       );
     }
-    // La marca evita que `ensureBaseCourse` reintroduzca el base tras una
-    // sincronización válida con cero cursos (DEC-05).
-    await db.runAsync(
-      `INSERT INTO meta (key, value) VALUES (?, ?)
-       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-      `${COURSES_SYNCED_PREFIX}${account.id}`,
-      now,
-    );
   });
   return changed;
 }

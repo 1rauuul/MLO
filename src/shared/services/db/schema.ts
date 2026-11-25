@@ -1,4 +1,4 @@
-export const DATABASE_VERSION = 21;
+export const DATABASE_VERSION = 24;
 
 export const SCHEMA_DDL = `
 CREATE TABLE IF NOT EXISTS accounts (
@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   username TEXT NOT NULL UNIQUE,
   external_key TEXT NOT NULL UNIQUE,
   display_name TEXT NOT NULL,
+  email TEXT,
   password_hash TEXT NOT NULL,
   salt TEXT NOT NULL,
   created_at TEXT NOT NULL
@@ -14,6 +15,19 @@ CREATE TABLE IF NOT EXISTS accounts (
 CREATE TABLE IF NOT EXISTS auth_session (
   id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
   account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE
+);
+
+-- Credencial remota y estado de sincronización. El token se borra al cerrar
+-- sesión, pero el hash se conserva para no subir progreso viejo como nuevo.
+CREATE TABLE IF NOT EXISTS remote_session (
+  account_id INTEGER PRIMARY KEY NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  token TEXT,
+  expires_at TEXT,
+  last_uploaded_hash TEXT,
+  last_synced_at TEXT,
+  pending_restore INTEGER NOT NULL DEFAULT 0,
+  force_remote INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS units (
@@ -248,27 +262,8 @@ CREATE TABLE IF NOT EXISTS meta (
   value TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS remote_catalogs (
-  catalog_id TEXT PRIMARY KEY NOT NULL,
-  title TEXT NOT NULL DEFAULT '',
-  version TEXT NOT NULL DEFAULT '',
-  manifest_hash TEXT NOT NULL DEFAULT '',
-  lesson_ids TEXT NOT NULL DEFAULT '[]',
-  fetched_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS remote_lessons (
-  catalog_id TEXT NOT NULL,
-  lesson_id TEXT NOT NULL,
-  hash TEXT NOT NULL,
-  payload TEXT NOT NULL,
-  fetched_at TEXT NOT NULL,
-  applied_hash TEXT,
-  PRIMARY KEY (catalog_id, lesson_id)
-);
-
 -- Descubrimiento de cursos v3. El manifiesto v3 se guarda como JSON para X-03;
--- el contenido v2 sigue viviendo en units/lessons/remote_lessons.
+-- el contenido v2 se retiró con el curso base empaquetado.
 CREATE TABLE IF NOT EXISTS remote_courses (
   catalog_id TEXT PRIMARY KEY NOT NULL,
   title TEXT NOT NULL,
@@ -319,7 +314,6 @@ CREATE INDEX IF NOT EXISTS idx_lessons_group ON lessons(group_id);
 CREATE INDEX IF NOT EXISTS idx_examples_group ON examples(group_id);
 CREATE INDEX IF NOT EXISTS idx_exercises_group ON exercises(group_id);
 CREATE INDEX IF NOT EXISTS idx_evaluations_group ON evaluations(group_id);
-CREATE INDEX IF NOT EXISTS idx_remote_lessons_catalog ON remote_lessons(catalog_id);
 CREATE INDEX IF NOT EXISTS idx_content_references_scope ON content_references(catalog_id, group_id);
 `;
 
@@ -337,8 +331,6 @@ DROP TABLE IF EXISTS content_references;
 DROP TABLE IF EXISTS account_classes;
 DROP TABLE IF EXISTS class_extras_cache;
 DROP TABLE IF EXISTS class_cache;
-DROP TABLE IF EXISTS remote_lessons;
-DROP TABLE IF EXISTS remote_catalogs;
 DROP TABLE IF EXISTS meta;
 DROP TABLE IF EXISTS learner_profile;
 DROP TABLE IF EXISTS questions;

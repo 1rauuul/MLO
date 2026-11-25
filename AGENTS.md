@@ -7,9 +7,9 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v58.0.0/ before 
 ## Stack de producción
 
 Expo SDK 58 (React Native 0.88) + Expo Router + expo-sqlite + TypeScript estricto + Jest/jest-expo
-con `@testing-library/react-native`. Offline-first: **sin red por defecto**
-(`DATA_MODE = 'local'`). Los servicios son opcionales y solo se consultan con
-`DATA_MODE = 'hybrid'`; SQLite sigue siendo la fuente de verdad local.
+con `@testing-library/react-native`. Offline-first: **sin red por defecto** (`DATA_MODE = 'local'`).
+Los servicios solo se consultan con `DATA_MODE = 'hybrid'`; SQLite sigue siendo la fuente de verdad
+local y el contenido llega desde los cursos y clases del CMS (el APK no empaqueta contenido base).
 Sin RA, sin sensores nativos, sin empaquetado SCORM/LOM en runtime.
 
 ## Arquitectura (MVVM por features, MLO-AR sin RA)
@@ -38,9 +38,12 @@ Reglas:
 - El contrato v2 vive en `docs/api/contrato.md`: el cliente acepta `version` string o entera,
   normaliza los códigos de clase a mayúsculas y los campos vacíos omitidos, y descarta una
   lección si su hash o sus ids no coinciden con el manifest y el curso.
-- **El arranque nunca espera a la red.** `migrateAndSeed` solo aplica contenido local;
-  `ContentSyncProvider` descarga a `remote_lessons` y a la caché de clases en segundo plano;
-  `applyStagedContent` aplica lo pendiente en el siguiente arranque o al unirse a una clase.
+- **El arranque nunca espera a la red.** `migrateAndSeed` solo crea el esquema y aplica los
+  releases v3 ya guardados; `ContentSyncProvider` descarga cursos y clases en segundo plano y
+  `applyPendingContent` aplica lo pendiente cuando el alumno confirma.
+- El contenido base ya no se empaqueta en el APK: vive solo en el CMS y se muestra únicamente
+  si un curso publicado (`uses_base`) o una clase lo incluye. Una instalación nueva sin cursos
+  o clases sincronizadas queda vacía hasta que el alumno entre y descargue contenido.
 - Contenido retirado: `units`, `lessons` y `evaluations` se archivan con `archived_at`; no se
   borran si tienen progreso asociado. Los ids de contenido remoto son globales
   (`{catalogId}-{id}`); el curso base usa ids sin prefijo y `catalog_id = 'base'`.
@@ -76,12 +79,12 @@ Reglas:
   `exercises`, `evaluations`), cada una con `model/`, `viewmodel/` y `view/` (+ `__tests__/`).
 - `src/shared/components/` — componentes RN reutilizables (`AppText`, `Screen`, `Buttons`, …).
 - `src/shared/hooks/` — `useReducedMotion`, `useExitGuard`, `useAsyncResource`.
-- `src/shared/services/db/` — `database.ts` (init/migración/seed), `schema.ts` (DDL), `seed.ts`.
+- `src/shared/services/db/` — `database.ts` (init/migración de esquema), `schema.ts`.
 - `src/shared/services/data/` — `DataProvider.tsx` (puertos inyectables) y `dataMode.ts`.
 - `src/shared/services/http/` — `client.ts` (timeout, reintentos, errores tipados).
-- `src/shared/services/content/` — `richContent.ts`, `unit1.content.ts`, `banks/`,
-  `remoteContent.ts` (descarga/validación), `remote/` (validador y aplicación del área de espera)
-  y `ContentSyncProvider.tsx`.
+- `src/shared/services/content/` — `remoteContent.ts` (clases), `coursesV3.ts` (catálogo v3),
+  `applyV3Content.ts`, `mediaCache.ts`/`mediaPath.ts`, `remote/` (validadores y contenido
+  pendiente) y `ContentSyncProvider.tsx`.
 - `src/shared/utils/` — `activityLabels.ts`, `validate.ts`, `navigation/{tabRoutes,locationRoutes}`.
 - `src/shared/model/` — `entities.ts` (tipos compartidos).
 - `src/shared/theme/` — `ThemeProvider.tsx`, `tokens.ts`.
@@ -116,6 +119,6 @@ Reglas:
   `src/features/modules/viewmodel/cha.logic.ts`.
 - Las contraseñas se derivan con PBKDF2-HMAC-SHA256 (`src/features/auth/viewmodel/auth.logic.ts`);
   las cuentas con hash legacy SHA-256 se re-hashean de forma transparente al iniciar sesión.
-- Los subtemas de las unidades 2–5 tienen contenido introductorio; el contenido completo de
-  la Unidad 1 proviene de `docs/contenido/tablas-ingenieria.md`.
+- El contenido base del curso vive en el CMS (`docs/contenido/tablas-ingenieria.md` es su fuente);
+  el APK ya no lo empaqueta y solo lo muestra dentro de cursos o clases que lo incluyan.
 - No hay empaquetado SCORM/LOM en runtime.

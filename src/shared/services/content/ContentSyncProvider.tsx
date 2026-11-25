@@ -13,7 +13,7 @@ import { AppState } from 'react-native';
 
 import { refreshClassMemberships, stageClassContent } from '@/shared/services/content/classSync';
 import { refreshCourseList } from '@/shared/services/content/coursesV3';
-import { refreshCatalogs } from '@/shared/services/content/remoteContent';
+import { applyStoredV3Content } from '@/shared/services/content/applyV3Content';
 import {
   applyPendingContent,
   hasPendingContent,
@@ -78,16 +78,13 @@ export function ContentSyncProvider({ children }: { children: ReactNode }) {
     let changed = await hasPendingContent(db).catch(() => false);
     let online = false;
     try {
-      changed = (await refreshCatalogs(db, http)) || changed;
+      const coursesChanged = await refreshCourseList(db, httpV3);
+      changed = coursesChanged || changed;
       online = true;
-    } catch (caught) {
-      if (__DEV__) {
-        console.warn('[content] no se pudo comprobar el catálogo base', caught);
+      // La primera descarga no es una actualización: se aplica sin aviso.
+      if (!coursesChanged) {
+        await applyStoredV3Content(db);
       }
-    }
-    try {
-      changed = (await refreshCourseList(db, httpV3)) || changed;
-      online = true;
     } catch (caught) {
       if (__DEV__) {
         console.warn('[content] no se pudo comprobar la lista de cursos', caught);

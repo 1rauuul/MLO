@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { SplashScreen, Stack } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { SplashScreen, Stack, useRouter } from 'expo-router';
 import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -15,6 +15,7 @@ import { AppThemeProvider } from '@/shared/theme/ThemeProvider';
 import { AuthProvider, useAuth } from '@/features/auth/viewmodel/useAuth';
 import { ClassesProvider } from '@/features/classes/viewmodel/useClasses';
 import { LearnerProfileProvider } from '@/features/profile/viewmodel/useLearnerProfile';
+import { ProgressSyncProvider } from '@/features/profile/viewmodel/useProgressSync';
 import { SessionProvider } from '@/features/auth/viewmodel/useSession';
 
 void SplashScreen.preventAutoHideAsync();
@@ -34,19 +35,21 @@ export default function RootLayout() {
           <DataProvider>
             <ContentSyncProvider>
               <AuthProvider>
-                <ClassesProvider>
-                  <SessionProvider>
-                    <LearnerProfileProvider>
-                      <AppThemeProvider>
-                        <StatusBar style="auto" />
-                        <ErrorBoundary onError={() => setReady(true)}>
-                          <RootNavigator onReady={() => setReady(true)} />
-                        </ErrorBoundary>
-                        <ContentUpdateNotice />
-                      </AppThemeProvider>
-                    </LearnerProfileProvider>
-                  </SessionProvider>
-                </ClassesProvider>
+                <ProgressSyncProvider>
+                  <ClassesProvider>
+                    <SessionProvider>
+                      <LearnerProfileProvider>
+                        <AppThemeProvider>
+                          <StatusBar style="auto" />
+                          <ErrorBoundary onError={() => setReady(true)}>
+                            <RootNavigator onReady={() => setReady(true)} />
+                          </ErrorBoundary>
+                          <ContentUpdateNotice />
+                        </AppThemeProvider>
+                      </LearnerProfileProvider>
+                    </SessionProvider>
+                  </ClassesProvider>
+                </ProgressSyncProvider>
               </AuthProvider>
             </ContentSyncProvider>
           </DataProvider>
@@ -58,13 +61,22 @@ export default function RootLayout() {
 }
 
 function RootNavigator({ onReady }: { onReady: () => void }) {
-  const { account, isLoading } = useAuth();
+  const { account, isLoading, needsRemoteLink } = useAuth();
+  const router = useRouter();
+  const promptedRef = useRef(false);
 
   useEffect(() => {
     if (!isLoading) {
       onReady();
     }
   }, [isLoading, onReady]);
+
+  useEffect(() => {
+    if (!isLoading && account && needsRemoteLink && !promptedRef.current) {
+      promptedRef.current = true;
+      router.push('/vincular-cuenta' as never);
+    }
+  }, [account, isLoading, needsRemoteLink, router]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -74,6 +86,7 @@ function RootNavigator({ onReady }: { onReady: () => void }) {
       <Stack.Protected guard={!account}>
         <Stack.Screen name="login" />
         <Stack.Screen name="register" />
+        <Stack.Screen name="forgot-password" />
       </Stack.Protected>
     </Stack>
   );

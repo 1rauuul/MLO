@@ -11,7 +11,6 @@ import {
   applyPendingContent,
   hasPendingContent,
 } from '@/shared/services/content/remote/applyStagedContent';
-import { refreshCatalogs } from '@/shared/services/content/remoteContent';
 
 let mockAppStateHandler: ((state: string) => void) | null = null;
 let mockHybrid = true;
@@ -24,9 +23,6 @@ jest.mock('@/shared/services/http/client', () => ({
   http: {},
   httpV3: {},
 }));
-jest.mock('@/shared/services/content/remoteContent', () => ({
-  refreshCatalogs: jest.fn(),
-}));
 jest.mock('@/shared/services/content/coursesV3', () => ({
   refreshCourseList: jest.fn(),
 }));
@@ -38,8 +34,10 @@ jest.mock('@/shared/services/content/remote/applyStagedContent', () => ({
   hasPendingContent: jest.fn(),
   applyPendingContent: jest.fn(),
 }));
+jest.mock('@/shared/services/content/applyV3Content', () => ({
+  applyStoredV3Content: jest.fn(async () => ({ failed: [] })),
+}));
 
-const mockRefreshCatalogs = jest.mocked(refreshCatalogs);
 const mockRefreshCourseList = jest.mocked(refreshCourseList);
 const mockStageClassContent = jest.mocked(stageClassContent);
 const mockHasPendingContent = jest.mocked(hasPendingContent);
@@ -82,7 +80,6 @@ beforeEach(() => {
     mockAppStateHandler = handler as unknown as (state: string) => void;
     return { remove: jest.fn() } as never;
   });
-  mockRefreshCatalogs.mockResolvedValue(false);
   mockRefreshCourseList.mockResolvedValue(false);
   mockStageClassContent.mockResolvedValue({ changed: false, failed: [] });
   mockHasPendingContent.mockResolvedValue(false);
@@ -100,66 +97,66 @@ describe('ContentSyncProvider', () => {
     renderProvider();
     await act(async () => {});
 
-    expect(mockRefreshCatalogs).not.toHaveBeenCalled();
+    expect(mockRefreshCourseList).not.toHaveBeenCalled();
   });
 
   it('comprueba al abrir y cada hora en primer plano', async () => {
     renderProvider();
 
-    await waitFor(() => expect(mockRefreshCatalogs).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockRefreshCourseList).toHaveBeenCalledTimes(1));
 
     await act(async () => {
       jest.advanceTimersByTime(60 * 60 * 1000);
     });
 
-    await waitFor(() => expect(mockRefreshCatalogs).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockRefreshCourseList).toHaveBeenCalledTimes(2));
   });
 
   it('el botón manual fuerza una comprobación', async () => {
     const { getByLabelText } = renderProvider();
-    await waitFor(() => expect(mockRefreshCatalogs).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockRefreshCourseList).toHaveBeenCalledTimes(1));
 
     fireEvent.press(getByLabelText('manual'));
 
-    await waitFor(() => expect(mockRefreshCatalogs).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockRefreshCourseList).toHaveBeenCalledTimes(2));
   });
 
   it('pausa el temporizador en background y comprueba al volver', async () => {
     renderProvider();
-    await waitFor(() => expect(mockRefreshCatalogs).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockRefreshCourseList).toHaveBeenCalledTimes(1));
 
     act(() => mockAppStateHandler?.('background'));
     await act(async () => {
       jest.advanceTimersByTime(2 * 60 * 60 * 1000);
     });
-    expect(mockRefreshCatalogs).toHaveBeenCalledTimes(1);
+    expect(mockRefreshCourseList).toHaveBeenCalledTimes(1);
 
     act(() => mockAppStateHandler?.('active'));
-    await waitFor(() => expect(mockRefreshCatalogs).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockRefreshCourseList).toHaveBeenCalledTimes(2));
   });
 
   it('no solapa comprobaciones: la manual espera a la que está en curso', async () => {
     let release!: (value: boolean) => void;
-    mockRefreshCatalogs.mockImplementationOnce(
+    mockRefreshCourseList.mockImplementationOnce(
       () =>
         new Promise<boolean>(resolve => {
           release = resolve;
         }),
     );
     const { getByLabelText } = renderProvider();
-    await waitFor(() => expect(mockRefreshCatalogs).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockRefreshCourseList).toHaveBeenCalledTimes(1));
 
     fireEvent.press(getByLabelText('manual'));
     await act(async () => {
       jest.advanceTimersByTime(60 * 60 * 1000);
     });
-    expect(mockRefreshCatalogs).toHaveBeenCalledTimes(1);
+    expect(mockRefreshCourseList).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       release(false);
     });
     fireEvent.press(getByLabelText('manual'));
-    await waitFor(() => expect(mockRefreshCatalogs).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockRefreshCourseList).toHaveBeenCalledTimes(2));
   });
 
   it('detecta cambios por version/hash y ofrece la actualización', async () => {

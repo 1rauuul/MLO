@@ -12,7 +12,6 @@ import type {
 import { EXERCISE_TYPES } from '@/shared/model/entities';
 import type {
   ClassPreviewData,
-  RemoteClassRelease,
 } from '@/shared/services/content/remote/validateClassRelease';
 import { registerJoinedCourse } from '@/shared/services/content/coursesV3';
 
@@ -251,69 +250,6 @@ export async function selectClassSyncState(
 
 export async function archiveClassCache(db: SQLiteDatabase, classId: string): Promise<void> {
   await db.runAsync('UPDATE class_cache SET archived = 1 WHERE class_id = ?', classId);
-}
-
-export async function selectClassVersion(
-  db: SQLiteDatabase,
-  classId: string,
-): Promise<{ version: number; hash: string } | null> {
-  return db.getFirstAsync<{ version: number; hash: string }>(
-    'SELECT version, hash FROM class_cache WHERE class_id = ?',
-    classId,
-  );
-}
-
-export async function storeClassRelease(
-  db: SQLiteDatabase,
-  code: string,
-  release: RemoteClassRelease,
-): Promise<void> {
-  const now = new Date().toISOString();
-  await db.withTransactionAsync(async () => {
-    await db.runAsync(
-      `INSERT INTO class_cache
-         (class_id, class_code, class_name, teacher_name, version, hash, published_at,
-          course_catalog_id, archived, release_v3, applied_hash, fetched_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'base', 0, NULL, NULL, ?)
-       ON CONFLICT(class_id) DO UPDATE SET
-         class_code = excluded.class_code,
-         class_name = excluded.class_name,
-         teacher_name = excluded.teacher_name,
-         version = excluded.version,
-         hash = excluded.hash,
-         published_at = excluded.published_at,
-         archived = 0,
-         fetched_at = excluded.fetched_at`,
-      release.class.id,
-      code,
-      release.class.name,
-      release.class.teacherName,
-      release.version,
-      release.hash,
-      release.publishedAt,
-      now,
-    );
-
-    await db.runAsync('DELETE FROM class_extras_cache WHERE class_id = ?', release.class.id);
-
-    let position = 0;
-    for (const lesson of release.lessons) {
-      for (const extra of lesson.extras) {
-        await db.runAsync(
-          `INSERT INTO class_extras_cache
-             (class_id, extra_id, lesson_id, type, payload, position)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          release.class.id,
-          extra.id,
-          lesson.lessonId,
-          extra.type,
-          JSON.stringify(extra.content),
-          position,
-        );
-        position += 1;
-      }
-    }
-  });
 }
 
 export async function updateClassMetadata(

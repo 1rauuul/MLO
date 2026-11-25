@@ -1,6 +1,3 @@
-import type { ExerciseConfig } from '@/shared/model/entities';
-import { unit1Evaluations, unit1Exercises } from '@/shared/services/content/unit1.content';
-
 import {
   buildFillBank,
   crosswordCells,
@@ -160,56 +157,5 @@ describe('crossword', () => {
 
   it('puntúa cada celda correcta por separado', () => {
     expect(crosswordScore(crosswordCells(config), { '0-0': 'S' })).toEqual({ correct: 1, total: 5 });
-  });
-});
-
-describe('ejemplos curados de l1.2', () => {
-  it('todo ejercicio de l1.2 trae título, pasos y pistas', () => {
-    const lessonExercises = unit1Exercises.filter(exercise => exercise.lessonId === 'l1.2');
-    expect(lessonExercises.length).toBeGreaterThan(0);
-    for (const exercise of lessonExercises) {
-      expect(exercise.example?.title).toBeTruthy();
-      expect(exercise.example?.steps.length).toBeGreaterThan(0);
-      expect(exercise.example?.hints.length).toBeGreaterThan(0);
-      for (const step of exercise.example?.steps ?? []) {
-        expect(step.text).toBeTruthy();
-        expect(step.why).toBeTruthy();
-      }
-    }
-  });
-});
-
-describe('crossword data integrity (Unidad 1)', () => {
-  const configs: ExerciseConfig[] = [
-    ...unit1Exercises.map(exercise => exercise.config).filter((c): c is ExerciseConfig => !!c?.crossword),
-    ...unit1Evaluations.flatMap(ev => ev.questions.map(q => q.config)).filter((c): c is ExerciseConfig => !!c?.crossword),
-  ];
-
-  it('valida que cada palabra encaje en su rejilla sin conflictos', () => {
-    expect(configs.length).toBeGreaterThan(0);
-    for (const config of configs) {
-      const crossword = config.crossword!;
-      const letters = new Map<string, string>();
-      for (const entry of crossword.entries) {
-        const stepRow = entry.direction === 'down' ? 1 : 0;
-        const stepCol = entry.direction === 'across' ? 1 : 0;
-        for (let offset = 0; offset < entry.word.length; offset += 1) {
-          const row = entry.row + stepRow * offset;
-          const col = entry.col + stepCol * offset;
-          expect(row).toBeGreaterThanOrEqual(0);
-          expect(row).toBeLessThan(crossword.rows);
-          expect(col).toBeGreaterThanOrEqual(0);
-          expect(col).toBeLessThan(crossword.cols);
-          const key = `${row}-${col}`;
-          const letter = entry.word[offset]!.toUpperCase();
-          const existing = letters.get(key);
-          if (existing !== undefined) {
-            expect(existing).toBe(letter);
-          }
-          letters.set(key, letter);
-        }
-      }
-      expect(letters.size).toBeGreaterThan(0);
-    }
   });
 });

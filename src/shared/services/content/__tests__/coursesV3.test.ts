@@ -209,7 +209,7 @@ describe('refreshCourseList', () => {
     expect(statements).toHaveLength(0);
   });
 
-  it('una lista vacía deja cero accesos y escribe la marca de sincronización', async () => {
+  it('una lista vacía deja cero accesos y borra el base sin clase', async () => {
     const { db, statements } = makeDb({
       session: { id: 1, external_key: STUDENT_KEY },
       previous: [{ catalog_id: 'base', active: 1 }],
@@ -228,8 +228,7 @@ describe('refreshCourseList', () => {
     expect(
       statements.some(statement => statement.sql.startsWith('INSERT INTO account_courses')),
     ).toBe(false);
-    const marker = statements.find(statement => statement.sql.startsWith('INSERT INTO meta'));
-    expect(marker?.params).toEqual(['courses_synced:1', expect.any(String)]);
+    expect(statements.some(statement => statement.sql.startsWith('INSERT INTO meta'))).toBe(false);
   });
 
   it('guarda la lista y el manifiesto no-base conservando el curso activo', async () => {
@@ -247,11 +246,8 @@ describe('refreshCourseList', () => {
     const inserts = statements.filter(statement =>
       statement.sql.startsWith('INSERT INTO remote_courses'),
     );
-    expect(inserts).toHaveLength(2);
-    const base = inserts.find(statement => statement.params[0] === 'base');
+    expect(inserts).toHaveLength(1);
     const demo = inserts.find(statement => statement.params[0] === 'demo');
-    expect(base?.params[8]).toBe(1);
-    expect(base?.params[9]).toBeNull();
     expect(demo?.params[8]).toBe(0);
     expect(String(demo?.params[9])).toContain('"kind":"course"');
     expect(demo?.params[7]).toBe(1);
@@ -259,41 +255,38 @@ describe('refreshCourseList', () => {
     const memberships = statements.filter(statement =>
       statement.sql.startsWith('INSERT INTO account_courses'),
     );
-    expect(memberships).toHaveLength(3);
-    expect(memberships.slice(0, 2).map(statement => statement.params.slice(0, 2))).toEqual([
-      [1, 'base'],
-      [1, 'demo'],
-    ]);
-    expect(memberships.slice(0, 2).every(statement => statement.sql.includes('VALUES (?, ?, 0, ?)'))).toBe(true);
+    expect(memberships).toHaveLength(2);
+    expect(memberships[0]?.params.slice(0, 2)).toEqual([1, 'demo']);
+    expect(memberships[0]?.sql.includes('VALUES (?, ?, 0, ?)')).toBe(true);
     const active = memberships.find(statement => statement.sql.includes('VALUES (?, ?, 1, ?)'));
     expect(active?.params.slice(0, 2)).toEqual([1, 'demo']);
   });
 
-  it('reemplaza accesos y cae al base si el activo anterior desaparece', async () => {
+  it('mantiene el curso activo si sigue en la lista', async () => {
     const { db, statements } = makeDb({
       session: { id: 7, external_key: STUDENT_KEY },
       previous: [{ catalog_id: 'demo', active: 1 }],
-      remaining: ['base'],
+      remaining: ['demo'],
     });
     const list = readJson('course-list.json');
-    const baseOnly = {
+    const demoOnly = {
       ...list,
-      courses: [(list.courses as unknown[])[0]],
+      courses: [(list.courses as unknown[])[1]],
     };
-    const client = makeClient(baseOnly);
+    const client = makeClient(demoOnly, { demo: readJson('manifest-empty.json') });
 
     await refreshCourseList(db, client);
 
     const remove = statements.find(statement =>
       statement.sql.startsWith('DELETE FROM account_courses'),
     );
-    expect(remove?.params).toEqual([7, 'base', 7]);
+    expect(remove?.params).toEqual([7, 'demo', 7]);
     const active = statements.find(
       statement =>
         statement.sql.startsWith('INSERT INTO account_courses') &&
         statement.sql.includes('VALUES (?, ?, 1, ?)'),
     );
-    expect(active?.params.slice(0, 2)).toEqual([7, 'base']);
+    expect(active?.params.slice(0, 2)).toEqual([7, 'demo']);
   });
 
   it('conserva el curso local de una clase aunque el servidor aún no lo liste', async () => {
@@ -314,7 +307,7 @@ describe('refreshCourseList', () => {
       statement.sql.startsWith('DELETE FROM account_courses'),
     );
     expect(remove?.sql).toContain('SELECT course_catalog_id FROM account_classes');
-    expect(remove?.params).toEqual([9, 'base', 9]);
+    expect(remove?.params).toEqual([9, 9]);
     const active = statements.find(
       statement =>
         statement.sql.startsWith('INSERT INTO account_courses') &&
@@ -337,8 +330,8 @@ describe('refreshCourseList', () => {
 });
 
 describe('membresías y curso activo', () => {
-  it('una cuenta ya sincronizada sin cursos no recupera el base', async () => {
-    const { db, statements } = makeDb({ synced: true, rows: [] });
+  it('sin cursos devuelve lista vacía y no crea el base', async () => {
+    const { db, statements } = makeDb({ rows: [] });
 
     await expect(loadAccountCourses(db, 1)).resolves.toEqual({
       courses: [],
@@ -347,10 +340,10 @@ describe('membresías y curso activo', () => {
     expect(statements).toHaveLength(0);
   });
 
-  it('loadAccountCourses asegura el base cuando la cuenta no tiene filas', async () => {
+  it('el curso base solo se muestra si una clase activa lo asignó', async () => {
     const baseRow = {
       catalog_id: 'base',
-      title: 'Contenido base',
+      title: 'Ingeniería de Software',
       status: 'published',
       uses_base: 0,
       version: '',
@@ -358,26 +351,19 @@ describe('membresías y curso activo', () => {
       published_at: null,
       empty: 0,
       active: 1,
+      has_class: 0,
     };
-    const { db, statements } = makeDb({
-      membershipCount: 0,
-      rows: [baseRow],
+    const hidden = makeDb({ rows: [baseRow] });
+    await expect(loadAccountCourses(hidden.db, 3)).resolves.toEqual({
+      courses: [],
+      activeCatalogId: '',
     });
+    expect(hidden.statements).toHaveLength(0);
 
-    const result = await loadAccountCourses(db, 3);
-
+    const visible = makeDb({ rows: [{ ...baseRow, has_class: 1 }] });
+    const result = await loadAccountCourses(visible.db, 3);
     expect(result.activeCatalogId).toBe('base');
     expect(result.courses).toHaveLength(1);
-    expect(
-      statements.some(statement => statement.sql.startsWith('INSERT INTO remote_courses')),
-    ).toBe(true);
-    expect(
-      statements.some(
-        statement =>
-          statement.sql.startsWith('INSERT INTO account_courses') &&
-          statement.params[0] === 3,
-      ),
-    ).toBe(true);
   });
 
   it('selectCourse cambia el activo solo si hay acceso', async () => {

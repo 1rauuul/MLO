@@ -1,3 +1,5 @@
+import { getAuthToken } from './authToken';
+
 export class NetworkError extends Error {
   constructor(message = 'No se pudo conectar con el servidor.') {
     super(message);
@@ -169,5 +171,25 @@ export function apiV3BaseUrl(): string {
   return base.endsWith('/v2') ? `${base.slice(0, -2)}v3` : `${base}/api/mlo/v3`;
 }
 
-export const http = createHttpClient({ baseUrl: apiBaseUrl() });
-export const httpV3 = createHttpClient({ baseUrl: apiV3BaseUrl() });
+export const http = createHttpClient({
+  baseUrl: apiBaseUrl(),
+  getToken: getAuthToken,
+});
+export const httpV3 = createHttpClient({
+  baseUrl: apiV3BaseUrl(),
+  getToken: getAuthToken,
+});
+/** Cliente de las rutas de cuenta: añade el Bearer de la sesión remota. */
+export const httpAuth = createHttpClient({
+  baseUrl: apiV3BaseUrl(),
+  getToken: getAuthToken,
+});
+/**
+ * Recuperación sin reintentos: un POST reintentado puede enviar dos correos o
+ * repetir la verificación de un código que ya se consumió.
+ */
+export const httpRecovery = createHttpClient({
+  baseUrl: apiV3BaseUrl(),
+  timeoutMs: 15_000,
+  retries: 0,
+});

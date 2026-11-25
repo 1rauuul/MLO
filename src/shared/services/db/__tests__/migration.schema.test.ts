@@ -106,7 +106,13 @@ function expectMigrated(db: InstanceType<NonNullable<typeof DatabaseSync>>): voi
     .get() as { name?: string } | undefined;
   expect(table?.name).toBe('content_references');
   const version = db.prepare('PRAGMA user_version').get() as { user_version: number };
-  expect(version.user_version).toBe(21);
+  expect(version.user_version).toBe(24);
+  const remoteSession = db
+    .prepare("SELECT name FROM sqlite_master WHERE name = 'remote_session'")
+    .get() as { name?: string } | undefined;
+  expect(remoteSession?.name).toBe('remote_session');
+  const accounts = db.prepare('PRAGMA table_info(accounts)').all() as { name: string }[];
+  expect(accounts.map(column => column.name)).toContain('email');
   const lessons = db.prepare('PRAGMA table_info(lessons)').all() as { name: string }[];
   expect(lessons.map(column => column.name)).toEqual(
     expect.arrayContaining(['topic_id', 'group_id', 'reference_ids']),
@@ -122,15 +128,11 @@ describe('migrateAndSeed sobre esquemas antiguos', () => {
     expectMigrated(db);
   });
 
-  maybe('una base v5 sin bibliografía migra y adjunta la referencia base', async () => {
+  maybe('una base v5 sin bibliografía migra sin "no such column"', async () => {
     const { db, adapter } = legacyDb(5);
 
     await expect(migrateAndSeed(adapter)).resolves.toBeUndefined();
 
-    const rows = db
-      .prepare("SELECT id FROM content_references WHERE catalog_id = 'base'")
-      .all() as { id: string }[];
-    expect(rows.length).toBe(1);
     expectMigrated(db);
   });
 

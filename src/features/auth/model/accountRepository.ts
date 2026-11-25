@@ -12,6 +12,7 @@ interface AccountRow {
   username: string;
   external_key: string;
   display_name: string;
+  email: string | null;
   password_hash: string;
   salt: string;
   created_at: string;
@@ -23,6 +24,7 @@ function mapAccount(row: AccountRow): AccountRecord {
     username: row.username,
     externalKey: row.external_key,
     displayName: row.display_name,
+    email: row.email ?? null,
     passwordHash: row.password_hash,
     salt: row.salt,
     createdAt: row.created_at,
@@ -35,15 +37,17 @@ export async function insertAccount(
     username: string;
     externalKey: string;
     displayName: string;
+    email: string | null;
     passwordHash: string;
     salt: string;
   },
 ): Promise<number> {
   const result = await db.runAsync(
-    'INSERT INTO accounts (username, external_key, display_name, password_hash, salt, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    'INSERT INTO accounts (username, external_key, display_name, email, password_hash, salt, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
     input.username,
     input.externalKey,
     input.displayName,
+    input.email,
     input.passwordHash,
     input.salt,
     new Date().toISOString(),
@@ -101,6 +105,29 @@ export async function updateExternalKey(
   await db.runAsync(
     'UPDATE accounts SET external_key = ? WHERE id = ?',
     externalKey,
+    accountId,
+  );
+}
+
+export async function updateAccountEmail(
+  db: SQLiteDatabase,
+  accountId: number,
+  email: string | null,
+): Promise<void> {
+  await db.runAsync('UPDATE accounts SET email = ? WHERE id = ?', email, accountId);
+}
+
+/** La identidad remota manda cuando la cuenta se adopta en este equipo. */
+export async function updateAccountIdentity(
+  db: SQLiteDatabase,
+  accountId: number,
+  input: { externalKey: string; displayName: string; email: string | null },
+): Promise<void> {
+  await db.runAsync(
+    'UPDATE accounts SET external_key = ?, display_name = ?, email = ? WHERE id = ?',
+    input.externalKey,
+    input.displayName,
+    input.email,
     accountId,
   );
 }

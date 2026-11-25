@@ -13,7 +13,7 @@ jest.mock('@/shared/services/http/client', () => {
   const actual = jest.requireActual('@/shared/services/http/client');
   return {
     ...actual,
-    httpV3: {
+    httpAuth: {
       get: (...args: unknown[]) => mockGet(...args),
       put: (...args: unknown[]) => mockPut(...args),
     },
@@ -44,17 +44,15 @@ beforeEach(() => {
 });
 
 describe('studentProgress', () => {
-  it('descarga y valida el progreso remoto', async () => {
+  it('descarga y valida el progreso remoto con Bearer', async () => {
     mockGet.mockResolvedValue({
       progress: snapshot,
       updatedAt: '2026-01-01T00:00:00.000Z',
     });
 
-    const remote = await fetchRemoteProgress('key');
+    const remote = await fetchRemoteProgress();
 
-    expect(mockGet).toHaveBeenCalledWith('/students/me/progress', {
-      headers: { 'X-MLO-Student-Key': 'key' },
-    });
+    expect(mockGet).toHaveBeenCalledWith('/students/me/progress');
     expect(remote?.updatedAt).toBe('2026-01-01T00:00:00.000Z');
     expect(remote?.progress.version).toBe(5);
     expect(remote?.progress.student?.externalKey).toBe(
@@ -62,17 +60,26 @@ describe('studentProgress', () => {
     );
   });
 
+  it('acepta el progreso como texto de un servidor antiguo', async () => {
+    mockGet.mockResolvedValue({
+      progress: JSON.stringify(snapshot),
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    const remote = await fetchRemoteProgress();
+    expect(remote?.progress.version).toBe(5);
+  });
+
   it('sube el progreso con el nombre del alumno', async () => {
     mockPut.mockResolvedValue({ updatedAt: '2026-01-02T00:00:00.000Z' });
 
-    await expect(uploadRemoteProgress('key', 'Ana', snapshot)).resolves.toBe(
+    await expect(uploadRemoteProgress('Ana', snapshot)).resolves.toBe(
       '2026-01-02T00:00:00.000Z',
     );
-    expect(mockPut).toHaveBeenCalledWith(
-      '/students/me/progress',
-      { studentName: 'Ana', progress: snapshot },
-      { headers: { 'X-MLO-Student-Key': 'key' } },
-    );
+    expect(mockPut).toHaveBeenCalledWith('/students/me/progress', {
+      studentName: 'Ana',
+      progress: snapshot,
+    });
   });
 
   it('descarga y valida las clases del alumno', async () => {
@@ -80,8 +87,9 @@ describe('studentProgress', () => {
       classes: [{ code: 'ABC123', joinedAt: '2026-01-01T00:00:00.000Z', preview }],
     });
 
-    await expect(fetchRemoteClasses('key')).resolves.toEqual([
+    await expect(fetchRemoteClasses()).resolves.toEqual([
       { code: 'ABC123', joinedAt: '2026-01-01T00:00:00.000Z', preview },
     ]);
+    expect(mockGet).toHaveBeenCalledWith('/students/me/classes');
   });
 });

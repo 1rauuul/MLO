@@ -10,10 +10,12 @@ export const PBKDF2_DEFAULT_ITERATIONS = 100_000;
 export const PBKDF2_KEY_BYTES = 32;
 
 const USERNAME_PATTERN = /^[a-z0-9._-]+$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface RegistrationInput {
   firstName: string;
   lastName: string;
+  email: string;
   username: string;
   password: string;
   confirm: string;
@@ -22,6 +24,8 @@ export interface RegistrationInput {
 export type RegisterError =
   | 'first_name_empty'
   | 'last_name_empty'
+  | 'email_empty'
+  | 'email_invalid'
   | 'username_empty'
   | 'username_short'
   | 'username_invalid'
@@ -33,6 +37,15 @@ export function normalizeUsername(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
+export function normalizeEmail(raw: string): string {
+  return raw.trim().toLowerCase();
+}
+
+export function isValidEmail(raw: string): boolean {
+  const email = normalizeEmail(raw);
+  return email.length >= 5 && email.length <= 254 && EMAIL_PATTERN.test(email);
+}
+
 export function validateUsername(raw: string): Extract<RegisterError, 'username_empty' | 'username_short' | 'username_invalid'> | null {
   const username = normalizeUsername(raw);
   if (username.length === 0) {
@@ -41,7 +54,7 @@ export function validateUsername(raw: string): Extract<RegisterError, 'username_
   if (username.length < 3) {
     return 'username_short';
   }
-  if (!USERNAME_PATTERN.test(username)) {
+  if (username.length > 32 || !USERNAME_PATTERN.test(username)) {
     return 'username_invalid';
   }
   return null;
@@ -64,6 +77,12 @@ export function validateRegistration(input: RegistrationInput): RegisterError | 
   }
   if (input.lastName.trim().length === 0) {
     return 'last_name_empty';
+  }
+  if (normalizeEmail(input.email).length === 0) {
+    return 'email_empty';
+  }
+  if (!isValidEmail(input.email)) {
+    return 'email_invalid';
   }
   const usernameError = validateUsername(input.username);
   if (usernameError) {

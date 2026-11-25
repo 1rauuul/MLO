@@ -1,4 +1,4 @@
-import { httpV3, ParseError } from '@/shared/services/http/client';
+import { httpAuth, ParseError } from '@/shared/services/http/client';
 import {
   parseClassPreview,
   type ClassPreviewData,
@@ -9,8 +9,6 @@ import {
   parseProgressBackup,
   type ProgressBackup,
 } from '@/features/profile/model/backup.logic';
-
-const STUDENT_KEY_HEADER = 'X-MLO-Student-Key';
 
 export interface RemoteProgress {
   progress: ProgressBackup;
@@ -23,38 +21,33 @@ export interface RemoteClass {
   preview: ClassPreviewData;
 }
 
-function headers(externalKey: string): Record<string, string> {
-  return { [STUDENT_KEY_HEADER]: externalKey };
-}
-
-export async function fetchRemoteProgress(
-  externalKey: string,
-): Promise<RemoteProgress | null> {
-  const result = await httpV3.get<{ progress: unknown; updatedAt: string } | undefined>(
-    '/students/me/progress',
-    { headers: headers(externalKey) },
-  );
+export async function fetchRemoteProgress(): Promise<RemoteProgress | null> {
+  const result = await httpAuth.get<
+    { progress: unknown; updatedAt: string } | undefined
+  >('/students/me/progress');
   if (!result) {
     return null;
   }
   if (!isRecord(result) || !isString(result.updatedAt)) {
     throw new ParseError('El progreso guardado no es válido.');
   }
+  const rawProgress =
+    typeof result.progress === 'string'
+      ? result.progress
+      : JSON.stringify(result.progress);
   return {
-    progress: parseProgressBackup(JSON.stringify(result.progress)),
+    progress: parseProgressBackup(rawProgress),
     updatedAt: result.updatedAt,
   };
 }
 
 export async function uploadRemoteProgress(
-  externalKey: string,
   studentName: string,
   progress: ProgressBackup,
 ): Promise<string> {
-  const result = await httpV3.put<{ updatedAt: string }>(
+  const result = await httpAuth.put<{ updatedAt: string }>(
     '/students/me/progress',
     { studentName, progress },
-    { headers: headers(externalKey) },
   );
   if (!isRecord(result) || !isString(result.updatedAt)) {
     throw new ParseError('La confirmación del guardado no es válida.');
@@ -62,10 +55,10 @@ export async function uploadRemoteProgress(
   return result.updatedAt;
 }
 
-export async function fetchRemoteClasses(externalKey: string): Promise<RemoteClass[]> {
-  const result = await httpV3.get<{ classes: unknown[] }>('/students/me/classes', {
-    headers: headers(externalKey),
-  });
+export async function fetchRemoteClasses(): Promise<RemoteClass[]> {
+  const result = await httpAuth.get<{ classes: unknown[] }>(
+    '/students/me/classes',
+  );
   if (!isRecord(result) || !Array.isArray(result.classes)) {
     throw new ParseError('La lista de clases no es válida.');
   }

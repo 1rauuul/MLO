@@ -4,7 +4,6 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import type { ContentBlock, ImageMime } from '@/shared/model/entities';
 import { mediaLocalUri, mediaRelativePath } from '@/shared/services/content/mediaPath';
 import type { GroupManifest } from '@/shared/services/content/coursesV3';
-import type { RemoteLessonPayload } from '@/shared/services/content/remote/validateLessonPayload';
 
 const EXTENSIONS: Record<ImageMime, string> = {
   'image/jpeg': 'jpg',
@@ -141,17 +140,4 @@ export async function cacheMediaInGroupRelease(
     additions.push({ ...addition, blocks: await cacheMediaBlocks(db, addition.blocks) });
   }
   return { ...manifest, lessons, additions };
-}
-
-export async function cacheMediaInLessonPayload(
-  db: SQLiteDatabase,
-  payload: RemoteLessonPayload,
-): Promise<RemoteLessonPayload> {
-  return {
-    ...payload,
-    lesson: {
-      ...payload.lesson,
-      content: await cacheMediaBlocks(db, payload.lesson.content),
-    },
-  };
 }

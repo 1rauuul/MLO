@@ -1,8 +1,10 @@
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/shared/components/AppText';
 import { SecondaryButton } from '@/shared/components/Buttons';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { Icon } from '@/shared/components/Icon';
 import { useContentSync } from '@/shared/services/content/ContentSyncProvider';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 
@@ -11,6 +13,7 @@ export function ContentUpdateNotice() {
   const { updateAvailable, applying, updated, blocked, applyUpdate, dismissUpdate } =
     useContentSync();
   const { colors, radius, spacing } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <>
@@ -24,7 +27,9 @@ export function ContentUpdateNotice() {
         onCancel={dismissUpdate}
       />
       {updated ? (
-        <View pointerEvents="none" style={styles.toastAnchor}>
+        <View
+          pointerEvents="none"
+          style={[styles.toastAnchor, { bottom: insets.bottom + 64 }]}>
           <View
             accessibilityRole="alert"
             accessibilityLiveRegion="polite"
@@ -33,14 +38,24 @@ export function ContentUpdateNotice() {
               {
                 backgroundColor: colors.card,
                 borderColor: colors.success,
-                borderRadius: radius.control,
+                borderRadius: radius.card,
                 paddingHorizontal: spacing.lg,
-                paddingVertical: spacing.sm,
+                paddingVertical: spacing.md,
               },
             ]}>
-            <AppText weight="700" color={colors.success}>
-              Contenido actualizado
-            </AppText>
+            <View
+              style={[
+                styles.badge,
+                { backgroundColor: colors.soft, borderRadius: radius.pill },
+              ]}>
+              <Icon name="check" size={16} color={colors.success} strokeWidth={2.4} />
+            </View>
+            <View style={styles.copy}>
+              <AppText weight="700">Contenido actualizado</AppText>
+              <AppText variant="small" color={colors.muted}>
+                Las lecciones y actividades nuevas ya están disponibles.
+              </AppText>
+            </View>
           </View>
         </View>
       ) : null}
@@ -66,10 +81,23 @@ export function ContentUpdateButton({ style }: { style?: StyleProp<ViewStyle> })
 const styles = StyleSheet.create({
   toastAnchor: {
     position: 'absolute',
-    left: 24,
-    right: 24,
-    bottom: 24,
+    left: 16,
+    right: 16,
     alignItems: 'center',
   },
-  toast: { borderWidth: 1 },
+  toast: {
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+    maxWidth: 520,
+  },
+  badge: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  copy: { flex: 1, gap: 2 },
 });

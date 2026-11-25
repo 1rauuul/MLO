@@ -19,10 +19,8 @@ interface LearnerProfileContextValue {
   isLoading: boolean;
   style: LearningStyle;
   darkMode: boolean;
-  showBaseCourse: boolean;
   setStyle: (style: LearningStyle) => void;
   setDarkMode: (value: boolean) => void;
-  setShowBaseCourse: (value: boolean) => void;
   saveQuestionnaire: (style: LearningStyle) => void;
 }
 
@@ -34,7 +32,6 @@ export function LearnerProfileProvider({ children }: { children: ReactNode }) {
   const { account } = useAuth();
   const [profile, setProfile] = useState<LearnerProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showBaseCourse, setShowBaseCourseState] = useState(true);
   const profileRef = useRef<LearnerProfile | null>(null);
 
   useEffect(() => {
@@ -50,13 +47,11 @@ export function LearnerProfileProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         const loaded = await profileRepository.selectProfile(account.id);
-        const showBase = await profileRepository.selectShowBaseCourse();
         if (!active) {
           return;
         }
         profileRef.current = loaded;
         setProfile(loaded);
-        setShowBaseCourseState(showBase);
       } catch (caught) {
         if (__DEV__) {
           console.error('[profile] carga fallida', caught);
@@ -64,7 +59,6 @@ export function LearnerProfileProvider({ children }: { children: ReactNode }) {
         if (active) {
           profileRef.current = null;
           setProfile(null);
-          setShowBaseCourseState(true);
         }
       } finally {
         if (active) {
@@ -93,13 +87,6 @@ export function LearnerProfileProvider({ children }: { children: ReactNode }) {
 
   const setStyle = useCallback((style: LearningStyle) => update({ learningStyle: style }), [update]);
   const setDarkMode = useCallback((darkMode: boolean) => update({ darkMode }), [update]);
-  const setShowBaseCourse = useCallback(
-    (value: boolean) => {
-      setShowBaseCourseState(value);
-      void profileRepository.saveShowBaseCourse(value);
-    },
-    [profileRepository],
-  );
 
   const value = useMemo<LearnerProfileContextValue>(
     () => ({
@@ -107,13 +94,11 @@ export function LearnerProfileProvider({ children }: { children: ReactNode }) {
       isLoading,
       style: profile?.learningStyle ?? FALLBACK_STYLE,
       darkMode: profile?.darkMode ?? true,
-      showBaseCourse,
       setStyle,
       setDarkMode,
-      setShowBaseCourse,
       saveQuestionnaire: setStyle,
     }),
-    [profile, isLoading, showBaseCourse, setStyle, setDarkMode, setShowBaseCourse],
+    [profile, isLoading, setStyle, setDarkMode],
   );
 
   return <LearnerProfileContext.Provider value={value}>{children}</LearnerProfileContext.Provider>;

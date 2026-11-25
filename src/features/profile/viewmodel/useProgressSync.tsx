@@ -1,109 +1,232 @@
-import { useCallback, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import { AppState } from 'react-native';
 
+import {
+  restoreAccountState,
+  uploadAccountProgress,
+} from '@/features/auth/model/accountRestore';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
-import { useClasses } from '@/features/classes/viewmodel/useClasses';
-import { useCourses } from '@/features/modules/viewmodel/useCourses';
-import { isHybrid } from '@/shared/services/data/dataMode';
+import {
+  progressFingerprint,
+  progressHasData,
+} from '@/features/profile/model/progressFingerprint';
 import { useRepositories } from '@/shared/services/data/DataProvider';
 import {
-  fetchRemoteClasses,
-  fetchRemoteProgress,
-  uploadRemoteProgress,
-} from '@/shared/services/content/studentProgress';
+  ConfigError,
+  HttpError,
+  NetworkError,
+} from '@/shared/services/http/client';
 
-export function useProgressSync() {
-  const { account, reloadAccount } = useAuth();
-  const { backup, content, classes: classRepository } = useRepositories();
-  const { refresh: refreshClasses } = useClasses();
-  const { refresh: refreshCourses } = useCourses();
-  const [busyAction, setBusyAction] = useState<'save' | 'sync' | null>(null);
+const SYNC_INTERVAL_MS = 60_000;
+
+export type ProgressSyncStatus =
+  | 'unlinked'
+  | 'syncing'
+  | 'synced'
+  | 'offline'
+  | 'session_expired'
+  | 'error';
+
+export interface ProgressSyncValue {
+  status: ProgressSyncStatus;
+  lastSyncedAt: string | null;
+  error: string | null;
+  isSyncing: boolean;
+  isLinked: boolean;
+  syncNow: () => Promise<void>;
+}
+
+const ProgressSyncContext = createContext<ProgressSyncValue | null>(null);
+
+const noSync: ProgressSyncValue = {
+  status: 'unlinked',
+  lastSyncedAt: null,
+  error: null,
+  isSyncing: false,
+  isLinked: false,
+  syncNow: async () => {},
+};
+
+export function useProgressSync(): ProgressSyncValue {
+  return useContext(ProgressSyncContext) ?? noSync;
+}
+
+function statusForError(error: unknown): {
+  status: ProgressSyncStatus;
+  message: string;
+} {
+  if (error instanceof HttpError && error.status === 401) {
+    return {
+      status: 'session_expired',
+      message: 'Tu sesión caducó. Vuelve a iniciar sesión.',
+    };
+  }
+  if (error instanceof NetworkError || error instanceof ConfigError) {
+    return { status: 'offline', message: 'Sin conexión.' };
+  }
+  return { status: 'error', message: 'No se pudo sincronizar el progreso.' };
+}
+
+/**
+ * Sube el progreso cuando cambia y reintenta la restauración pendiente.
+ * La copia local sigue siendo la de trabajo; esto solo la replica en la nube.
+ */
+export function ProgressSyncProvider({ children }: { children: ReactNode }) {
+  const { account, needsRemoteLink } = useAuth();
+  const repos = useRepositories();
+  const { backup, remote } = repos;
+  const [status, setStatus] = useState<ProgressSyncStatus>('unlinked');
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const isBusy = busyAction !== null;
+  const [isSyncing, setIsSyncing] = useState(false);
+  const runningRef = useRef(false);
+  const expiredRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  const saveProgress = useCallback(async () => {
+  useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
+
+  const refreshSessionState = useCallback(async () => {
     if (!account) {
+      setStatus('unlinked');
+      setLastSyncedAt(null);
+      return null;
+    }
+    const session = await remote.select(account.id);
+    setLastSyncedAt(session?.lastSyncedAt ?? null);
+    if (!session?.token) {
+      setStatus('unlinked');
+    }
+    return session;
+  }, [account, remote]);
+
+  const syncNow = useCallback(async () => {
+    if (!account || needsRemoteLink || runningRef.current || expiredRef.current) {
       return;
     }
-    if (!isHybrid()) {
-      setError('Guardar progreso requiere conexión y el modo híbrido.');
+    const session = await remote.select(account.id);
+    if (!session?.token) {
+      setStatus('unlinked');
       return;
     }
-    setBusyAction('save');
+
+    runningRef.current = true;
+    setIsSyncing(true);
+    setStatus('syncing');
     setError(null);
-    setMessage(null);
     try {
-      const snapshot = await backup.selectProgressBackup(account.id);
-      const updatedAt = await uploadRemoteProgress(
-        account.externalKey,
-        account.displayName,
-        snapshot,
-      );
-      setMessage(`Progreso guardado (${new Date(updatedAt).toLocaleString('es-ES')}).`);
+      if (session.pendingRestore) {
+        const action = await restoreAccountState(repos, account, {
+          forceRemote: session.forceRemote,
+        });
+        if (action === 'upload') {
+          await uploadAccountProgress(repos, account);
+        }
+      } else {
+        const snapshot = await backup.selectProgressBackup(account.id);
+        const fingerprint = await progressFingerprint(snapshot);
+        // Un equipo nuevo no debe subir su progreso vacío sobre la nube.
+        const shouldUpload =
+          fingerprint !== session.lastUploadedHash &&
+          (progressHasData(snapshot) || Boolean(session.lastUploadedHash));
+        if (shouldUpload) {
+          await uploadAccountProgress(repos, account);
+        }
+      }
+      const updated = await refreshSessionState();
+      if (mountedRef.current) {
+        setStatus('synced');
+        setLastSyncedAt(updated?.lastSyncedAt ?? new Date().toISOString());
+      }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'No se pudo guardar el progreso.');
+      const mapped = statusForError(caught);
+      if (mapped.status === 'session_expired') {
+        expiredRef.current = true;
+      }
+      if (mountedRef.current) {
+        setStatus(mapped.status);
+        setError(mapped.message);
+      }
     } finally {
-      setBusyAction(null);
+      runningRef.current = false;
+      if (mountedRef.current) {
+        setIsSyncing(false);
+      }
     }
-  }, [account, backup]);
+  }, [account, backup, needsRemoteLink, refreshSessionState, remote, repos]);
 
-  const syncProgress = useCallback(async () => {
-    if (!account) {
+  const reload = useCallback(async () => {
+    await refreshSessionState();
+    await syncNow();
+  }, [refreshSessionState, syncNow]);
+
+  useEffect(() => {
+    expiredRef.current = false;
+    if (account && !needsRemoteLink) {
+      void reload();
+    } else {
+      setStatus('unlinked');
+      setLastSyncedAt(null);
+      setError(null);
+    }
+    // `reload` cambia con la cuenta; no debe reiniciar por cada render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account?.id, needsRemoteLink]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', next => {
+      if (next === 'active' || next === 'background') {
+        void syncNow();
+      }
+    });
+    return () => subscription.remove();
+  }, [syncNow]);
+
+  useEffect(() => {
+    if (!account || needsRemoteLink) {
       return;
     }
-    if (!isHybrid()) {
-      setError('Sincronizar requiere conexión y el modo híbrido.');
-      return;
-    }
-    setBusyAction('sync');
-    setError(null);
-    setMessage(null);
-    try {
-      const remote = await fetchRemoteProgress(account.externalKey);
-      if (!remote) {
-        setMessage('No hay progreso guardado en la nube.');
-        return;
+    const timer = setInterval(() => {
+      if (AppState.currentState === 'active') {
+        void syncNow();
       }
-      if (
-        remote.progress.student &&
-        remote.progress.student.externalKey !== account.externalKey
-      ) {
-        throw new Error('El progreso guardado pertenece a otra cuenta.');
-      }
+    }, SYNC_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [account, needsRemoteLink, syncNow]);
 
-      await backup.replaceProgressFromBackup(account.id, remote.progress);
-      await reloadAccount();
+  const value = useMemo<ProgressSyncValue>(
+    () => ({
+      status,
+      lastSyncedAt,
+      error,
+      isSyncing,
+      isLinked: Boolean(account && !needsRemoteLink),
+      syncNow,
+    }),
+    [
+      account,
+      error,
+      isSyncing,
+      lastSyncedAt,
+      needsRemoteLink,
+      status,
+      syncNow,
+    ],
+  );
 
-      const remoteClasses = await fetchRemoteClasses(account.externalKey);
-      for (const item of remoteClasses) {
-        await classRepository.saveAccountClass(
-          account.id,
-          item.code,
-          item.preview,
-          item.preview.course?.catalogId ?? 'base',
-          item.preview.course?.title ?? '',
-        );
-      }
-
-      await Promise.all([refreshClasses(), refreshCourses()]);
-      await content.refreshClassContent();
-      setMessage('Progreso sincronizado.');
-    } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : 'No se pudo sincronizar el progreso.',
-      );
-    } finally {
-      setBusyAction(null);
-    }
-  }, [
-    account,
-    backup,
-    classRepository,
-    content,
-    refreshClasses,
-    refreshCourses,
-    reloadAccount,
-  ]);
-
-  return { saveProgress, syncProgress, busyAction, isBusy, error, message };
+  return (
+    <ProgressSyncContext.Provider value={value}>
+      {children}
+    </ProgressSyncContext.Provider>
+  );
 }

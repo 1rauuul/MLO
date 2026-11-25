@@ -4,7 +4,7 @@ import { useRepositories } from '@/shared/services/data/DataProvider';
 import type { EvaluationResult } from '@/shared/model/entities';
 
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
-import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
+import { useCourses } from '@/features/modules/viewmodel/useCourses';
 
 interface RecentResultsResult {
   results: EvaluationResult[];
@@ -17,17 +17,18 @@ interface RecentResultsResult {
 export function useRecentResults(limit = 5): RecentResultsResult {
   const { evaluations } = useRepositories();
   const { account } = useAuth();
+  const { activeCatalogId } = useCourses();
   const [results, setResults] = useState<EvaluationResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const loaded = account
+      const loaded = account && activeCatalogId
         ? await evaluations.selectRecentEvaluationResults(
             account.id,
             limit,
-            BASE_CATALOG_ID,
+            activeCatalogId,
           )
         : [];
       setResults(loaded);
@@ -37,7 +38,7 @@ export function useRecentResults(limit = 5): RecentResultsResult {
     } finally {
       setIsLoading(false);
     }
-  }, [evaluations, account, limit]);
+  }, [evaluations, account, limit, activeCatalogId]);
 
   useEffect(() => {
     void refresh();

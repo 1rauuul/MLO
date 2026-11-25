@@ -184,8 +184,11 @@ export default function ModulesScreen() {
         <>
           <SectionHeading eyebrow="Tu biblioteca" title="Mis cursos" trailing="00" />
           <EmptyState
-            title={libraryError ? 'No se pudieron cargar los cursos' : 'Sin cursos habilitados'}
-            message={libraryError ?? 'No tienes cursos disponibles.'}
+            title={libraryError ? 'No se pudieron cargar los cursos' : 'Aún no tienes cursos'}
+            message={
+              libraryError ??
+              'Pide a tu docente el código de la clase y únete desde aquí abajo.'
+            }
           />
           <SecondaryButton
             label="Reintentar"

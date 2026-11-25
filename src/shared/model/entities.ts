@@ -200,6 +200,8 @@ export interface Account {
   /** Identidad estable de la persona ante el panel; viaja en el respaldo. */
   externalKey: string;
   displayName: string;
+  /** Correo de recuperación; las cuentas viejas pueden no tenerlo. */
+  email: string | null;
   createdAt: string;
 }
 

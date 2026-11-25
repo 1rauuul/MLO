@@ -15,6 +15,7 @@ import { useExercisesForLesson } from '@/features/exercises/viewmodel/useExercis
 import { useLessonContent } from '@/features/modules/viewmodel/useLessonContent';
 import { useModuleProgress } from '@/features/modules/viewmodel/useModuleProgress';
 import { useEvaluationForLesson } from '@/features/evaluations/viewmodel/useQuizEngine';
+import { useLessonCatalogId } from '@/features/classes/viewmodel/useActiveGroup';
 import { useSession } from '@/features/auth/viewmodel/useSession';
 
 export default function LessonDetailScreen() {
@@ -24,7 +25,8 @@ export default function LessonDetailScreen() {
   const { exercises } = useExercisesForLesson(lessonId);
   const { evaluation } = useEvaluationForLesson(lessonId);
   const { markCompleted } = useModuleProgress();
-  const { lessonsByUnit } = useCatalog();
+  const lessonCatalogId = useLessonCatalogId(lessonId);
+  const { lessonsByUnit } = useCatalog(lessonCatalogId);
   const { record } = useSession();
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();

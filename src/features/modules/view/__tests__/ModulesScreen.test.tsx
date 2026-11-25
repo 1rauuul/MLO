@@ -201,8 +201,10 @@ describe('ModulesScreen', () => {
 
     const { getByText, getByLabelText } = render(<ModulesScreen />);
 
-    expect(getByText('Sin cursos habilitados')).toBeTruthy();
-    expect(getByText('No tienes cursos disponibles.')).toBeTruthy();
+    expect(getByText('Aún no tienes cursos')).toBeTruthy();
+    expect(
+      getByText('Pide a tu docente el código de la clase y únete desde aquí abajo.'),
+    ).toBeTruthy();
     expect(getByLabelText('Unirme a una clase')).toBeTruthy();
     fireEvent.press(getByText('Reintentar'));
     expect(mockRefreshLibrary).toHaveBeenCalled();

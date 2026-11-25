@@ -58,6 +58,9 @@ jest.mock('@/features/evaluations/viewmodel/useQuizEngine', () => ({
 jest.mock('@/features/modules/viewmodel/useModuleProgress', () => ({
   useModuleProgress: () => ({ markCompleted: mockMarkCompleted }),
 }));
+jest.mock('@/features/classes/viewmodel/useActiveGroup', () => ({
+  useLessonCatalogId: () => 'base',
+}));
 jest.mock('@/features/modules/viewmodel/useCatalog', () => ({
   useCatalog: () => ({ lessonsByUnit: { u1: mockUnitLessons }, completionMap: {}, refresh: jest.fn() }),
 }));

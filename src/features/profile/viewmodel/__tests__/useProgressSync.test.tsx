@@ -1,47 +1,47 @@
-import { act, renderHook } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
+import type { ReactNode } from 'react';
+import { AppState } from 'react-native';
 
 import type { ProgressBackup } from '@/features/profile/model/backup.logic';
-import type { ClassPreviewData } from '@/shared/services/content/remote/validateClassRelease';
-import { useProgressSync } from '@/features/profile/viewmodel/useProgressSync';
+import {
+  ProgressSyncProvider,
+  useProgressSync,
+} from '@/features/profile/viewmodel/useProgressSync';
+import { HttpError, NetworkError } from '@/shared/services/http/client';
 
-const mockSelectProgressBackup = jest.fn();
-const mockReplaceProgressFromBackup = jest.fn(async () => ({ omitted: 0 }));
-const mockSaveAccountClass = jest.fn(async () => {});
-const mockRefreshClassContent = jest.fn(async () => {});
-const mockRefreshClasses = jest.fn(async () => {});
-const mockRefreshCourses = jest.fn(async () => {});
-const mockReloadAccount = jest.fn(async () => {});
-const mockFetchProgress = jest.fn();
-const mockFetchClasses = jest.fn();
-const mockUploadProgress = jest.fn();
+const mockAccount = {
+  id: 7,
+  username: 'ana',
+  externalKey: 'key',
+  displayName: 'Ana',
+  createdAt: '2026-01-01T00:00:00.000Z',
+};
+const mockRepos = {
+  backup: { selectProgressBackup: jest.fn() },
+  remote: { select: jest.fn(), updateSync: jest.fn() },
+  classes: {},
+  courses: {},
+  content: {},
+};
+
+const mockRestore = jest.fn();
+const mockUpload = jest.fn();
+const mockFingerprint = jest.fn();
+const mockHasData = jest.fn();
 
 jest.mock('@/features/auth/viewmodel/useAuth', () => ({
-  useAuth: () => ({
-    account: { id: 7, externalKey: 'key', displayName: 'Ana' },
-    reloadAccount: mockReloadAccount,
-  }),
+  useAuth: () => ({ account: mockAccount, needsRemoteLink: false }),
 }));
-jest.mock('@/features/classes/viewmodel/useClasses', () => ({
-  useClasses: () => ({ refresh: mockRefreshClasses }),
-}));
-jest.mock('@/features/modules/viewmodel/useCourses', () => ({
-  useCourses: () => ({ refresh: mockRefreshCourses }),
-}));
-jest.mock('@/shared/services/data/dataMode', () => ({ isHybrid: () => true }));
 jest.mock('@/shared/services/data/DataProvider', () => ({
-  useRepositories: () => ({
-    backup: {
-      selectProgressBackup: mockSelectProgressBackup,
-      replaceProgressFromBackup: mockReplaceProgressFromBackup,
-    },
-    content: { refreshClassContent: mockRefreshClassContent },
-    classes: { saveAccountClass: mockSaveAccountClass },
-  }),
+  useRepositories: () => mockRepos,
 }));
-jest.mock('@/shared/services/content/studentProgress', () => ({
-  fetchRemoteProgress: (...args: unknown[]) => mockFetchProgress(...args),
-  fetchRemoteClasses: (...args: unknown[]) => mockFetchClasses(...args),
-  uploadRemoteProgress: (...args: unknown[]) => mockUploadProgress(...args),
+jest.mock('@/features/auth/model/accountRestore', () => ({
+  restoreAccountState: (...args: unknown[]) => mockRestore(...args),
+  uploadAccountProgress: (...args: unknown[]) => mockUpload(...args),
+}));
+jest.mock('@/features/profile/model/progressFingerprint', () => ({
+  progressFingerprint: (...args: unknown[]) => mockFingerprint(...args),
+  progressHasData: (...args: unknown[]) => mockHasData(...args),
 }));
 
 const snapshot: ProgressBackup = {
@@ -56,63 +56,100 @@ const snapshot: ProgressBackup = {
   lastLocation: null,
 };
 
-const preview: ClassPreviewData = {
-  schemaVersion: 2,
-  class: { id: 'c1', name: 'Grupo A', teacherName: 'Profe' },
-  course: { catalogId: 'base', title: 'Curso' },
-  published: null,
+const session = {
+  accountId: 7,
+  token: 'tok',
+  expiresAt: '2026-12-24T00:00:00.000Z',
+  lastUploadedHash: 'old',
+  lastSyncedAt: null as string | null,
+  pendingRestore: false,
+  forceRemote: false,
+  createdAt: '2026-11-24T00:00:00.000Z',
 };
+
+function wrapper({ children }: { children: ReactNode }) {
+  return <ProgressSyncProvider>{children}</ProgressSyncProvider>;
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockSelectProgressBackup.mockResolvedValue(snapshot);
-  mockUploadProgress.mockResolvedValue('2026-01-02T00:00:00.000Z');
-  mockFetchClasses.mockResolvedValue([]);
+  jest.spyOn(AppState, 'addEventListener').mockReturnValue({
+    remove: jest.fn(),
+  } as never);
+  Object.defineProperty(AppState, 'currentState', {
+    value: 'active',
+    configurable: true,
+  });
+  mockRepos.backup.selectProgressBackup.mockResolvedValue(snapshot);
+  mockRepos.remote.select.mockResolvedValue(session);
+  mockFingerprint.mockResolvedValue('new');
+  mockHasData.mockReturnValue(true);
+  mockUpload.mockResolvedValue('2026-01-02T00:00:00.000Z');
+  mockRestore.mockResolvedValue('restored');
 });
 
-describe('useProgressSync', () => {
-  it('guarda el progreso local en la nube', async () => {
-    const { result } = renderHook(() => useProgressSync());
+describe('ProgressSyncProvider', () => {
+  it('sube cuando la huella local cambió', async () => {
+    const { result } = renderHook(() => useProgressSync(), { wrapper });
 
-    await act(async () => {
-      await result.current.saveProgress();
-    });
-
-    expect(mockUploadProgress).toHaveBeenCalledWith('key', 'Ana', snapshot);
-    expect(result.current.message).toContain('Progreso guardado');
-    expect(result.current.error).toBeNull();
+    await waitFor(() => expect(mockUpload).toHaveBeenCalled());
+    expect(result.current.status).toBe('synced');
+    expect(result.current.isLinked).toBe(true);
   });
 
-  it('sincroniza el progreso y reconstruye las clases', async () => {
-    mockFetchProgress.mockResolvedValue({
-      progress: snapshot,
-      updatedAt: '2026-01-01T00:00:00.000Z',
+  it('no sube un progreso vacío sin huella previa', async () => {
+    mockRepos.remote.select.mockResolvedValue({
+      ...session,
+      lastUploadedHash: null,
     });
-    mockFetchClasses.mockResolvedValue([
-      { code: 'ABC123', joinedAt: '2026-01-01T00:00:00.000Z', preview },
-    ]);
+    mockFingerprint.mockResolvedValue('empty');
+    mockHasData.mockReturnValue(false);
 
-    const { result } = renderHook(() => useProgressSync());
+    const { result } = renderHook(() => useProgressSync(), { wrapper });
 
-    await act(async () => {
-      await result.current.syncProgress();
-    });
-
-    expect(mockReplaceProgressFromBackup).toHaveBeenCalledWith(7, snapshot);
-    expect(mockSaveAccountClass).toHaveBeenCalledWith(7, 'ABC123', preview, 'base', 'Curso');
-    expect(mockRefreshClassContent).toHaveBeenCalled();
-    expect(result.current.message).toBe('Progreso sincronizado.');
+    await waitFor(() => expect(result.current.status).toBe('synced'));
+    expect(mockUpload).not.toHaveBeenCalled();
   });
 
-  it('avisa cuando no hay progreso guardado en la nube', async () => {
-    mockFetchProgress.mockResolvedValue(null);
-    const { result } = renderHook(() => useProgressSync());
-
-    await act(async () => {
-      await result.current.syncProgress();
+  it('reintenta la restauración pendiente antes de subir', async () => {
+    mockRepos.remote.select.mockResolvedValue({
+      ...session,
+      pendingRestore: true,
     });
 
-    expect(result.current.message).toBe('No hay progreso guardado en la nube.');
-    expect(mockReplaceProgressFromBackup).not.toHaveBeenCalled();
+    const { result } = renderHook(() => useProgressSync(), { wrapper });
+
+    await waitFor(() => expect(mockRestore).toHaveBeenCalled());
+    expect(mockUpload).not.toHaveBeenCalled();
+    expect(result.current.status).toBe('synced');
+  });
+
+  it('marca la sesión caducada con 401', async () => {
+    mockUpload.mockRejectedValue(new HttpError(401, ''));
+
+    const { result } = renderHook(() => useProgressSync(), { wrapper });
+
+    await waitFor(() => expect(result.current.status).toBe('session_expired'));
+    expect(result.current.error).toContain('sesión');
+  });
+
+  it('marca sin conexión cuando falla la red', async () => {
+    mockUpload.mockRejectedValue(new NetworkError());
+
+    const { result } = renderHook(() => useProgressSync(), { wrapper });
+
+    await waitFor(() => expect(result.current.status).toBe('offline'));
+    expect(result.current.error).toBe('Sin conexión.');
+  });
+
+  it('expone syncNow para el reintento manual', async () => {
+    const { result } = renderHook(() => useProgressSync(), { wrapper });
+    await waitFor(() => expect(result.current.status).toBe('synced'));
+
+    await act(async () => {
+      await result.current.syncNow();
+    });
+
+    expect(mockUpload).toHaveBeenCalled();
   });
 });

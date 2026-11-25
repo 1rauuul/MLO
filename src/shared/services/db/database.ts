@@ -6,17 +6,6 @@ import {
   applyStoredV3Content,
   backfillLegacyTopics,
 } from '@/shared/services/content/applyV3Content';
-import { applyStagedContent } from '@/shared/services/content/remote/applyStagedContent';
-
-import {
-  applyContentMigration,
-  migrateQuestionIds,
-  saveContentHash,
-  seedDatabase,
-  syncContentIfChanged,
-  writeContentSync,
-  writeSeedDatabase,
-} from '@/shared/services/db/seed';
 
 export const DATABASE_NAME = 'mlo.db';
 
@@ -38,8 +27,8 @@ async function ensureColumn(
 
 /**
  * `SCHEMA_DDL` es el esquema actual, pero las migraciones lo ejecutan antes de
- * v16/v19/v20 y `writeContentSync` corre antes de v21: catálogo, temas, grupos y
- * bibliografía deben existir ya o los índices/inserts fallan con "no such column".
+ * v16/v19/v20: catálogo, temas, grupos y bibliografía deben existir ya o los
+ * índices/inserts fallan con "no such column".
  */
 async function ensureContentSchema(db: SQLiteDatabase): Promise<void> {
   await db.execAsync(`
@@ -67,16 +56,6 @@ async function ensureContentSchema(db: SQLiteDatabase): Promise<void> {
   }
 }
 
-async function seedIfEmpty(db: SQLiteDatabase): Promise<void> {
-  const row = await db.getFirstAsync<{ units: number; lessons: number }>(
-    'SELECT (SELECT COUNT(*) FROM units) AS units, (SELECT COUNT(*) FROM lessons) AS lessons',
-  );
-  if (!row || row.units === 0 || row.lessons === 0) {
-    await seedDatabase(db);
-    await saveContentHash(db);
-  }
-}
-
 export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
   await db.execAsync('PRAGMA journal_mode = WAL;');
   await db.execAsync('PRAGMA foreign_keys = ON;');
@@ -84,25 +63,18 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   const currentVersion = row?.user_version ?? 0;
 
-  // Fresh install: SCHEMA_DDL already contains every column and seedDatabase loads
-  // all content, so skip the incremental ALTERs (they would duplicate columns).
+  // Fresh install: el esquema queda vacío y lo llena la sincronización del CMS.
   if (currentVersion === 0) {
     await db.withTransactionAsync(async () => {
       await db.execAsync(SCHEMA_DDL);
-      await writeSeedDatabase(db);
-      await backfillLegacyTopics(db);
-      await saveContentHash(db);
       await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
     });
-    await applyStagedContent(db);
     await applyStoredV3Content(db);
     return;
   }
 
   if (currentVersion >= DATABASE_VERSION) {
     await db.execAsync(SCHEMA_DDL);
-    await seedIfEmpty(db);
-    await syncBundledAndRemote(db);
     await db.withTransactionAsync(() => backfillLegacyTopics(db));
     await applyStoredV3Content(db);
     return;
@@ -114,7 +86,6 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     await db.withTransactionAsync(async () => {
       await db.execAsync(DROP_ALL_DDL);
       await db.execAsync(SCHEMA_DDL);
-      await writeSeedDatabase(db);
       await db.execAsync('PRAGMA user_version = 2');
     });
     version = 2;
@@ -128,7 +99,6 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
       if (!hasContent) {
         await db.execAsync(`ALTER TABLE lessons ADD COLUMN content TEXT NOT NULL DEFAULT '[]'`);
       }
-      await applyContentMigration(db);
       await db.execAsync('PRAGMA user_version = 3');
     });
     version = 3;
@@ -185,7 +155,6 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
       if (!hasExerciseExplanation) {
         await db.execAsync(`ALTER TABLE exercises ADD COLUMN explanation TEXT NOT NULL DEFAULT ''`);
       }
-      await writeContentSync(db);
       await db.execAsync('PRAGMA user_version = 5');
     });
     version = 5;
@@ -193,7 +162,6 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
 
   if (version < 6) {
     await db.withTransactionAsync(async () => {
-      await writeContentSync(db);
       await db.execAsync('PRAGMA user_version = 6');
     });
     version = 6;
@@ -201,7 +169,6 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
 
   if (version < 7) {
     await db.withTransactionAsync(async () => {
-      await writeContentSync(db);
       await db.execAsync('PRAGMA user_version = 7');
     });
     version = 7;
@@ -209,7 +176,6 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
 
   if (version < 8) {
     await db.withTransactionAsync(async () => {
-      await writeContentSync(db);
       await db.execAsync('PRAGMA user_version = 8');
     });
     version = 8;
@@ -234,7 +200,6 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
 
   if (version < 10) {
     await db.withTransactionAsync(async () => {
-      await writeContentSync(db);
       await db.execAsync('PRAGMA user_version = 10');
     });
     version = 10;
@@ -242,7 +207,6 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
 
   if (version < 11) {
     await db.withTransactionAsync(async () => {
-      await writeContentSync(db);
       await db.execAsync('PRAGMA user_version = 11');
     });
     version = 11;
@@ -266,7 +230,6 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
 
   if (version < 13) {
     await db.withTransactionAsync(async () => {
-      await writeContentSync(db);
       await db.execAsync('PRAGMA user_version = 13');
     });
     version = 13;
@@ -274,7 +237,6 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
 
   if (version < 14) {
     await db.withTransactionAsync(async () => {
-      await writeContentSync(db);
       await db.execAsync('PRAGMA user_version = 14');
     });
     version = 14;
@@ -294,9 +256,6 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
       if (!(await hasColumn(db, 'attempts', 'score_total'))) {
         await db.execAsync(`ALTER TABLE attempts ADD COLUMN score_total INTEGER NOT NULL DEFAULT 1`);
       }
-      await migrateQuestionIds(db);
-      await writeContentSync(db);
-      await saveContentHash(db);
       await db.execAsync('PRAGMA user_version = 15');
     });
     version = 15;
@@ -538,14 +497,48 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
     version = 21;
   }
 
-  await seedIfEmpty(db);
-  await syncBundledAndRemote(db);
+  if (version < 22) {
+    // Solo se descartan las cachés del protocolo remoto viejo. El contenido,
+    // las clases y el progreso existentes se conservan: una actualización no
+    // puede borrar trabajo real. El CMS reemplaza el contenido al sincronizar.
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(`
+        DROP TABLE IF EXISTS remote_lessons;
+        DROP TABLE IF EXISTS remote_catalogs;
+      `);
+      await db.execAsync(SCHEMA_DDL);
+      await db.execAsync('PRAGMA user_version = 22');
+    });
+    version = 22;
+  }
+
+  if (version < 23) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS remote_session (
+          account_id INTEGER PRIMARY KEY NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+          token TEXT,
+          expires_at TEXT,
+          last_uploaded_hash TEXT,
+          last_synced_at TEXT,
+          pending_restore INTEGER NOT NULL DEFAULT 0,
+          force_remote INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL
+        );
+      `);
+      await db.execAsync('PRAGMA user_version = 23');
+    });
+    version = 23;
+  }
+
+  if (version < 24) {
+    await db.withTransactionAsync(async () => {
+      await ensureColumn(db, 'accounts', 'email', 'TEXT');
+      await db.execAsync('PRAGMA user_version = 24');
+    });
+    version = 24;
+  }
+
   await db.withTransactionAsync(() => backfillLegacyTopics(db));
   await applyStoredV3Content(db);
-}
-
-// Primero el contenido incluido; después lo remoto ya validado, sin red.
-async function syncBundledAndRemote(db: SQLiteDatabase): Promise<void> {
-  await syncContentIfChanged(db);
-  await applyStagedContent(db);
 }

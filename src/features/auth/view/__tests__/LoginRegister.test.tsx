@@ -78,6 +78,12 @@ describe('LoginScreen', () => {
       await pending.promise;
     });
   });
+
+  it('abre la recuperación de contraseña', () => {
+    const { getByText } = render(<LoginScreen />);
+    fireEvent.press(getByText('¿Olvidaste tu contraseña?'));
+    expect(mockPush).toHaveBeenCalledWith('/forgot-password');
+  });
 });
 
 describe('RegisterScreen', () => {
@@ -87,9 +93,10 @@ describe('RegisterScreen', () => {
     const { getByLabelText, getByText } = render(<RegisterScreen />);
     fireEvent.changeText(getByLabelText('Nombre'), 'Ana');
     fireEvent.changeText(getByLabelText('Apellidos'), 'Pérez');
+    fireEvent.changeText(getByLabelText('Correo'), 'ana@escuela.mx');
     fireEvent.changeText(getByLabelText('Usuario'), 'ana');
-    fireEvent.changeText(getByLabelText('Contraseña'), 'secreto1');
-    fireEvent.changeText(getByLabelText('Confirmar contraseña'), 'secreto1');
+    fireEvent.changeText(getByLabelText('Contraseña'), 'Secreto1!');
+    fireEvent.changeText(getByLabelText('Confirmar contraseña'), 'Secreto1!');
     await act(async () => {
       fireEvent.press(getByText('Crear cuenta'));
     });
@@ -106,9 +113,10 @@ describe('RegisterScreen', () => {
     const { getByLabelText, getByText } = render(<RegisterScreen />);
     fireEvent.changeText(getByLabelText('Nombre'), 'Ana');
     fireEvent.changeText(getByLabelText('Apellidos'), 'Pérez');
+    fireEvent.changeText(getByLabelText('Correo'), 'ana@escuela.mx');
     fireEvent.changeText(getByLabelText('Usuario'), 'ana');
-    fireEvent.changeText(getByLabelText('Contraseña'), 'secreto1');
-    fireEvent.changeText(getByLabelText('Confirmar contraseña'), 'secreto1');
+    fireEvent.changeText(getByLabelText('Contraseña'), 'Secreto1!');
+    fireEvent.changeText(getByLabelText('Confirmar contraseña'), 'Secreto1!');
     fireEvent.press(getByText('Crear cuenta'));
     fireEvent.press(getByText('Crear cuenta'));
 

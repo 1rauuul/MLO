@@ -7,20 +7,20 @@ import {
   applyPendingContent,
   hasPendingContent,
 } from '@/shared/services/content/remote/applyStagedContent';
-import { refreshCatalogs } from '@/shared/services/content/remoteContent';
+import { refreshCourseList } from '@/shared/services/content/coursesV3';
 import { useBlockContentUpdates } from '@/shared/hooks/useContentUpdatesGate';
 
 const mockDb = {};
 
 jest.mock('expo-sqlite', () => ({ useSQLiteContext: () => mockDb }));
 jest.mock('@/shared/services/data/dataMode', () => ({ isHybrid: () => true }));
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
 jest.mock('@/shared/services/http/client', () => ({
   apiBaseUrl: () => 'https://api.test',
   http: {},
   httpV3: {},
-}));
-jest.mock('@/shared/services/content/remoteContent', () => ({
-  refreshCatalogs: jest.fn(async () => true),
 }));
 jest.mock('@/shared/services/content/coursesV3', () => ({
   refreshCourseList: jest.fn(async () => false),
@@ -31,6 +31,9 @@ jest.mock('@/shared/services/content/classSync', () => ({
 jest.mock('@/shared/services/content/remote/applyStagedContent', () => ({
   hasPendingContent: jest.fn(async () => false),
   applyPendingContent: jest.fn(async () => ({ failed: [] })),
+}));
+jest.mock('@/shared/services/content/applyV3Content', () => ({
+  applyStoredV3Content: jest.fn(async () => ({ failed: [] })),
 }));
 jest.mock('@/shared/theme/ThemeProvider', () => ({
   useTheme: () => ({
@@ -54,7 +57,7 @@ jest.mock('@/shared/theme/ThemeProvider', () => ({
   }),
 }));
 
-const mockRefreshCatalogs = jest.mocked(refreshCatalogs);
+const mockRefreshCourseList = jest.mocked(refreshCourseList);
 const mockHasPendingContent = jest.mocked(hasPendingContent);
 const mockApplyPendingContent = jest.mocked(applyPendingContent);
 
@@ -74,13 +77,14 @@ function renderNotice(extra?: ReactNode) {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockRefreshCatalogs.mockResolvedValue(true);
+  mockRefreshCourseList.mockResolvedValue(false);
   mockHasPendingContent.mockResolvedValue(false);
   mockApplyPendingContent.mockResolvedValue({ failed: [] });
 });
 
 describe('ContentUpdateNotice', () => {
   it('el evento de actualización abre el modal y confirma el aviso', async () => {
+    mockHasPendingContent.mockResolvedValue(true);
     const { getByLabelText, getByText } = renderNotice();
 
     await waitFor(() => expect(getByText('Contenido nuevo disponible')).toBeTruthy());
@@ -88,9 +92,13 @@ describe('ContentUpdateNotice', () => {
 
     await waitFor(() => expect(mockApplyPendingContent).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(getByText('Contenido actualizado')).toBeTruthy());
+    expect(
+      getByText('Las lecciones y actividades nuevas ya están disponibles.'),
+    ).toBeTruthy();
   });
 
   it('«Más tarde» oculta el aviso sin aplicar nada', async () => {
+    mockHasPendingContent.mockResolvedValue(true);
     const { getByLabelText, queryByText } = renderNotice();
 
     await waitFor(() => expect(queryByText('Contenido nuevo disponible')).toBeTruthy());
@@ -114,18 +122,19 @@ describe('ContentUpdateNotice', () => {
   });
 
   it('una desconexión no aplica ni borra la copia local', async () => {
-    mockRefreshCatalogs.mockRejectedValueOnce(new Error('sin red'));
+    mockRefreshCourseList.mockRejectedValueOnce(new Error('sin red'));
     const { queryByText } = renderNotice();
 
-    await waitFor(() => expect(mockRefreshCatalogs).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockRefreshCourseList).toHaveBeenCalledTimes(1));
     expect(mockApplyPendingContent).not.toHaveBeenCalled();
     expect(queryByText('Contenido nuevo disponible')).toBeNull();
   });
 
   it('una evaluación en curso difiere el aviso hasta una transición segura', async () => {
+    mockHasPendingContent.mockResolvedValue(true);
     const { queryByText, rerender } = renderNotice(<RunningEvaluation />);
 
-    await waitFor(() => expect(mockRefreshCatalogs).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockRefreshCourseList).toHaveBeenCalledTimes(1));
     expect(queryByText('Contenido nuevo disponible')).toBeNull();
     expect(mockApplyPendingContent).not.toHaveBeenCalled();
 

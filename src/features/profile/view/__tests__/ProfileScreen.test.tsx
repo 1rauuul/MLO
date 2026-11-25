@@ -8,9 +8,7 @@ const mockResetProgress = jest.fn(async () => {});
 const mockClearLocation = jest.fn();
 const mockRefreshCatalog = jest.fn(async () => {});
 const mockRefreshResults = jest.fn(async () => {});
-const mockSetShowBaseCourse = jest.fn();
-const mockSaveProgress = jest.fn();
-const mockSyncProgress = jest.fn();
+const mockSyncNow = jest.fn(async () => {});
 
 let mockCatalog: Record<string, unknown> = {};
 
@@ -24,9 +22,20 @@ jest.mock('@/features/auth/viewmodel/useAuth', () => ({
     account: { displayName: 'Valentina Ríos', username: 'valentina' },
     logout: jest.fn(),
     resetProgress: mockResetProgress,
+    needsRemoteLink: false,
   }),
 }));
 jest.mock('@/features/modules/viewmodel/useCatalog', () => ({ useCatalog: () => mockCatalog }));
+jest.mock('@/features/modules/viewmodel/useCourses', () => ({
+  useCourses: () => ({
+    courses: [],
+    activeCatalogId: 'demo',
+    selectCourse: jest.fn(),
+    refresh: jest.fn(),
+    isLoading: false,
+    error: null,
+  }),
+}));
 jest.mock('@/features/auth/viewmodel/useSession', () => ({
   useSession: () => ({
     location: { unitId: null, lessonId: null, lessonCode: null, section: null },
@@ -39,8 +48,6 @@ jest.mock('@/features/profile/viewmodel/useLearnerProfile', () => ({
   useLearnerProfile: () => ({
     darkMode: true,
     setDarkMode: jest.fn(),
-    showBaseCourse: true,
-    setShowBaseCourse: mockSetShowBaseCourse,
   }),
 }));
 jest.mock('@/features/profile/viewmodel/useRecentResults', () => ({
@@ -48,15 +55,14 @@ jest.mock('@/features/profile/viewmodel/useRecentResults', () => ({
 }));
 jest.mock('@/features/profile/viewmodel/useProgressSync', () => ({
   useProgressSync: () => ({
-    saveProgress: mockSaveProgress,
-    syncProgress: mockSyncProgress,
-    busyAction: null,
-    isBusy: false,
+    status: 'synced',
+    lastSyncedAt: null,
     error: null,
-    message: null,
+    isSyncing: false,
+    isLinked: true,
+    syncNow: mockSyncNow,
   }),
 }));
-jest.mock('@/shared/services/data/dataMode', () => ({ isHybrid: () => true }));
 jest.mock('@/shared/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }));
 jest.mock('@/shared/theme/ThemeProvider', () => ({
   useTheme: () => ({
@@ -141,23 +147,18 @@ describe('ProfileScreen', () => {
     expect(queryByText('Texto ampliado')).toBeNull();
   });
 
-  it('permite mostrar u ocultar el curso base', () => {
-    const { getByLabelText, getByText } = render(<ProfileScreen />);
+  it('ya no muestra el ajuste del curso base', () => {
+    const { queryByText } = render(<ProfileScreen />);
 
-    expect(getByText('Mostrar curso base')).toBeTruthy();
-    fireEvent.press(getByLabelText('Mostrar curso base'));
-
-    expect(mockSetShowBaseCourse).toHaveBeenCalledWith(false);
+    expect(queryByText('Mostrar curso base')).toBeNull();
+    expect(queryByText('Curso base')).toBeNull();
   });
 
-  it('permite guardar y sincronizar el progreso', () => {
+  it('permite sincronizar el progreso ahora', () => {
     const { getByText } = render(<ProfileScreen />);
 
-    fireEvent.press(getByText('Guardar progreso'));
-    expect(mockSaveProgress).toHaveBeenCalled();
-
-    fireEvent.press(getByText('Sincronizar'));
-    expect(getByText(/Se reemplazará tu progreso local/)).toBeTruthy();
+    fireEvent.press(getByText('Sincronizar ahora'));
+    expect(mockSyncNow).toHaveBeenCalled();
   });
 
   it('reinicia progreso limpiando la ubicación de sesión', async () => {

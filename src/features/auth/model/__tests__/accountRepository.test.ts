@@ -8,6 +8,8 @@ import {
   selectAccountById,
   selectAccountByUsername,
   selectSessionAccountId,
+  updateAccountEmail,
+  updateAccountIdentity,
   updateExternalKey,
   updatePasswordHash,
 } from '@/features/auth/model/accountRepository';
@@ -31,6 +33,7 @@ const accountRow = {
   username: 'valentina',
   external_key: '11111111-1111-4111-8111-111111111111',
   display_name: 'Valentina Ríos',
+  email: 'valentina@escuela.mx',
   password_hash: 'abc',
   salt: 's1',
   created_at: '2026-01-01T00:00:00.000Z',
@@ -44,6 +47,7 @@ describe('accountRepository', () => {
       username: 'valentina',
       externalKey: '11111111-1111-4111-8111-111111111111',
       displayName: 'Valentina',
+      email: 'valentina@escuela.mx',
       passwordHash: 'hash',
       salt: 's1',
     });
@@ -54,6 +58,7 @@ describe('accountRepository', () => {
       'valentina',
       '11111111-1111-4111-8111-111111111111',
       'Valentina',
+      'valentina@escuela.mx',
       'hash',
       's1',
       expect.any(String),
@@ -68,6 +73,7 @@ describe('accountRepository', () => {
       username: 'valentina',
       externalKey: '11111111-1111-4111-8111-111111111111',
       displayName: 'Valentina Ríos',
+      email: 'valentina@escuela.mx',
       passwordHash: 'abc',
       salt: 's1',
       createdAt: '2026-01-01T00:00:00.000Z',
@@ -126,6 +132,36 @@ describe('accountRepository', () => {
       expect.stringContaining('UPDATE accounts SET password_hash'),
       'nuevo-hash',
       'nueva-salt',
+      7,
+    );
+  });
+
+  it('updateAccountEmail guarda el correo de recuperación', async () => {
+    const { db, calls } = makeDb();
+
+    await updateAccountEmail(db, 7, 'nueva@escuela.mx');
+
+    expect(calls.runAsync).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE accounts SET email'),
+      'nueva@escuela.mx',
+      7,
+    );
+  });
+
+  it('updateAccountIdentity actualiza identidad y correo remotos', async () => {
+    const { db, calls } = makeDb();
+
+    await updateAccountIdentity(db, 7, {
+      externalKey: '22222222-2222-4222-8222-222222222222',
+      displayName: 'Valentina Ríos',
+      email: 'valentina@escuela.mx',
+    });
+
+    expect(calls.runAsync).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE accounts SET external_key'),
+      '22222222-2222-4222-8222-222222222222',
+      'Valentina Ríos',
+      'valentina@escuela.mx',
       7,
     );
   });

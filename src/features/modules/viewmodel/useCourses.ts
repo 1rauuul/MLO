@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
-import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
 import type { RemoteCourse } from '@/features/modules/model/courseRepository';
 import { useRepositories } from '@/shared/services/data/DataProvider';
 import { isHybrid } from '@/shared/services/data/dataMode';
@@ -55,7 +54,7 @@ export function useCourses(): CoursesResult {
     async (catalogId: string) => {
       const changed = account
         ? await repository.selectCourse(account.id, catalogId)
-        : catalogId === BASE_CATALOG_ID;
+        : false;
       if (changed) {
         try {
           await repository.applyStoredContent(catalogId);

@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -12,11 +12,14 @@ import { useTheme } from '@/shared/theme/ThemeProvider';
 import { initials } from '@/features/auth/viewmodel/auth.logic';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
 import { useCatalog } from '@/features/modules/viewmodel/useCatalog';
+import { useCourses } from '@/features/modules/viewmodel/useCourses';
 import { useLearnerProfile } from '@/features/profile/viewmodel/useLearnerProfile';
-import { useProgressSync } from '@/features/profile/viewmodel/useProgressSync';
+import {
+  useProgressSync,
+  type ProgressSyncStatus,
+} from '@/features/profile/viewmodel/useProgressSync';
 import { useRecentResults } from '@/features/profile/viewmodel/useRecentResults';
 import { useSession } from '@/features/auth/viewmodel/useSession';
-import { isHybrid } from '@/shared/services/data/dataMode';
 
 interface DialogState {
   title: string;
@@ -29,19 +32,20 @@ interface DialogState {
 
 export default function ProfileScreen() {
   const { colors, radius, spacing } = useTheme();
-  const { account, logout, resetProgress } = useAuth();
+  const router = useRouter();
+  const { account, logout, resetProgress, needsRemoteLink } = useAuth();
   const [dialog, setDialog] = useState<DialogState | null>(null);
-  const { darkMode, setDarkMode, showBaseCourse, setShowBaseCourse } = useLearnerProfile();
+  const { darkMode, setDarkMode } = useLearnerProfile();
   const { clear: clearLocation } = useSession();
-  const { lessonsByUnit, completionMap, refresh } = useCatalog();
+  const { activeCatalogId } = useCourses();
+  const { lessonsByUnit, completionMap, refresh } = useCatalog(activeCatalogId);
   const { averageScore, refresh: refreshResults } = useRecentResults();
   const {
-    saveProgress,
-    syncProgress,
-    busyAction,
-    isBusy,
+    status: syncStatus,
+    lastSyncedAt,
     error: syncError,
-    message: syncMessage,
+    isSyncing,
+    syncNow,
   } = useProgressSync();
 
   useFocusEffect(
@@ -63,22 +67,11 @@ export default function ProfileScreen() {
       confirmLabel: 'Reiniciar',
       destructive: true,
       onConfirm: () => {
-        void resetProgress().then(() => {
+        void resetProgress().then(async () => {
           clearLocation();
-          return Promise.all([refresh(), refreshResults()]);
+          await Promise.all([refresh(), refreshResults()]);
+          await syncNow();
         });
-      },
-    });
-
-  const onSyncProgress = () =>
-    setDialog({
-      title: 'Sincronizar progreso',
-      message:
-        'Se reemplazará tu progreso local por el guardado en la nube. Esta acción no se puede deshacer.',
-      confirmLabel: 'Sincronizar',
-      destructive: true,
-      onConfirm: () => {
-        void syncProgress();
       },
     });
 
@@ -114,21 +107,6 @@ export default function ProfileScreen() {
         ))}
       </View>
 
-      <SectionHeading eyebrow="Cursos" title="Curso base" />
-      <View style={styles.list}>
-        <SettingRow
-          title="Mostrar curso base"
-          subtitle="Ingeniería de software"
-          control={
-            <Toggle
-              on={showBaseCourse}
-              onToggle={() => setShowBaseCourse(!showBaseCourse)}
-              label="Mostrar curso base"
-            />
-          }
-        />
-      </View>
-
       <SectionHeading eyebrow="Accesibilidad" title="Ajustes de lectura" />
       <View style={styles.list}>
         <SettingRow
@@ -141,38 +119,60 @@ export default function ProfileScreen() {
       <SectionHeading eyebrow="Cuenta" title="Sesión" />
       <View style={styles.list}>
         <SettingRow title={learnerName} subtitle={`@${accountUsername}`} control={null} />
+        <SettingRow
+          title="Correo de recuperación"
+          subtitle={account?.email ?? 'Sin correo'}
+          control={null}
+        />
       </View>
+      {needsRemoteLink ? (
+        <AppText variant="small" color={colors.warning} style={{ marginTop: spacing.sm }}>
+          Vincula tu cuenta para poder guardar un correo de recuperación.
+        </AppText>
+      ) : (
+        <View style={[styles.backupActions, { marginTop: spacing.md }]}>
+          <SecondaryButton
+            label={account?.email ? 'Cambiar correo' : 'Agregar correo'}
+            onPress={() => router.push('/correo-recuperacion' as never)}
+          />
+        </View>
+      )}
 
       <SectionHeading eyebrow="Sincronización" title="Tu progreso" />
       <AppText variant="small">
-        Guarda tu avance en la nube y recupéralo en este dispositivo cuando lo necesites.
+        Tu avance se guarda solo cuando hay conexión y se recupera al iniciar sesión
+        en otro equipo.
       </AppText>
-      {!isHybrid() ? (
-        <AppText variant="small" style={{ marginTop: spacing.sm }}>
-          Necesitas conexión y el modo híbrido para guardar o sincronizar.
-        </AppText>
-      ) : null}
-      <View style={[styles.backupActions, { marginTop: spacing.md }]}>
-        <SecondaryButton
-          label="Guardar progreso"
-          onPress={() => void saveProgress()}
-          loading={busyAction === 'save'}
-          disabled={!isHybrid() || isBusy}
-        />
-        <SecondaryButton
-          label="Sincronizar"
-          onPress={onSyncProgress}
-          loading={busyAction === 'sync'}
-          disabled={!isHybrid() || isBusy}
-        />
-      </View>
+      {needsRemoteLink ? (
+        <View style={[styles.backupActions, { marginTop: spacing.md }]}>
+          <AppText variant="small" color={colors.warning}>
+            Tu cuenta todavía no está en la nube. Pide un código de vinculación a tu
+            docente para no perder el progreso si cambias de equipo.
+          </AppText>
+          <SecondaryButton
+            label="Vincular cuenta"
+            // La ruta existe; los tipos generados de expo-router aún no la listan.
+            onPress={() => router.push('/vincular-cuenta' as never)}
+          />
+        </View>
+      ) : (
+        <>
+          <AppText variant="small" style={{ marginTop: spacing.sm }}>
+            {syncSummary(syncStatus, lastSyncedAt)}
+          </AppText>
+          <View style={[styles.backupActions, { marginTop: spacing.md }]}>
+            <SecondaryButton
+              label={isSyncing ? 'Sincronizando…' : 'Sincronizar ahora'}
+              onPress={() => void syncNow()}
+              loading={isSyncing}
+              disabled={isSyncing}
+            />
+          </View>
+        </>
+      )}
       {syncError ? (
         <AppText variant="small" color={colors.danger} accessibilityLiveRegion="polite">
           {syncError}
-        </AppText>
-      ) : syncMessage ? (
-        <AppText variant="small" color={colors.success} accessibilityLiveRegion="polite">
-          {syncMessage}
         </AppText>
       ) : null}
 
@@ -197,6 +197,30 @@ export default function ProfileScreen() {
       />
     </Screen>
   );
+}
+
+function syncSummary(
+  status: ProgressSyncStatus,
+  lastSyncedAt: string | null,
+): string {
+  if (status === 'syncing') {
+    return 'Sincronizando…';
+  }
+  if (status === 'synced') {
+    return lastSyncedAt
+      ? `Guardado el ${new Date(lastSyncedAt).toLocaleString('es-ES')}.`
+      : 'Progreso guardado en la nube.';
+  }
+  if (status === 'offline') {
+    return 'Sin conexión. Se guardará al volver la red.';
+  }
+  if (status === 'session_expired') {
+    return 'Tu sesión caducó. Vuelve a iniciar sesión para seguir guardando.';
+  }
+  if (status === 'error') {
+    return 'No se pudo sincronizar. Puedes reintentarlo.';
+  }
+  return 'Tu cuenta todavía no está en la nube.';
 }
 
 function SettingRow({

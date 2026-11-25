@@ -1,5 +1,5 @@
 import type { EvaluationSummary } from '@/features/evaluations/model/evaluationRepository';
-import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
+import { useCourses } from '@/features/modules/viewmodel/useCourses';
 import { useAsyncResource } from '@/shared/hooks/useAsyncResource';
 import { useRepositories } from '@/shared/services/data/DataProvider';
 
@@ -11,9 +11,10 @@ interface EvaluationsCatalogResult {
 
 export function useEvaluationsCatalog(): EvaluationsCatalogResult {
   const { evaluations } = useRepositories();
+  const { activeCatalogId } = useCourses();
   const resource = useAsyncResource(
-    () => evaluations.selectEvaluationSummaries(BASE_CATALOG_ID),
-    `evaluations:${BASE_CATALOG_ID}`,
+    () => evaluations.selectEvaluationSummaries(activeCatalogId),
+    `evaluations:${activeCatalogId}`,
     null,
     'No se pudo cargar las evaluaciones.',
   );

@@ -6,7 +6,8 @@ del usuario, 6 090 mensajes en total) entre el 21 de septiembre y el 13 de novie
 (base local de OpenCode), contrastadas con los 37 commits del historial de git. Las fechas son
 locales (America/Mexico_City).  
 **Corte:** 13 de noviembre de 2026.  
-**Actualización:** 17 de noviembre de 2026 (medios en lecciones y cierre de pendientes).
+**Actualización:** 24 de noviembre de 2026 (cuentas remotas y progreso en la nube).  
+**Historial del CMS:** [`historial-cms.md`](./historial-cms.md).
 
 ## Resumen por fases
 
@@ -306,24 +307,77 @@ contrato v3 con los bloques nuevos.
 - **Verificación.** 581/581 pruebas y TypeScript limpio. El panel queda con 145/145, lint, tsc y
   build en verde.
 
+### 19 nov — Contenido desde el CMS y aviso de actualización
+- **Contenido base.** Se retira del APK todo el contenido empaquetado (`unit1.content`,
+  `richContent`, bancos y `seed.ts`) y la sincronización v2 del catálogo base (`remote_lessons`,
+  `remote_catalogs`). El contenido base vive solo en el CMS y se muestra si un curso
+  (`uses_base`) o una clase lo incluye.
+- **Curso base.** Ya no se asigna a las cuentas: `loadAccountCourses` solo lo muestra si hay una
+  clase activa sobre `base`. Se retira el ajuste **Mostrar curso base** del perfil.
+- **Migración v22.** Borra cursos, grupos, contenido y progreso local, y conserva cuenta, perfil y
+  sesión. El APK vuelve a sincronizarse desde el CMS.
+- **Medios y video.** `VideoPlayer` envía el encabezado `Referer` que YouTube exige en WebView
+  (error 153).
+- **Aviso de actualización.** El aviso pasa a tarjeta con icono, título y línea de contexto, y se
+  coloca encima de la barra inferior.
+- **CMS.** Migración `20261119000000_reset_courses_and_groups.sql`: elimina grupos, cursos no base
+  y progreso en la nube; conserva docentes, alumnos, media y el curso base.
+- **Verificación.** 514/514 pruebas y TypeScript limpio.
+
+### 24 nov — Cuentas remotas, progreso en la nube y limpieza de contenido
+- **Cuentas en el CMS.** Registro, login y logout contra `/api/mlo/v3/auth/*`; token Bearer de
+  30 días, contraseñas scrypt y límite de intentos. La identidad sigue siendo el `externalKey`.
+- **Sesión local.** SQLite v23 con `remote_session` (token, caducidad, huella subida, último
+  sync y `pending_restore`); v24 añade `accounts.email`. `httpAuth` envía el `Authorization`
+  desde un store en memoria.
+- **Restauración.** `accountRestore` descarga clases, cursos y contenido antes de aplicar el
+  progreso. Política de conflicto: sube el local si hay cambios pendientes; si no, aplica el
+  servidor; una identidad remota adoptada fuerza el servidor.
+- **Sincronización.** `ProgressSyncProvider` sube solo cuando cambia la huella SHA-256
+  (`progressFingerprint`), al abrir, al volver a primer plano, al segundo plano y cada 60 s. Un
+  401 marca `session_expired` sin borrar el progreso; sin red queda `offline` y reintenta.
+- **Vinculación.** Las cuentas locales antiguas conservan su `externalKey` y sus clases; se
+  vinculan una vez desde `LinkAccountScreen` con su contraseña actual, una contraseña nueva y un
+  código de un solo uso emitido por el docente/administrador (`npm run link:student`). El
+  `externalKey` por sí solo ya no permite reclamar la cuenta. Las cuentas nuevas solo se crean
+  contra el CMS.
+- **Interfaz.** Login y registro explican que la cuenta y el progreso viven en la nube; Perfil
+  muestra el estado de sincronización y la tarjeta de vinculación; desaparecen los botones
+  manuales de guardar/sincronizar.
+- **Contenido.** Se completa la salida del contenido empaquetado del APK y de la sincronización
+  v2; el contenido base solo llega desde el CMS. Las pruebas pasan de 581 a 541 por la retirada
+  de los bancos y fixtures locales.
+- **Documentación.** Capturas del panel en `docs/estado/capturas-ui/` (17 imágenes) e historial
+  del CMS en `docs/estado/historial-cms.md`.
+- **Estado de git.** El commit `0ec32e6` («big commit») cubre la primera parte (progreso,
+  Perfil, tema y `Referer` de YouTube); el resto de las cuentas remotas y la limpieza de
+  contenido siguen **sin commit** al registrar esta entrada.
+- **Verificación.** 541/541 pruebas y TypeScript limpio; el CMS queda con 157/157, lint, tsc y
+  build en verde.
+
 ## Estado del repositorio
 
-- `main` con la entrega del 18 nov (portada, perfil, salida del curso, lección de una pantalla y
-  unidad de grupo) sobre la del 17 nov (medios y `409 unpublished`). Árbol limpio, sin cambios
-  pendientes.
-- La base local sigue en `DATABASE_VERSION` 21; `media_cache` se crea con
-  `CREATE TABLE IF NOT EXISTS` también en instalaciones existentes.
-- Contrato de contenido en v3 con 7 tipos de bloque (v2 sigue soportado para el curso base y
-  releases legacy).
+- `main` en `0ec32e6` («big commit», 24 nov) con la primera parte del progreso remoto y el aviso
+  de actualización; queda un lote sin commit con cuentas remotas, contenido empaquetado
+  retirado, Perfil, capturas y documentación.
+- La base local sube a `DATABASE_VERSION` 24 por `remote_session` y `accounts.email`; el
+  contenido base ya no se empaqueta en el APK.
+- Contrato de contenido en v3; las cuentas viven en el CMS y el progreso se restaura desde la
+  nube. El curso base y los releases legacy v2 ya no se consumen en el APK.
 
 ## Pendientes señalados en las propias sesiones
 
-- Probar en dispositivo la portada, el ajuste **Mostrar curso base**, **Salir del curso** y la
-  lección de una sola pantalla.
-- Probar en dispositivo la sincronización de imágenes (offline), el reproductor de YouTube y el
-  `409` al unirse a un grupo sin publicar.
-- Revisar el contenido completo de las unidades 2–5: hoy depende de lo que publique el CMS; el
-  curso base v3 ya trae 25 subtemas.
+- Probar en dispositivo el flujo completo de cuentas: registrar, avanzar, sincronizar, borrar
+  datos, entrar y restaurar; vincular una cuenta antigua; sin red después de entrar; token
+  caducado; límite de intentos.
+- Mover el token de SQLite a `expo-secure-store` (la API ya está aislada).
+- Recuperación y cambio de contraseña quedaron fuera de alcance; tampoco hay merge de progreso
+  entre dispositivos (gana la última escritura).
+- Probar en dispositivo la portada, **Salir del curso** y la lección de una sola pantalla.
+- Probar en dispositivo la sincronización de imágenes (offline) y el reproductor de YouTube con
+  el `Referer`.
+- Probar el arranque sin contenido: crear un curso con `uses_base` o una clase desde el CMS y
+  verificar que el APK lo descarga y lo muestra.
 - Soporte de APK de 32 bits o emuladores x86_64 si se necesita; validación del APK en un
   dispositivo físico.
 - Cobertura verificada de las 9 categorías LOM (la ficha descriptiva sigue parcial).

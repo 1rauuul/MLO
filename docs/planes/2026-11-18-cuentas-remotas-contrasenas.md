@@ -1,9 +1,12 @@
 # Plan: cuentas remotas y contraseñas
 
-Estado: **pendiente de implementar**. La sincronización de progreso ya existe y usa
-`X-MLO-Student-Key` (el `accounts.external_key` local). Este plan agrega cuentas con
-contraseña en el CMS para poder iniciar sesión en un dispositivo nuevo o tras
-reinstalar la app.
+Estado: **implementado** (2026-11-24). El diseño final vive en
+`mlo-teachers/docs/superpowers/specs/2026-11-24-cuentas-remotas-design.md`.
+
+Diferencias con este borrador: la app guarda token y snapshot local en SQLite
+(`remote_session`), sincroniza sola cada 60 s / al volver a primer plano y restaura
+clases y contenido antes del progreso. Las cuentas locales antiguas se vinculan una
+vez; las nuevas se crean solo contra el CMS.
 
 ## Objetivo
 
