@@ -47,7 +47,7 @@ export type AuthOutcome = { ok: true } | { ok: false; error: string };
 interface AuthContextValue {
   account: Account | null;
   isLoading: boolean;
-  /** La cuenta local aún no tiene token del CMS. */
+  /** La cuenta local no tiene fila remota: nunca estuvo en la nube. */
   needsRemoteLink: boolean;
   register: (input: {
     firstName: string;
@@ -208,13 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setAuthToken(remoteSession?.token ?? null);
         setAccount(loaded ? toAccount(loaded) : null);
-        setNeedsRemoteLink(
-          Boolean(
-            loaded &&
-              !remoteSession?.token &&
-              !remoteSession?.lastUploadedHash,
-          ),
-        );
+        setNeedsRemoteLink(Boolean(loaded && !remoteSession));
       } catch {
         if (active) {
           setAuthToken(null);
@@ -426,11 +420,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const remoteSession = loaded ? await remote.select(loaded.id) : null;
     setAuthToken(remoteSession?.token ?? null);
     setAccount(loaded ? toAccount(loaded) : null);
-    setNeedsRemoteLink(
-      Boolean(
-        loaded && !remoteSession?.token && !remoteSession?.lastUploadedHash,
-      ),
-    );
+    setNeedsRemoteLink(Boolean(loaded && !remoteSession));
   }, [accounts, remote]);
 
   const value = useMemo<AuthContextValue>(

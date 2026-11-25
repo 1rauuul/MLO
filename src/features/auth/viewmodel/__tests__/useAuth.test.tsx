@@ -322,3 +322,38 @@ describe('useAuth remoto', () => {
     expect(result.current.account?.email).toBe(localRecord.email);
   });
 });
+
+describe('needsRemoteLink', () => {
+  const remoteSession = {
+    accountId: 7,
+    token: null,
+    expiresAt: null,
+    lastUploadedHash: null,
+    lastSyncedAt: null,
+    pendingRestore: false,
+    forceRemote: false,
+    createdAt: '2026-11-25T00:00:00.000Z',
+  };
+
+  it('needsRemoteLink no pide vincular una cuenta que ya está en la nube', async () => {
+    mockRepos.accounts.selectSessionAccountId.mockResolvedValue(7);
+    mockRepos.accounts.selectAccountById.mockResolvedValue(localRecord);
+    mockRepos.remote.select.mockResolvedValue(remoteSession);
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.needsRemoteLink).toBe(false);
+  });
+
+  it('needsRemoteLink pide vincular cuando la cuenta no tiene fila remota', async () => {
+    mockRepos.accounts.selectSessionAccountId.mockResolvedValue(7);
+    mockRepos.accounts.selectAccountById.mockResolvedValue(localRecord);
+    mockRepos.remote.select.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.needsRemoteLink).toBe(true);
+  });
+});
