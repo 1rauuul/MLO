@@ -58,8 +58,14 @@ panel vive en el repositorio `mlo-teachers` (`PLAN.md`); los contratos, en
 - **Vinculación.** `needsRemoteLink` ahora depende de la existencia de la fila `remote_session`
   (incluidos los dos fallbacks de login offline); una cuenta en la nube no vuelve a mostrar
   “Vincular cuenta” tras cerrar sesión. `DATABASE_VERSION` 24.
-- **Verificación.** Panel 184/184 (`test:db` 8/8), `lint`, `tsc` y `build` en verde; la app
-  queda con 578/578 y TypeScript limpio. El recorrido manual en navegador/dispositivo queda
+- **Revisión final.** Las respuestas de recuperación son genéricas: un correo inexistente y un
+  envío fallido devuelven lo mismo (`ok`), y `email_unavailable` queda solo para fallos de
+  configuración (proveedor o `APP_BASE_URL`). Una fila de `remote_session` sin token muestra
+  “sesión caducada” (no “no está en la nube”) y deshabilita el botón **Sincronizar ahora**. El
+  reenvío de invitación se serializa con el bloqueo del maestro: dos pulsaciones concurrentes
+  envían un solo correo.
+- **Verificación.** Panel 184/184 (`test:db` 11/11), `lint`, `tsc` y `build` en verde; la app
+  queda con 579/579 y TypeScript limpio. El recorrido manual en navegador/dispositivo queda
   pendiente.
 
 ## 2026-11-18 · Editor de contenido del grupo y seguimiento de cambios

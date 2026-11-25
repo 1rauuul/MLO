@@ -370,7 +370,11 @@ contrato v3 con los bloques nuevos.
 - **App.** `needsRemoteLink` depende de la existencia de `remote_session` (incluidos los dos
   fallbacks de login offline); una cuenta en la nube no muestra “Vincular cuenta” tras cerrar
   sesión. `DATABASE_VERSION` 24.
-- **Verificación.** Panel 184/184 (`test:db` 8/8), lint, tsc y build en verde; app 578/578 y
+- **Revisión final.** Las respuestas de recuperación son genéricas (un correo inexistente y un
+  envío fallido devuelven `ok`; `email_unavailable` queda solo para fallos de configuración).
+  Una fila de `remote_session` sin token muestra “sesión caducada” y deshabilita **Sincronizar
+  ahora**. El reenvío de invitación se serializa con el bloqueo del maestro.
+- **Verificación.** Panel 184/184 (`test:db` 11/11), lint, tsc y build en verde; app 579/579 y
   TypeScript limpio. El recorrido manual en navegador/dispositivo queda pendiente.
 
 ## Estado del repositorio
