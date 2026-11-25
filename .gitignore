@@ -85,3 +85,8 @@ PlanDesarrollo.md
 **/PlanDesarrollo.md
 **/planes.md
 **/*.plan.md
+
+.vercel
+.env*
+eas-build-preview*.json
+eas-build-preview*.log
