@@ -292,7 +292,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await accounts.saveSession(local.id);
             setAuthToken(null);
             setAccount(toAccount(local));
-            setNeedsRemoteLink(true);
+            setNeedsRemoteLink(!remoteSession);
             return { ok: true };
           }
           return { ok: false, error: 'network_error' };
@@ -310,7 +310,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await accounts.saveSession(local.id);
             setAuthToken(null);
             setAccount(toAccount(local));
-            setNeedsRemoteLink(true);
+            setNeedsRemoteLink(!remoteSession);
             return { ok: true };
           }
           return { ok: false, error: 'invalid_credentials' };

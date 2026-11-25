@@ -356,4 +356,20 @@ describe('needsRemoteLink', () => {
 
     expect(result.current.needsRemoteLink).toBe(true);
   });
+
+  it('needsRemoteLink no pide vincular al entrar sin red si existe fila remota', async () => {
+    mockLoginRemote.mockResolvedValue({ ok: false, error: 'network_error' });
+    mockRepos.accounts.selectAccountByUsername.mockResolvedValue(localRecord);
+    mockRepos.remote.select.mockResolvedValue(remoteSession);
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      const outcome = await result.current.login('valentina', '1234567a');
+      expect(outcome.ok).toBe(true);
+    });
+
+    expect(result.current.needsRemoteLink).toBe(false);
+  });
 });
