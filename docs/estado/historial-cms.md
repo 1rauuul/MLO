@@ -33,13 +33,13 @@ panel vive en el repositorio `mlo-teachers` (`PLAN.md`); los contratos, en
   cliente `http` v2 y la conversión de `/v2` a `/v3`. Cursos, clases, releases, cuentas y
   progreso usan `httpV3`.
 - **SecureStore.** El token de alumno se guarda en `expo-secure-store`; al leer una fila
-  antigua con token en SQLite se migra y se borra de SQLite. En web se usa el fallback
-  del almacenamiento seguro. `remote_session` conserva caducidad, huella y estado de
-  sincronización.
+  antigua con token en SQLite se migra y se borra de SQLite. En web no existe SecureStore:
+  el token vive solo en memoria y se pierde al recargar. `remote_session` conserva
+  caducidad, huella y estado de sincronización.
 - **CI/CD.** CI con `tsc`, Jest y lint; `eas.json` usa `hybrid` y la API v3 en `preview`
   y `production`; workflow manual de EAS preview. No se generó ningún build.
 - **Verificación.** CMS 185 pruebas (`test:db` 13, incluida la E2E v3), lint, `tsc` y build
-  en verde; app 581 pruebas, `tsc` y lint limpios. La prueba en dispositivo queda
+  en verde; app 582 pruebas, `tsc` y lint limpios. La prueba en dispositivo queda
   pendiente.
 
 ## 2026-11-24 · Cuentas de alumno, progreso en la nube y pulido del panel

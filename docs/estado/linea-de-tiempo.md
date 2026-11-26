@@ -388,12 +388,13 @@ contrato v3 con los bloques nuevos.
   CORS con `CORS_ALLOWED_ORIGIN`; CI de test, lint, `tsc` y build; prueba E2E HTTP v3 de
   preview, join, release y manifest.
 - **App.** El token de alumno vive en `expo-secure-store` (con migración de la fila
-  antigua en SQLite y fallback en web) y `remote_session` conserva el resto del estado.
+  antigua en SQLite); en web no hay SecureStore y el token vive solo en memoria. El resto
+  del estado sigue en `remote_session`.
 - **CI/CD.** CI con `tsc`, Jest y lint; `eas.json` define `EXPO_PUBLIC_DATA_MODE=hybrid` y
   `EXPO_PUBLIC_API_URL=https://mlo-enrichment.vercel.app/api/mlo/v3` en `preview` y
   `production`; workflow manual de EAS preview. No se generó ningún build.
 - **Verificación.** CMS 185 pruebas (`test:db` 13, incluida la E2E v3), lint, `tsc` y build
-  en verde; app 581 pruebas, `tsc` y lint limpios. La prueba en dispositivo sigue
+  en verde; app 582 pruebas, `tsc` y lint limpios. La prueba en dispositivo sigue
   pendiente.
 - **Git.** CMS en `50b1558` y app en `2fcc592` antes de los commits de documentación de
   esta entrada.

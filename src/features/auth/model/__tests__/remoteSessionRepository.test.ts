@@ -137,16 +137,18 @@ describe('remoteSessionRepository', () => {
   describe('en web', () => {
     const originalOS = Platform.OS;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       (Platform as unknown as { OS: string }).OS = 'web';
+      await clearRemoteToken(makeDb().db, 7);
+      jest.clearAllMocks();
     });
 
     afterEach(() => {
       (Platform as unknown as { OS: string }).OS = originalOS;
     });
 
-    it('guarda, lee y limpia el token en SQLite sin tocar SecureStore', async () => {
-      const { db, calls } = makeDb({ row: { ...row, token: 'web-tok' } });
+    it('guarda el token solo en memoria y deja SQLite sin token', async () => {
+      const { db, calls } = makeDb({ row });
       await saveRemoteSession(db, {
         accountId: 7,
         token: 'web-tok',
@@ -155,7 +157,7 @@ describe('remoteSessionRepository', () => {
       expect(calls.runAsync).toHaveBeenCalledWith(
         expect.stringContaining('ON CONFLICT(account_id) DO UPDATE'),
         7,
-        'web-tok',
+        null,
         '2026-12-24T00:00:00.000Z',
         0,
         0,
@@ -163,9 +165,21 @@ describe('remoteSessionRepository', () => {
       );
       await expect(selectRemoteSession(db, 7)).resolves.toMatchObject({ token: 'web-tok' });
       await clearRemoteToken(db, 7);
+      await expect(selectRemoteSession(db, 7)).resolves.toMatchObject({ token: null });
       expect(secure.setItemAsync).not.toHaveBeenCalled();
       expect(secure.getItemAsync).not.toHaveBeenCalled();
       expect(secure.deleteItemAsync).not.toHaveBeenCalled();
+    });
+
+    it('migra a memoria un token antiguo de SQLite y lo borra', async () => {
+      const { db, calls } = makeDb({ row: { ...row, token: 'legacy-web' } });
+      await expect(selectRemoteSession(db, 7)).resolves.toMatchObject({
+        token: 'legacy-web',
+      });
+      expect(calls.runAsync).toHaveBeenCalledWith(
+        expect.stringContaining('SET token = NULL'),
+        7,
+      );
     });
   });
 });

@@ -172,8 +172,8 @@ Esta decisión **actualiza C9 y C10**; no borra su registro histórico.
   `student_progress`. La app sigue siendo offline-first: SQLite manda y sin red conserva
   el estado local.
 - **Token en SecureStore.** El token de alumno se guarda en `expo-secure-store`; las
-  filas antiguas con token en SQLite se migran y el token se borra de SQLite. En web se
-  usa el fallback del almacenamiento seguro.
+  filas antiguas con token en SQLite se migran y el token se borra de SQLite. En web no
+  existe SecureStore: el token vive solo en memoria y se pierde al recargar.
 - **CI/CD.** CI con `tsc`, Jest y lint; EAS `preview`/`production` en modo `hybrid` con la
   API v3. El build se lanza a mano.
 - **Para el reporte:** describir la app como **offline-first con servicios opcionales y

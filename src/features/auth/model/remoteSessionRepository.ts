@@ -28,6 +28,9 @@ function tokenKey(accountId: number): string {
   return `mlo.remote.token.${accountId}`;
 }
 
+/** En web no hay SecureStore: el token vive solo en memoria, no en SQLite. */
+let webToken: { accountId: number; token: string } | null = null;
+
 function mapRemoteSession(row: RemoteSessionRow): RemoteSession {
   return {
     accountId: row.account_id,
@@ -51,9 +54,20 @@ export async function selectRemoteSession(
   );
   if (!row) return null;
 
-  // SecureStore no existe en web: la demo web guarda el token en SQLite.
-  // En nativo el token nunca toca SQLite (salvo migración de tokens antiguos).
-  if (Platform.OS === 'web') return mapRemoteSession(row);
+  // SecureStore no existe en web: el token vive solo en memoria. Una fila
+  // antigua con token en SQLite se migra a memoria y se borra de la base.
+  if (Platform.OS === 'web') {
+    const session = mapRemoteSession(row);
+    if (row.token) {
+      webToken = { accountId, token: row.token };
+      await db.runAsync(
+        'UPDATE remote_session SET token = NULL WHERE account_id = ?',
+        accountId,
+      );
+    }
+    session.token = webToken?.accountId === accountId ? webToken.token : null;
+    return session;
+  }
 
   const session = mapRemoteSession(row);
 
@@ -83,9 +97,11 @@ export async function saveRemoteSession(
     forceRemote?: boolean;
   },
 ): Promise<void> {
-  // En nativo primero SecureStore: si falla, no queda una fila sin token.
-  // En web el token va a SQLite porque SecureStore no está disponible.
-  if (Platform.OS !== 'web') {
+  // En nativo primero SecureStore; en web solo memoria. SQLite nunca guarda
+  // el token en claro.
+  if (Platform.OS === 'web') {
+    webToken = { accountId: input.accountId, token: input.token };
+  } else {
     await SecureStore.setItemAsync(tokenKey(input.accountId), input.token);
   }
   await db.runAsync(
@@ -98,7 +114,7 @@ export async function saveRemoteSession(
        pending_restore = excluded.pending_restore,
        force_remote = excluded.force_remote`,
     input.accountId,
-    Platform.OS === 'web' ? input.token : null,
+    null,
     input.expiresAt,
     input.pendingRestore ? 1 : 0,
     input.forceRemote ? 1 : 0,
@@ -139,7 +155,9 @@ export async function clearRemoteToken(
   db: SQLiteDatabase,
   accountId: number,
 ): Promise<void> {
-  if (Platform.OS !== 'web') {
+  if (Platform.OS === 'web') {
+    webToken = null;
+  } else {
     await SecureStore.deleteItemAsync(tokenKey(accountId));
   }
   await db.runAsync(

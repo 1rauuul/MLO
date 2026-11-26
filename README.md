@@ -8,8 +8,9 @@ contra la **API v3** del CMS. Sin RA ni sensores nativos.
 ## Estado
 
 - Cliente único **v3**: `EXPO_PUBLIC_API_URL=https://<host>/api/mlo/v3` (sin barra final).
-- Cuentas de alumno con token en **`expo-secure-store`** (con migración desde SQLite y
-  fallback en web); progreso en la nube.
+- Cuentas de alumno con token en **`expo-secure-store`** (con migración desde SQLite);
+  en web no hay SecureStore y el token vive solo en memoria durante la sesión. Progreso
+  en la nube.
 - CI de GitHub Actions (`.github/workflows/ci.yml`): `tsc`, Jest y lint en cada push y PR.
 - EAS configurado para `preview` (APK) y `production` (AAB) con modo `hybrid`; el build
   se lanza a mano y no se ha generado en esta entrega.
