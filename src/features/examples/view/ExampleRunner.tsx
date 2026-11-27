@@ -112,8 +112,10 @@ export function ExampleRunner({
                   {String(stepIndex + 1).padStart(2, '0')}
                 </AppText>
                 <View style={styles.flex}>
-                  <AppText weight="600">{step.text}</AppText>
-                  <AppText variant="small" color={colors.muted}>
+                  <AppText weight="600" style={styles.justified}>
+                    {step.text}
+                  </AppText>
+                  <AppText variant="small" color={colors.muted} style={styles.justified}>
                     {`Por qué: ${step.why}`}
                   </AppText>
                 </View>
@@ -174,7 +176,9 @@ export function ExampleRunner({
             },
           ]}>
           <AppText variant="eyebrow">Solución</AppText>
-          <AppText variant="small">{exercise.explanation}</AppText>
+          <AppText variant="small" style={styles.justified}>
+            {exercise.explanation}
+          </AppText>
         </View>
       ) : null}
 
@@ -184,7 +188,9 @@ export function ExampleRunner({
             <View
               key={hint}
               style={[styles.hintBox, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
-              <AppText variant="small">{`Pista ${hintIndex + 1}: ${hint}`}</AppText>
+              <AppText variant="small" style={styles.justified}>
+                {`Pista ${hintIndex + 1}: ${hint}`}
+              </AppText>
             </View>
           ))}
         </View>
@@ -228,7 +234,8 @@ const styles = StyleSheet.create({
   node: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 16, borderWidth: 1 },
   table: { borderWidth: 1, overflow: 'hidden' },
   tableRow: { flexDirection: 'row', gap: 10, padding: 12, borderTopWidth: 1 },
-  cell: { flex: 1, lineHeight: 18, textAlign: 'justify' },
+  cell: { flex: 1, lineHeight: 18 },
+  justified: { textAlign: 'justify' },
   hint: { lineHeight: 18 },
   hintBox: { padding: 12 },
   controls: { flexDirection: 'row', gap: 12 },

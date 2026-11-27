@@ -49,7 +49,7 @@ export function PrimaryButton({
       style={({ pressed }) => [
         styles.button,
         {
-          backgroundColor: colors.primary,
+          backgroundColor: colors.primaryStrong,
           borderRadius: radius.control,
           opacity: disabled || loading ? 0.5 : 1,
         },

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { Unit } from '@/shared/model/entities';
-import { accentForUnit } from '@/shared/theme/tokens';
+import { accentForUnit, accentInk } from '@/shared/theme/tokens';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 
 import { AppText } from '@/shared/components/AppText';
@@ -39,7 +39,7 @@ export function UnitCard({
         onPress={onToggle}
         style={styles.main}>
         <View style={[styles.icon, { backgroundColor: accent, borderRadius: radius.control }]}>
-          <AppText variant="code" color={colors.onPrimary} weight="700">
+          <AppText variant="code" color={accentInk} weight="700">
             {String(unit.number).padStart(2, '0')}
           </AppText>
         </View>
@@ -51,7 +51,9 @@ export function UnitCard({
           </AppText>
           <View style={styles.badges}>
             <MetadataBadge>{unit.difficulty}</MetadataBadge>
-            <MetadataBadge>{`${subtopicCount} subtemas`}</MetadataBadge>
+            <MetadataBadge>
+              {`${subtopicCount} ${subtopicCount === 1 ? 'subtema' : 'subtemas'}`}
+            </MetadataBadge>
           </View>
         </View>
         <ProgressRing value={progress} />

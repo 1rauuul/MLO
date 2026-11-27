@@ -2,6 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import { SplashScreen, Stack, useRouter } from 'expo-router';
 import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
+import {
+  FiraCode_400Regular,
+  FiraCode_500Medium,
+  FiraCode_600SemiBold,
+  FiraCode_700Bold,
+} from '@expo-google-fonts/fira-code';
+import {
+  SourceSans3_400Regular,
+  SourceSans3_500Medium,
+  SourceSans3_600SemiBold,
+  SourceSans3_700Bold,
+} from '@expo-google-fonts/source-sans-3';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -22,11 +35,37 @@ void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
+  const [fontsLoaded, fontError] = useFonts([
+    {
+      fontFamily: 'SourceSans3',
+      fontDefinitions: [
+        { path: SourceSans3_400Regular, weight: 400 },
+        { path: SourceSans3_500Medium, weight: 500 },
+        { path: SourceSans3_600SemiBold, weight: 600 },
+        { path: SourceSans3_700Bold, weight: 700 },
+      ],
+    },
+    {
+      fontFamily: 'FiraCode',
+      fontDefinitions: [
+        { path: FiraCode_400Regular, weight: 400 },
+        { path: FiraCode_500Medium, weight: 500 },
+        { path: FiraCode_600SemiBold, weight: 600 },
+        { path: FiraCode_700Bold, weight: 700 },
+      ],
+    },
+  ]);
 
-  // La portada de slides ya está montada: el splash nativo puede retirarse.
+  // El splash nativo se retira cuando las fuentes están listas (o fallan).
   useEffect(() => {
-    SplashScreen.hide();
-  }, []);
+    if (fontsLoaded || fontError) {
+      void SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

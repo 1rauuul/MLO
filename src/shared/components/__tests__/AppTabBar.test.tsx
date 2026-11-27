@@ -39,13 +39,13 @@ beforeEach(() => {
   mockLocation = { unitId: 'u1', lessonId: 'lesson-2', lessonCode: '2.1', section: 'lesson' };
 });
 
-it('keeps the Módulos, Evaluaciones and Perfil bar outside subtopics', () => {
+it('keeps the Cursos, Evaluaciones and Perfil bar outside subtopics', () => {
   const onNavigateTab = jest.fn();
   const { getByRole, queryByRole } = render(
     <AppTabBar routeName="(modules)" onNavigateTab={onNavigateTab} bottomInset={0} />,
   );
 
-  expect(getByRole('tab', { name: 'Módulos' })).toBeTruthy();
+  expect(getByRole('tab', { name: 'Cursos' })).toBeTruthy();
   expect(getByRole('tab', { name: 'Perfil' })).toBeTruthy();
   expect(queryByRole('tab', { name: 'Inicio' })).toBeNull();
 
@@ -59,7 +59,7 @@ it('renders Inicio and Tema inside a subtopic with working targets', () => {
     <AppTabBar routeName="(modules)" onNavigateTab={jest.fn()} bottomInset={0} />,
   );
 
-  expect(queryByRole('tab', { name: 'Módulos' })).toBeNull();
+  expect(queryByRole('tab', { name: 'Cursos' })).toBeNull();
 
   fireEvent.press(getByRole('tab', { name: 'Inicio' }));
   expect(mockNavigate).toHaveBeenCalledWith('/');

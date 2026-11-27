@@ -140,6 +140,7 @@ describe('ProfileScreen', () => {
 
     expect(getByText('1/2')).toBeTruthy();
     expect(getByText('75%')).toBeTruthy();
+    expect(getByText('lecciones completadas')).toBeTruthy();
     expect(getAllByText('@valentina').length).toBeGreaterThan(0);
     expect(queryByText('Grupo A')).toBeNull();
     expect(queryByText('Unirme a una clase')).toBeNull();

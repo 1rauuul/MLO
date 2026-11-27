@@ -99,6 +99,13 @@ export default function EvaluationFlow() {
   // Un resultado por intento: cambia runId cuando el alumno reintenta.
   const recordedRunRef = useRef<number | null>(null);
   const exitGuard = useExitGuard(engine.phase === 'running');
+  const restartEvaluation = engine.restart;
+  const confirmExitGuard = exitGuard.confirm;
+  // Salir sin calificar descarta el intento: al volver se empieza de cero.
+  const confirmExit = useCallback(() => {
+    restartEvaluation();
+    confirmExitGuard();
+  }, [restartEvaluation, confirmExitGuard]);
   // Un contenido nuevo no debe reemplazar los reactivos de una evaluación abierta.
   useBlockContentUpdates(engine.phase === 'running');
 
@@ -146,35 +153,44 @@ export default function EvaluationFlow() {
   if (engine.phase === 'summary') {
     const percent = engine.total === 0 ? 0 : Math.round((engine.correctCount / engine.total) * 100);
     const recommendation = recommendReview(engine.summary);
+    const typeBreakdown = Object.entries(engine.summary.byType).filter(
+      ([type]) => type !== 'mcq',
+    );
     return (
       <Screen>
         <ScreenHeader onBack={() => router.back()} eyebrow="Evaluación" title="Resultado" />
         <View
           style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
-          <AppText variant="eyebrow">Score final</AppText>
+          <AppText variant="eyebrow">Puntaje final</AppText>
           <AppText variant="title">{`${percent}%`}</AppText>
-          <AppText variant="small">{`${engine.correctCount} de ${engine.total} reactivos correctos`}</AppText>
+          <AppText variant="small">
+            {`${engine.correctCount} de ${engine.total} ${
+              engine.total === 1 ? 'reactivo correcto' : 'reactivos correctos'
+            }`}
+          </AppText>
         </View>
 
-        <AppText variant="eyebrow" style={{ marginTop: spacing.lg }}>
-          Score por tipo
-        </AppText>
-        <View style={styles.list}>
-          {Object.entries(engine.summary.byType)
-            .filter(([type]) => type !== 'mcq')
-            .map(([type, bucket]) => (
-              <View
-                key={type}
-                style={[styles.row, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control }]}>
-                <AppText weight="600" style={styles.flex}>
-                  {TYPE_LABELS[type as ActivityType] ?? type}
-                </AppText>
-                <AppText color={bucket.correct === bucket.total ? colors.success : colors.danger} weight="700">
-                  {`${bucket.correct}/${bucket.total}`}
-                </AppText>
-              </View>
-            ))}
-        </View>
+        {typeBreakdown.length > 0 ? (
+          <>
+            <AppText variant="eyebrow" style={{ marginTop: spacing.lg }}>
+              Puntaje por tipo
+            </AppText>
+            <View style={styles.list}>
+              {typeBreakdown.map(([type, bucket]) => (
+                <View
+                  key={type}
+                  style={[styles.row, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control }]}>
+                  <AppText weight="600" style={styles.flex}>
+                    {TYPE_LABELS[type as ActivityType] ?? type}
+                  </AppText>
+                  <AppText color={bucket.correct === bucket.total ? colors.success : colors.danger} weight="700">
+                    {`${bucket.correct}/${bucket.total}`}
+                  </AppText>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
 
         {recommendation !== 'none' ? (
           <View
@@ -220,9 +236,7 @@ export default function EvaluationFlow() {
                 strokeWidth={2.5}
               />
               <View style={styles.flex}>
-                <AppText variant="small" weight="600">
-                  {item.prompt}
-                </AppText>
+                <AppText weight="600">{item.prompt}</AppText>
                 {item.solution ? (
                   <AppText variant="small" color={colors.success}>
                     {`Respuesta correcta: ${item.solution}`}
@@ -239,7 +253,7 @@ export default function EvaluationFlow() {
         </View>
 
         <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
-          <PrimaryButton label="Volver a Módulos" onPress={() => router.navigate('/')} />
+          <PrimaryButton label="Volver a Cursos" onPress={() => router.navigate('/')} />
           <SecondaryButton label="Reintentar evaluación" onPress={engine.restart} />
           {recommendation === 'lesson' && lessonParam ? (
             <SecondaryButton
@@ -345,7 +359,7 @@ export default function EvaluationFlow() {
         message="Si sales ahora perderás el progreso de esta evaluación y la próxima vez empezarás de cero."
         cancelLabel="Continuar"
         onCancel={exitGuard.cancel}
-        onConfirm={exitGuard.confirm}
+        onConfirm={confirmExit}
       />
     </Screen>
   );

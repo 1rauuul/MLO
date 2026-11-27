@@ -7,7 +7,7 @@ import { AppText } from '@/shared/components/AppText';
 import { Icon, type IconName } from '@/shared/components/Icon';
 
 const tabs: { id: HomeTab; icon: IconName; label: string }[] = [
-  { id: 'modules', icon: 'module', label: 'Módulos' },
+  { id: 'modules', icon: 'module', label: 'Cursos' },
   { id: 'assessments', icon: 'eval', label: 'Evaluaciones' },
   { id: 'profile', icon: 'user', label: 'Perfil' },
 ];

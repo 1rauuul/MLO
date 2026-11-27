@@ -23,6 +23,7 @@ const unitRow = {
 const lessonRow = {
   id: 'l1.2',
   unit_id: 'u1',
+  topic_id: 't1',
   code: '1.2',
   title: 'Desarrollo',
   eyebrow: 'Módulo 01',
@@ -90,6 +91,18 @@ describe('lessonRepository', () => {
     expect(lessons[0]!.content).toEqual([]);
     const firstCall = calls.getAllAsync.mock.calls[0] as unknown as [string];
     expect(firstCall[0]).not.toContain('content');
+  });
+
+  it('selectLessons incluye topic_id para agrupar lecciones por subtema', async () => {
+    const { db, calls } = makeDb({
+      getAllAsync: jest.fn(async () => [{ ...lessonRow, content: undefined }]),
+    });
+
+    const lessons = await selectLessons(db);
+
+    expect(lessons[0]!.topicId).toBe('t1');
+    const firstCall = calls.getAllAsync.mock.calls[0] as unknown as [string];
+    expect(firstCall[0]).toContain('topic_id');
   });
 
   it('selectLessons tolera JSON inválido', async () => {

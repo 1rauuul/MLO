@@ -124,7 +124,19 @@ export default function RegisterScreen() {
   return (
     <Screen keyboardAvoiding contentStyle={styles.content}>
       <View style={styles.hero}>
-        <AppText variant="eyebrow">Primer acceso</AppText>
+        <View style={styles.heroTop}>
+          <AppText variant="eyebrow">Primer acceso</AppText>
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel="Volver a iniciar sesión"
+            disabled={submitting}
+            onPress={() => router.back()}
+            style={styles.loginLink}>
+            <AppText variant="small" color={colors.primary} weight="700">
+              Iniciar sesión
+            </AppText>
+          </Pressable>
+        </View>
         <AppText variant="title">Crea tu cuenta</AppText>
         <AppText variant="small">
           Tu cuenta se guarda en la nube y podrás entrar desde otro equipo.
@@ -272,22 +284,9 @@ export default function RegisterScreen() {
           disabled={submitting || !passwordValidation.valida}
           loading={submitting}
         />
-        <View style={styles.linkRow}>
-          <AppText variant="small">¿Ya tienes cuenta? </AppText>
-          <Pressable
-            accessibilityRole="link"
-            accessibilityLabel="Inicia sesión"
-            disabled={submitting}
-            onPress={() => router.back()}
-            style={styles.link}>
-            <AppText variant="small" color={colors.primary} weight="700">
-              Inicia sesión
-            </AppText>
-          </Pressable>
-        </View>
       </View>
       <View style={[styles.notice, { marginTop: spacing.lg }]}>
-        <Icon name="info" size={18} color={colors.warning} />
+        <Icon name="info" size={18} color={colors.muted} />
         <AppText variant="small" style={styles.flex}>
           Usaremos tu correo para recuperar la contraseña si algún día la olvidas.
         </AppText>
@@ -299,6 +298,13 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   content: { flexGrow: 1, justifyContent: 'center', paddingBottom: 32 },
   hero: { gap: 4, marginBottom: 20 },
+  heroTop: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  loginLink: { minHeight: 44, justifyContent: 'center' },
   card: { borderWidth: 1, padding: 20, gap: 14 },
   passwordToggle: {
     minWidth: 44,
@@ -306,8 +312,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' },
-  link: { minHeight: 44, justifyContent: 'center' },
   notice: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   flex: { flex: 1 },
 });

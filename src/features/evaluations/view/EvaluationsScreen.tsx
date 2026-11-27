@@ -10,6 +10,7 @@ import { Screen } from '@/shared/components/Screen';
 import { SectionHeading } from '@/shared/components/SectionHeading';
 import type { EvaluationResult } from '@/shared/model/entities';
 import { useTheme } from '@/shared/theme/ThemeProvider';
+import { accentForUnit } from '@/shared/theme/tokens';
 import { useEvaluationsCatalog } from '@/features/evaluations/viewmodel/useEvaluationsCatalog';
 import { useRecentResults } from '@/features/profile/viewmodel/useRecentResults';
 
@@ -64,7 +65,12 @@ export default function EvaluationsScreen() {
                 { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control },
               ]}>
               <View style={[styles.historyMark, { backgroundColor: colors.soft }]}>
-                <Icon name="check" size={16} color={colors.primary} strokeWidth={2.5} />
+                <Icon
+                  name="check"
+                  size={16}
+                  color={accentForUnit('violet')}
+                  strokeWidth={2.5}
+                />
               </View>
               <View style={styles.flex}>
                 <AppText weight="600">{item.title}</AppText>

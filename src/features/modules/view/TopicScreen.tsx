@@ -11,6 +11,7 @@ import { SectionHeading } from '@/shared/components/SectionHeading';
 import { HubTile } from '@/features/modules/view/HubTile';
 import { SubtopicRow } from '@/features/modules/view/SubtopicRow';
 import { useTheme } from '@/shared/theme/ThemeProvider';
+import { accentForUnit } from '@/shared/theme/tokens';
 import { useLessonHub } from '@/features/modules/viewmodel/useLessonHub';
 import { useCourses } from '@/features/modules/viewmodel/useCourses';
 import { useSession } from '@/features/auth/viewmodel/useSession';
@@ -163,7 +164,7 @@ export default function TopicHubScreen() {
       icon: 'eval',
       label: 'Evaluación',
       note: 'Comprueba tu avance',
-      accent: colors.danger,
+      accent: accentForUnit('violet'),
       onPress: () => go('/evaluacion', evaluations[0]!.id),
     });
   }

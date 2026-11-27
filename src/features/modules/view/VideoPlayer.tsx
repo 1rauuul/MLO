@@ -49,7 +49,7 @@ export function VideoPlayer({
                 onPress={() => Linking.openURL(url)}
                 style={[
                   styles.open,
-                  { backgroundColor: colors.primary, borderRadius: radius.control },
+                  { backgroundColor: colors.primaryStrong, borderRadius: radius.control },
                 ]}>
                 <AppText color={colors.onPrimary} weight="700">
                   Abrir en YouTube

@@ -171,6 +171,28 @@ it('shows no review action for an evaluation result with no recommendation', () 
   expect(queryByRole('button', { name: 'Resolver ejercicios' })).toBeNull();
 });
 
+it('oculta el desglose por tipo cuando solo hay reactivos mcq', () => {
+  mockEvaluationSummary = {
+    total: 2,
+    correct: 1,
+    accuracy: 0.5,
+    byType: { mcq: { total: 2, correct: 1 } },
+  };
+
+  const { getByText, queryByText } = render(<EvaluationFlow />);
+
+  expect(getByText('Puntaje final')).toBeTruthy();
+  expect(queryByText('Puntaje por tipo')).toBeNull();
+});
+
+it('muestra el desglose por tipo cuando hay otros tipos de reactivo', () => {
+  mockEvaluationSummary = practiceSummary;
+
+  const { getByText } = render(<EvaluationFlow />);
+
+  expect(getByText('Puntaje por tipo')).toBeTruthy();
+});
+
 it('muestra aciertos, errores, respuesta correcta y explicación por reactivo', () => {
   const { getByText } = render(<EvaluationFlow />);
 

@@ -167,7 +167,7 @@ export async function selectLessons(
   groupId: string | null = null,
 ): Promise<Lesson[]> {
   const rows = await db.getAllAsync<LessonRow>(
-    `SELECT id, unit_id, code, title, eyebrow, body, code_sample, context_title,
+    `SELECT id, unit_id, topic_id, code, title, eyebrow, body, code_sample, context_title,
             context_body, synthesis, position
      FROM lessons
      WHERE catalog_id = ? AND archived_at IS NULL

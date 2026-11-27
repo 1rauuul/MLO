@@ -218,9 +218,9 @@ export default function ModulesScreen() {
             <View
               style={[
                 styles.continueCard,
-                { backgroundColor: colors.primary, borderRadius: radius.tile },
+                { backgroundColor: colors.primaryStrong, borderRadius: radius.tile },
               ]}>
-              <AppText variant="eyebrow" color="#DCE6FF">
+              <AppText variant="eyebrow" color={colors.onPrimary}>
                 Continúa donde lo dejaste
               </AppText>
               <AppText style={styles.continueTitle} color={colors.onPrimary} weight="700">
@@ -228,9 +228,11 @@ export default function ModulesScreen() {
                 {'\n'}
                 {heroTitle}
               </AppText>
-              <AppText variant="small" color="#E6ECFF">
-                {`${heroDone} de ${heroLessons.length} lecciones · ${heroProgress}%`}
-              </AppText>
+              {heroLessons.length > 0 ? (
+                <AppText variant="small" color={colors.onPrimary}>
+                  {`${heroDone} de ${heroLessons.length} lecciones · ${heroProgress}%`}
+                </AppText>
+              ) : null}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Continuar unidad"
@@ -297,8 +299,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 18,
     bottom: 18,
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',

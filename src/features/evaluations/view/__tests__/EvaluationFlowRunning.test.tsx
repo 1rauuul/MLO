@@ -56,6 +56,7 @@ jest.mock('expo-router', () => {
       addListener: jest.fn(() => () => {}),
       setOptions: jest.fn(),
       dispatch: jest.fn(),
+      goBack: mockBack,
     }),
     useFocusEffect: (callback: () => void | (() => void)) => useEffect(callback, [callback]),
     usePreventRemove: () => () => {},
@@ -141,7 +142,7 @@ it('usa Calificar en el último reactivo', () => {
   expect(mockSend).toHaveBeenCalledTimes(1);
 });
 
-it('advierte al salir durante la evaluación con un modal', () => {
+it('advierte al salir durante la evaluación con un modal y descarta el intento', () => {
   const { getByRole, getByText, queryByText } = render(<EvaluationFlow />);
 
   expect(queryByText('Salir de la evaluación')).toBeNull();
@@ -151,9 +152,21 @@ it('advierte al salir durante la evaluación con un modal', () => {
 
   fireEvent.press(getByRole('button', { name: 'Salir' }));
   expect(mockBack).toHaveBeenCalledTimes(1);
+  expect(mockEngine.restart).toHaveBeenCalledTimes(1);
 });
 
-it('pide confirmación al cambiar de pestaña desde la evaluación', () => {
+it('conserva el intento si el alumno decide continuar', () => {
+  const { getByRole, queryByText } = render(<EvaluationFlow />);
+
+  fireEvent.press(getByRole('button', { name: 'Volver' }));
+  fireEvent.press(getByRole('button', { name: 'Continuar' }));
+
+  expect(mockBack).not.toHaveBeenCalled();
+  expect(mockEngine.restart).not.toHaveBeenCalled();
+  expect(queryByText('Salir de la evaluación')).toBeNull();
+});
+
+it('pide confirmación al cambiar de pestaña desde la evaluación y descarta el intento', () => {
   const next = jest.fn();
   const { getByRole, getByText } = render(<EvaluationFlow />);
 
@@ -163,4 +176,5 @@ it('pide confirmación al cambiar de pestaña desde la evaluación', () => {
 
   fireEvent.press(getByRole('button', { name: 'Salir' }));
   expect(next).toHaveBeenCalledTimes(1);
+  expect(mockEngine.restart).toHaveBeenCalledTimes(1);
 });

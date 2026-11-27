@@ -1,5 +1,6 @@
 import { useFocusEffect, useNavigation, usePreventRemove } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { BackHandler, Platform } from 'react-native';
 
 import { setExitGuard } from '@/shared/services/navigation/exitGuard';
 
@@ -16,21 +17,20 @@ export interface ExitGuardState {
  */
 export function useExitGuard(active: boolean): ExitGuardState {
   const navigation = useNavigation();
+  const goBackRef = useRef(navigation.goBack);
   const [pending, setPending] = useState<(() => void) | null>(null);
   const [visible, setVisible] = useState(false);
   // Tras confirmar, se desactiva la prevención para dejar pasar la acción.
   const [bypass, setBypass] = useState(false);
 
+  useEffect(() => {
+    goBackRef.current = navigation.goBack;
+  }, [navigation]);
+
   const disablePrevention = usePreventRemove(active && !bypass, ({ repeat }) => {
     setPending(() => repeat);
     setVisible(true);
   });
-
-  useFocusEffect(
-    useCallback(() => {
-      setBypass(false);
-    }, []),
-  );
 
   useEffect(() => {
     if (!active) {
@@ -50,14 +50,31 @@ export function useExitGuard(active: boolean): ExitGuardState {
     [active],
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      setBypass(false);
+      setExitGuard(request);
+      // usePreventRemove no siempre recibe el gesto/tecla de Android:
+      // se intercepta antes de que el handler raíz cierre la app.
+      const backSubscription =
+        Platform.OS === 'web'
+          ? null
+          : BackHandler.addEventListener('hardwareBackPress', () => {
+              request(() => goBackRef.current());
+              return true;
+            });
+      return () => {
+        backSubscription?.remove();
+        setExitGuard(null);
+        setVisible(false);
+        setPending(null);
+      };
+    }, [request]),
+  );
+
   useEffect(() => {
     navigation.setOptions({ gestureEnabled: !active });
   }, [navigation, active]);
-
-  useEffect(() => {
-    setExitGuard(request);
-    return () => setExitGuard(null);
-  }, [request]);
 
   const cancel = useCallback(() => {
     setVisible(false);

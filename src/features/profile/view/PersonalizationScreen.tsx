@@ -96,8 +96,8 @@ export default function PersonalizationScreen() {
                       style={[
                         styles.option,
                         {
-                          backgroundColor: active ? colors.primary : colors.soft,
-                          borderColor: active ? colors.primary : colors.line,
+                          backgroundColor: active ? colors.primaryStrong : colors.soft,
+                          borderColor: active ? colors.primaryStrong : colors.line,
                           borderRadius: radius.pill,
                         },
                       ]}>

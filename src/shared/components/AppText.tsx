@@ -50,7 +50,7 @@ export function AppText({
       allowFontScaling={false}
       {...rest}
       style={[
-        { color: color ?? colors.text },
+        { color: color ?? colors.text, fontFamily: fonts.sans },
         variantStyle,
         weight ? { fontWeight: weight } : null,
         center ? { textAlign: 'center' } : null,

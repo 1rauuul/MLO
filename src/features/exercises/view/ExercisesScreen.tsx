@@ -82,7 +82,7 @@ export default function PracticeScreen() {
         <ScreenHeader onBack={goBack} eyebrow={lesson ? `Tema ${lesson.code}` : 'Ejercicios'} title="Resultado" />
         <View
           style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
-          <AppText variant="eyebrow">Score de ejercicios</AppText>
+          <AppText variant="eyebrow">Puntaje de ejercicios</AppText>
           <AppText variant="title">{`${percent}%`}</AppText>
           <AppText variant="small">
             {`${formatPoints(summary.correct)} de ${summary.total} puntos · cada pregunta vale ${formatPoints(perQuestion)}%`}
@@ -276,7 +276,11 @@ export default function PracticeScreen() {
           <AppText color={engine.lastCorrect ? colors.success : colors.danger} weight="700">
             {engine.lastCorrect ? '✓ Respuesta correcta' : '✗ Respuesta incorrecta'}
           </AppText>
-          {exercise.explanation ? <AppText variant="small">{exercise.explanation}</AppText> : null}
+          {exercise.explanation ? (
+            <AppText variant="small" style={{ textAlign: 'justify' }}>
+              {exercise.explanation}
+            </AppText>
+          ) : null}
         </View>
       ) : null}
 

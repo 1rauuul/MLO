@@ -25,7 +25,7 @@ export function CrosswordExercise({
   variant = 'default',
   hideCheck = false,
 }: CrosswordExerciseProps) {
-  const { colors, radius, spacing } = useTheme();
+  const { colors, radius, spacing, fonts } = useTheme();
   const example = variant === 'example';
   const cellMap = new Map(engine.cells.map(cell => [`${cell.row}-${cell.col}`, cell]));
 
@@ -190,7 +190,7 @@ export function CrosswordExercise({
             styles.activeClue,
             { backgroundColor: colors.soft, borderRadius: radius.control, marginTop: spacing.md },
           ]}>
-          <View style={[styles.labelBadge, { backgroundColor: colors.primary }]}>
+          <View style={[styles.labelBadge, { backgroundColor: colors.primaryStrong }]}>
             <AppText variant="small" color={colors.onPrimary} weight="700">
               {labels[selected!]}
             </AppText>
@@ -224,6 +224,7 @@ export function CrosswordExercise({
             borderColor: selected !== null ? colors.primary : colors.line,
             backgroundColor: colors.card,
             color: colors.text,
+            fontFamily: fonts.mono,
             borderRadius: radius.control,
             marginTop: spacing.sm,
           },

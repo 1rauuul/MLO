@@ -87,6 +87,14 @@ describe('LoginScreen', () => {
 });
 
 describe('RegisterScreen', () => {
+  it('ofrece volver al inicio de sesión desde la parte superior', () => {
+    const { getByLabelText } = render(<RegisterScreen />);
+
+    fireEvent.press(getByLabelText('Volver a iniciar sesión'));
+
+    expect(mockBack).toHaveBeenCalled();
+  });
+
   it('muestra el error de almacenamiento', async () => {
     mockRegister.mockResolvedValue({ ok: false, error: 'storage_error' });
 

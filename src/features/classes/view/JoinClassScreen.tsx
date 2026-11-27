@@ -36,7 +36,7 @@ const ERROR_MESSAGES: Record<Exclude<JoinClassError, null>, string> = {
 export default function JoinClassScreen() {
   const router = useRouter();
   const { token: tokenParam } = useLocalSearchParams<{ token?: string | string[] }>();
-  const { colors, radius, spacing } = useTheme();
+  const { colors, radius, spacing, fonts } = useTheme();
   const {
     preview,
     invitation,
@@ -130,6 +130,7 @@ export default function JoinClassScreen() {
               styles.input,
               {
                 color: colors.text,
+                fontFamily: fonts.sans,
                 backgroundColor: colors.card,
                 borderColor: colors.line,
                 borderRadius: radius.control,
@@ -197,6 +198,6 @@ export default function JoinClassScreen() {
 }
 
 const styles = StyleSheet.create({
-  input: { borderWidth: 1, paddingHorizontal: 14, minHeight: 48, fontSize: 16, textAlign: 'center' },
+  input: { borderWidth: 1, paddingHorizontal: 14, minHeight: 48, fontSize: 16 },
   card: { borderWidth: 1, padding: 16, gap: 6 },
 });

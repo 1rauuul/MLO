@@ -159,7 +159,11 @@ export default function CourseScreen() {
               progress={progress}
               expanded={isExpanded}
               onToggle={() => setExpanded(isExpanded ? null : unit.id)}>
-              <AppText variant="eyebrow">{`Objetos de aprendizaje · ${unitTopics.length} subtemas`}</AppText>
+              <AppText variant="eyebrow">
+                {`Objetos de aprendizaje · ${unitTopics.length} ${
+                  unitTopics.length === 1 ? 'subtema' : 'subtemas'
+                }`}
+              </AppText>
               <View style={styles.subtopics}>
                 {unitTopics.map((topic, index) => {
                   const topicLessons = lessonsForTopic(topic.id);

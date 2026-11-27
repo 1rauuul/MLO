@@ -151,15 +151,17 @@ describe('ModulesScreen', () => {
     expect(getByText('Mis cursos')).toBeTruthy();
     expect(getByText('02')).toBeTruthy();
     expect(getByText('Diseño de experiencias')).toBeTruthy();
-    expect(getByText('Clase · QA Fase 6 · 25%')).toBeTruthy();
+    expect(getByText('QA Fase 6 · 25% completado')).toBeTruthy();
     expect(getByText('Ingeniería de Software')).toBeTruthy();
-    expect(getByText('Curso disponible · 0%')).toBeTruthy();
+    expect(getByText('Curso disponible · 0% completado')).toBeTruthy();
   });
 
   it('abre el curso seleccionado y lo marca como activo', async () => {
     const { getByLabelText } = render(<ModulesScreen />);
 
-    fireEvent.press(getByLabelText('Curso Diseño de experiencias, Clase · QA Fase 6 · 25%'));
+    fireEvent.press(
+      getByLabelText('Curso Diseño de experiencias, QA Fase 6 · 25% completado'),
+    );
 
     expect(mockSelectCourse).toHaveBeenCalledWith('demo');
     await waitFor(() =>

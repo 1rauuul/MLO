@@ -21,7 +21,7 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
   { label, error, trailing, style, onFocus, onBlur, ...rest },
   ref,
 ) {
-  const { colors, radius, scale } = useTheme();
+  const { colors, radius, scale, fonts } = useTheme();
   const [focused, setFocused] = useState(false);
 
   return (
@@ -58,6 +58,7 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
             styles.input,
             {
               color: colors.text,
+              fontFamily: fonts.sans,
               fontSize: 15 * scale,
             },
             style,

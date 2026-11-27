@@ -43,7 +43,7 @@ export function ConfirmModal({
             <PrimaryButton
               label={confirmLabel}
               onPress={onConfirm}
-              style={destructive ? { backgroundColor: colors.danger } : undefined}
+              style={destructive ? { backgroundColor: colors.dangerStrong } : undefined}
             />
             {cancelLabel !== null ? (
               <SecondaryButton label={cancelLabel} onPress={onCancel ?? onConfirm} />

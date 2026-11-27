@@ -26,6 +26,7 @@ export function QuizOption({ index, label, selected, result, onPress }: QuizOpti
         : selected
           ? colors.primary
           : colors.line;
+  const letterColor = !result && selected ? colors.onPrimary : colors.muted;
 
   const mark =
     result === 'correct' ? (
@@ -33,7 +34,7 @@ export function QuizOption({ index, label, selected, result, onPress }: QuizOpti
     ) : result === 'wrong' ? (
       <Icon name="close" size={16} color={borderColor} strokeWidth={2.5} />
     ) : (
-      <AppText variant="code" color={borderColor} weight="700">
+      <AppText variant="code" color={letterColor} weight="700">
         {letter}
       </AppText>
     );
@@ -50,7 +51,13 @@ export function QuizOption({ index, label, selected, result, onPress }: QuizOpti
         { borderColor, backgroundColor: colors.card, borderRadius: radius.control },
         pressed && !result ? { opacity: 0.85 } : null,
       ]}>
-      <View style={[styles.letter, { backgroundColor: colors.soft }]}>{mark}</View>
+      <View
+        style={[
+          styles.letter,
+          { backgroundColor: !result && selected ? colors.primaryStrong : colors.soft },
+        ]}>
+        {mark}
+      </View>
       <AppText style={styles.label}>{label}</AppText>
     </Pressable>
   );
@@ -73,6 +80,5 @@ const styles = StyleSheet.create({
   },
   label: {
     flex: 1,
-    fontSize: 14,
   },
 });

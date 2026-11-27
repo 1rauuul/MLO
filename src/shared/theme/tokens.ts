@@ -1,5 +1,3 @@
-import { Platform } from 'react-native';
-
 export type ThemeMode = 'dark' | 'light';
 
 export interface ThemeColors {
@@ -10,9 +8,11 @@ export interface ThemeColors {
   muted: string;
   line: string;
   primary: string;
+  primaryStrong: string;
   success: string;
   warning: string;
   danger: string;
+  dangerStrong: string;
   soft: string;
   code: string;
   onPrimary: string;
@@ -27,9 +27,11 @@ export const palette: Record<ThemeMode, ThemeColors> = {
     muted: '#9CABBC',
     line: '#324050',
     primary: '#4D7CFE',
+    primaryStrong: '#3563D9',
     success: '#45D39A',
     warning: '#F3BC61',
     danger: '#EE6F7D',
+    dangerStrong: '#C43D4B',
     soft: '#263447',
     code: '#121923',
     onPrimary: '#FFFFFF',
@@ -42,9 +44,11 @@ export const palette: Record<ThemeMode, ThemeColors> = {
     muted: '#617086',
     line: '#DCE3ED',
     primary: '#315FEC',
+    primaryStrong: '#315FEC',
     success: '#138A63',
     warning: '#B98225',
     danger: '#C43D4B',
+    dangerStrong: '#C43D4B',
     soft: '#E9EFF9',
     code: '#142033',
     onPrimary: '#FFFFFF',
@@ -68,9 +72,12 @@ export const spacing = {
 } as const;
 
 export const fonts = {
-  sans: Platform.select({ ios: 'System', android: 'sans-serif', default: 'System' }),
-  mono: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+  sans: 'SourceSans3',
+  mono: 'FiraCode',
 } as const;
+
+/** Dark ink for the fixed unit accent tiles. */
+export const accentInk = '#10151D';
 
 const unitAccents: Record<string, string> = {
   blue: '#4D7CFE',

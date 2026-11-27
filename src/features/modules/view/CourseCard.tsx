@@ -14,9 +14,10 @@ export function CourseCard({
   onPress: () => void;
 }) {
   const { colors, radius } = useTheme();
+  const progress = entry.percent === 100 ? 'Completado' : `${entry.percent}% completado`;
   const subtitle = entry.className
-    ? `Clase · ${entry.className} · ${entry.percent}%`
-    : `Curso disponible · ${entry.percent}%`;
+    ? `${entry.className} · ${progress}`
+    : `Curso disponible · ${progress}`;
 
   return (
     <Pressable

@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/shared/components/AppText';
-import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
+import { SecondaryButton } from '@/shared/components/Buttons';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { Screen } from '@/shared/components/Screen';
 import { SectionHeading } from '@/shared/components/SectionHeading';
@@ -92,7 +92,7 @@ export default function ProfileScreen() {
 
       <View style={styles.statsGrid}>
         {[
-          { value: `${completedLessons}/${totalLessons}`, label: 'subtemas completados' },
+          { value: `${completedLessons}/${totalLessons}`, label: 'lecciones completadas' },
           { value: `${averageScore}%`, label: 'promedio evaluación' },
         ].map(stat => (
           <View
@@ -177,8 +177,12 @@ export default function ProfileScreen() {
       ) : null}
 
       <View style={[styles.sessionActions, { marginTop: spacing.md }]}>
-        <PrimaryButton label="Cerrar sesión" onPress={() => void logout()} />
-        <SecondaryButton label="Reiniciar mi progreso" onPress={onResetProgress} />
+        <SecondaryButton label="Cerrar sesión" onPress={() => void logout()} />
+        <SecondaryButton
+          label="Reiniciar mi progreso"
+          labelColor={colors.danger}
+          onPress={onResetProgress}
+        />
       </View>
 
       <ConfirmModal

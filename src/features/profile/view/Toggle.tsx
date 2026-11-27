@@ -9,19 +9,22 @@ interface ToggleProps {
 }
 
 export function Toggle({ on, onToggle, label }: ToggleProps) {
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
+  // El carril apagado necesita contraste con el knob blanco en ambos temas.
+  const offTrack = mode === 'dark' ? colors.line : colors.muted;
 
   return (
     <Pressable
       accessibilityRole="switch"
       accessibilityLabel={label}
       accessibilityState={{ checked: on }}
+      hitSlop={8}
       onPress={onToggle}
-      style={[styles.track, { backgroundColor: on ? colors.primary : colors.soft }]}>
+      style={[styles.track, { backgroundColor: on ? colors.primaryStrong : offTrack }]}>
       <View
         style={[
           styles.knob,
-          { backgroundColor: colors.surface, alignSelf: on ? 'flex-end' : 'flex-start' },
+          { backgroundColor: colors.onPrimary, alignSelf: on ? 'flex-end' : 'flex-start' },
         ]}
       />
     </Pressable>

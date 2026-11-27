@@ -17,7 +17,7 @@ jest.mock('@/shared/theme/ThemeProvider', () => ({
 it('exposes accessible tabs and reports the selected destination', () => {
   const onChange = jest.fn();
   const { getByRole } = render(<BottomTabBar active="modules" onChange={onChange} />);
-  const modules = getByRole('tab', { name: 'Módulos' });
+  const modules = getByRole('tab', { name: 'Cursos' });
   const profile = getByRole('tab', { name: 'Perfil' });
 
   expect(modules.props.accessibilityState).toEqual({ selected: true });
