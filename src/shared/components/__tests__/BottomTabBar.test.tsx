@@ -10,6 +10,7 @@ jest.mock('@/shared/theme/ThemeProvider', () => ({
       surface: '#fff', line: '#ddd', primary: '#00f', muted: '#777', text: '#111',
     },
     fonts: { mono: 'monospace' },
+    radius: { pill: 999 },
     scale: 1,
   }),
 }));

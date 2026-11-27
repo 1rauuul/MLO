@@ -176,6 +176,9 @@ describe('summarizeAnswers', () => {
       'a → 1 · b → 2',
       'AB',
     ]);
+    expect(feedback.map(item => item.response)).toEqual([
+      'a', 'b → a → c', 'El uno y dos.', 'a → 1 · b → 2', 'AB',
+    ]);
     expect(feedback.map(item => item.explanation)).toEqual([
       'Explica mcq',
       'Explica order',
@@ -195,6 +198,7 @@ describe('summarizeAnswers', () => {
       correct: false,
       solution: 'b',
       explanation: '',
+      response: 'Sin respuesta',
     });
   });
 });
@@ -227,6 +231,7 @@ describe('buildEvaluationPool', () => {
       id: `${prefix}${index}`,
       type,
       config: {},
+      prompt: `${prefix} ${index}`,
       options: type === 'mcq' ? ['a', 'b'] : [],
       answer: 0,
     }));
@@ -240,6 +245,7 @@ describe('buildEvaluationPool', () => {
     expect(pool.questions).toHaveLength(10);
     expect(pool.exercises).toHaveLength(5);
     expect(pool.mixed).toHaveLength(15);
+    expect(pool.isComplete).toBe(true);
   });
 
   it('funciona con menos elementos de los solicitados', () => {
@@ -247,9 +253,10 @@ describe('buildEvaluationPool', () => {
     expect(pool.questions).toHaveLength(3);
     expect(pool.exercises).toHaveLength(2);
     expect(pool.mixed).toHaveLength(5);
+    expect(pool.isComplete).toBe(false);
   });
 
-  it('no devuelve dos preguntas con el mismo prompt', () => {
+  it('descarta reactivos idénticos pero conserva consignas genéricas de tipos distintos', () => {
     const repeated = many('q', 'mcq', 3).map((question, index) => ({
       ...question,
       prompt: index < 2 ? 'Repetida' : 'Única',
@@ -262,7 +269,24 @@ describe('buildEvaluationPool', () => {
     const pool = buildEvaluationPool(repeated, repeatedExercises, () => 0.5);
 
     expect(pool.questions.map(question => question.prompt)).toEqual(['Repetida', 'Única']);
-    expect(pool.exercises).toEqual([]);
-    expect(new Set(pool.mixed.map(question => question.prompt)).size).toBe(pool.mixed.length);
+    expect(pool.exercises).toHaveLength(1);
+    expect(new Set(pool.mixed.map(question => question.id)).size).toBe(pool.mixed.length);
+  });
+
+  it('descarta el mismo id incluso si llega como pregunta y ejercicio', () => {
+    const pool = buildEvaluationPool(
+      many('q', 'mcq', 2),
+      [
+        { ...orderQuestion, id: 'q0', prompt: 'Mismo identificador' },
+        { ...orderQuestion, id: 'e1', prompt: 'Otro ejercicio' },
+      ],
+      () => 0.5,
+      2,
+      2,
+    );
+
+    expect(pool.questions).toHaveLength(2);
+    expect(pool.exercises.map(question => question.id)).toEqual(['e1']);
+    expect(pool.isComplete).toBe(false);
   });
 });

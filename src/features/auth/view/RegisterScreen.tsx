@@ -228,7 +228,7 @@ export default function RegisterScreen() {
           textContentType="newPassword"
           returnKeyType="next"
           onSubmitEditing={() => confirmRef.current?.focus()}
-          placeholder="••••••••"
+          placeholder="••••••••••••"
           trailing={
             <Pressable
               accessibilityRole="button"
@@ -256,7 +256,7 @@ export default function RegisterScreen() {
           textContentType="newPassword"
           returnKeyType="go"
           onSubmitEditing={submit}
-          placeholder="••••••••"
+          placeholder="••••••••••••"
           trailing={
             <Pressable
               accessibilityRole="button"

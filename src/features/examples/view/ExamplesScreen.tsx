@@ -1,7 +1,10 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
+import { View } from 'react-native';
 
 import { EmptyState } from '@/shared/components/EmptyState';
+import { AppText } from '@/shared/components/AppText';
+import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
 import { ExampleRunner } from '@/features/examples/view/ExampleRunner';
 import { Screen } from '@/shared/components/Screen';
 import { ScreenHeader } from '@/shared/components/ScreenHeader';
@@ -15,6 +18,10 @@ export default function ExamplesScreen() {
   const engine = useExamplesEngine(lessonParam ?? null);
   const { record } = useSession();
   const router = useRouter();
+  const [finished, setFinished] = useState(false);
+  const [draw, setDraw] = useState(0);
+  const goExercises = () => router.replace({ pathname: '/ejercicios', params: { lesson: lessonParam, from: 'examples' } });
+  const redraw = () => { setFinished(false); setDraw(current => current + 1); engine.redraw(); };
 
   useFocusEffect(
     useCallback(() => {
@@ -55,24 +62,34 @@ export default function ExamplesScreen() {
     );
   }
 
+  if (finished) {
+    return (
+      <Screen>
+        <ScreenHeader onBack={() => router.back()} title="Ejemplos" />
+        <View style={{ gap: 20 }}>
+          <AppText variant="title">Ejemplos finalizados</AppText>
+          <AppText>Has llegado al final de esta selección de ejemplos.</AppText>
+          <AppText weight="600">{`Ejemplos recorridos: ${engine.total}/${engine.total}`}</AppText>
+          <PrimaryButton label="Continuar a ejercicios" onPress={goExercises} />
+          <SecondaryButton label="Nuevo sorteo" onPress={redraw} />
+          <SecondaryButton label="Volver al subtema" onPress={() => lesson ? router.navigate({ pathname: '/tema/[id]', params: { id: lesson.topicId ?? `t-${lesson.id}` } }) : router.back()} />
+        </View>
+      </Screen>
+    );
+  }
+
   return (
-    <Screen>
+    <Screen keyboardAvoiding>
       <ExampleRunner
-        key={engine.current.id}
+        key={`${draw}-${engine.current.id}`}
         exercise={engine.current}
         example={engine.currentExample}
         index={engine.index}
         total={engine.total}
         isLast={engine.isLast}
         onNext={engine.next}
-        onRedraw={engine.redraw}
-        onGoExercises={() => {
-          // El sorteo de ejemplos termina aquí: se reemplaza para no volver a él.
-          router.replace({
-            pathname: '/ejercicios',
-            params: { lesson: lessonParam, from: 'examples' },
-          });
-        }}
+        onRedraw={redraw}
+        onGoExercises={() => setFinished(true)}
         onBack={() => router.back()}
       />
     </Screen>

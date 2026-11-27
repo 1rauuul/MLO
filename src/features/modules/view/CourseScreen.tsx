@@ -1,40 +1,46 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Pressable, StyleSheet, View, type ScrollViewInstance } from 'react-native';
 
-import { AppText } from '@/shared/components/AppText';
-import { SecondaryButton } from '@/shared/components/Buttons';
-import { ConfirmModal } from '@/shared/components/ConfirmModal';
-import { ContentUpdateButton } from '@/shared/components/ContentUpdateNotice';
-import { EmptyState } from '@/shared/components/EmptyState';
-import { Screen } from '@/shared/components/Screen';
-import { ScreenHeader } from '@/shared/components/ScreenHeader';
-import { SectionHeading } from '@/shared/components/SectionHeading';
-import { Bibliography } from '@/features/modules/view/Bibliography';
-import { TopicRow } from '@/features/modules/view/TopicRow';
-import { UnitCard } from '@/features/modules/view/UnitCard';
-import type { Topic } from '@/shared/model/entities';
-import { useTheme } from '@/shared/theme/ThemeProvider';
+import { useClasses } from '@/features/classes/viewmodel/useClasses';
 import {
   BASE_CATALOG_ID,
   displayCourseTitle,
 } from '@/features/modules/model/catalog';
-import { useClasses } from '@/features/classes/viewmodel/useClasses';
+import { Bibliography } from '@/features/modules/view/Bibliography';
+import { CourseInfoCard } from '@/features/modules/view/CourseInfoCard';
+import { CourseOptionsMenu } from '@/features/modules/view/CourseOptionsMenu';
+import { TopicRow } from '@/features/modules/view/TopicRow';
+import { UnitCard } from '@/features/modules/view/UnitCard';
 import { useCatalog } from '@/features/modules/viewmodel/useCatalog';
 import { useCourses } from '@/features/modules/viewmodel/useCourses';
+import { AppText } from '@/shared/components/AppText';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { Icon } from '@/shared/components/Icon';
+import { Screen } from '@/shared/components/Screen';
+import { ScreenHeader } from '@/shared/components/ScreenHeader';
+import { SectionHeading } from '@/shared/components/SectionHeading';
+import { useContentSync } from '@/shared/services/content/ContentSyncProvider';
+import type { Topic } from '@/shared/model/entities';
+import { useTheme } from '@/shared/theme/ThemeProvider';
+import { accentForUnit } from '@/shared/theme/tokens';
 
 export default function CourseScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const catalogId = (Array.isArray(params.id) ? params.id[0] : params.id) ?? '';
   const router = useRouter();
   const { colors, spacing } = useTheme();
+  const { checking, checkNow } = useContentSync();
   const { courses, refresh: refreshCourses } = useCourses();
   const { classes, leaveClass } = useClasses();
   const course = courses.find(item => item.catalogId === catalogId);
   const klass = classes.find(item => item.courseCatalogId === catalogId) ?? null;
   const { units, topics, lessonsByUnit, completionMap, references, isLoading, error, refresh } =
     useCatalog(catalogId);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
 
@@ -44,9 +50,19 @@ export default function CourseScreen() {
     }, [refresh]),
   );
 
-  const title = course ? displayCourseTitle(course) : 'Curso';
+  const courseTitle = course ? displayCourseTitle(course) : 'Curso';
+  const menuButton =
+    units.length > 0 ? (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Opciones del curso"
+        onPress={() => setMenuOpen(true)}
+        style={styles.menuButton}>
+        <Icon name="more" size={20} color={colors.text} />
+      </Pressable>
+    ) : undefined;
   const header = (
-    <ScreenHeader onBack={() => router.back()} eyebrow="Curso" title={title} />
+    <ScreenHeader onBack={() => router.back()} title="Inicio" action={menuButton} />
   );
 
   if (!catalogId) {
@@ -120,6 +136,25 @@ export default function CourseScreen() {
     (topicsByUnit[topic.unitId] ??= []).push(topic);
   }
 
+  const doneLessons = allLessons.filter(lesson => completionMap[lesson.id]).length;
+  const courseProgress = allLessons.length
+    ? Math.round((doneLessons / allLessons.length) * 100)
+    : 0;
+  const nextTopic =
+    catalogTopics.find(topic =>
+      lessonsForTopic(topic.id).some(lesson => !completionMap[lesson.id]),
+    ) ??
+    catalogTopics[0] ??
+    null;
+  const actionLabel = !nextTopic
+    ? 'Sin contenido'
+    : courseProgress === 100
+      ? 'Repasar curso'
+      : courseProgress > 0
+        ? 'Continuar curso'
+        : 'Comenzar curso';
+  const accent = accentForUnit(units[0]?.color ?? 'blue');
+
   const leave = () => {
     if (!klass) {
       return;
@@ -139,10 +174,37 @@ export default function CourseScreen() {
   };
 
   return (
-    <Screen contentStyle={styles.content}>
+    <Screen contentStyle={styles.content} scrollRef={scrollRef}>
       {header}
 
-      <SectionHeading title="Tus unidades" trailing={String(units.length).padStart(2, '0')} />
+      <CourseInfoCard
+        title={courseTitle}
+        description={course?.description}
+        level={course?.level}
+        accent={accent}
+        unitCount={units.length}
+        subtopicCount={catalogTopics.length}
+        progress={courseProgress}
+        actionLabel={actionLabel}
+        actionDisabled={!nextTopic}
+        onAction={() => {
+          if (nextTopic) {
+            router.push({ pathname: '/tema/[id]', params: { id: nextTopic.id } });
+          }
+        }}
+      />
+
+      {leaveError ? (
+        <AppText
+          variant="small"
+          color={colors.danger}
+          accessibilityLiveRegion="polite"
+          style={{ marginTop: spacing.sm }}>
+          {leaveError}
+        </AppText>
+      ) : null}
+
+      <SectionHeading title="Unidades del curso" />
 
       <View style={styles.list}>
         {units.map(unit => {
@@ -151,21 +213,24 @@ export default function CourseScreen() {
           const done = lessons.filter(lesson => completionMap[lesson.id]).length;
           const progress = lessons.length ? Math.round((done / lessons.length) * 100) : 0;
           const isExpanded = expanded === unit.id;
+          const completedSubtopics = unitTopics.filter(topic => {
+            const topicLessons = lessonsForTopic(topic.id);
+            return (
+              topicLessons.length > 0 &&
+              topicLessons.every(lesson => completionMap[lesson.id])
+            );
+          }).length;
           return (
             <UnitCard
               key={unit.id}
               unit={unit}
               subtopicCount={unitTopics.length}
+              completedSubtopics={completedSubtopics}
               progress={progress}
               expanded={isExpanded}
               onToggle={() => setExpanded(isExpanded ? null : unit.id)}>
-              <AppText variant="eyebrow">
-                {`Objetos de aprendizaje · ${unitTopics.length} ${
-                  unitTopics.length === 1 ? 'subtema' : 'subtemas'
-                }`}
-              </AppText>
               <View style={styles.subtopics}>
-                {unitTopics.map((topic, index) => {
+                {unitTopics.map(topic => {
                   const topicLessons = lessonsForTopic(topic.id);
                   const topicDone = topicLessons.filter(lesson => completionMap[lesson.id]).length;
                   const topicProgress = topicLessons.length
@@ -174,20 +239,16 @@ export default function CourseScreen() {
                   const topicCompleted =
                     topicLessons.length > 0 && topicDone === topicLessons.length;
                   return (
-                    <View key={topic.id}>
-                      {index > 0 ? (
-                        <View style={[styles.divider, { backgroundColor: colors.line }]} />
-                      ) : null}
-                      <TopicRow
-                        topic={topic}
-                        unitNumber={unit.number}
-                        progress={topicProgress}
-                        completed={topicCompleted}
-                        onPress={() =>
-                          router.push({ pathname: '/tema/[id]', params: { id: topic.id } })
-                        }
-                      />
-                    </View>
+                    <TopicRow
+                      key={topic.id}
+                      topic={topic}
+                      unitNumber={unit.number}
+                      progress={topicProgress}
+                      completed={topicCompleted}
+                      onPress={() =>
+                        router.push({ pathname: '/tema/[id]', params: { id: topic.id } })
+                      }
+                    />
                   );
                 })}
               </View>
@@ -197,30 +258,6 @@ export default function CourseScreen() {
       </View>
 
       <Bibliography references={references ?? []} />
-
-      <ContentUpdateButton style={{ marginTop: spacing.lg }} />
-
-      {klass ? (
-        <View style={{ marginTop: spacing.md }}>
-          <SecondaryButton
-            label="Salir del curso"
-            labelColor={colors.danger}
-            onPress={() => {
-              setLeaveError(null);
-              setConfirmLeave(true);
-            }}
-          />
-          {leaveError ? (
-            <AppText
-              variant="small"
-              color={colors.danger}
-              accessibilityLiveRegion="polite"
-              style={{ marginTop: spacing.sm }}>
-              {leaveError}
-            </AppText>
-          ) : null}
-        </View>
-      ) : null}
 
       <ConfirmModal
         visible={confirmLeave}
@@ -236,13 +273,37 @@ export default function CourseScreen() {
         onCancel={() => setConfirmLeave(false)}
         onConfirm={leave}
       />
+
+      <CourseOptionsMenu
+        visible={menuOpen}
+        checking={checking}
+        canLeave={!!klass}
+        onClose={() => setMenuOpen(false)}
+        onCheckUpdates={() => {
+          void checkNow();
+        }}
+        onShowInfo={() => {
+          setMenuOpen(false);
+          scrollRef.current?.scrollTo({ y: 0, animated: true });
+        }}
+        onLeave={() => {
+          setMenuOpen(false);
+          setLeaveError(null);
+          setConfirmLeave(true);
+        }}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   content: { paddingBottom: 32 },
+  menuButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   list: { gap: 12 },
-  subtopics: { marginTop: 6 },
-  divider: { height: 1 },
+  subtopics: { gap: 8 },
 });

@@ -110,6 +110,7 @@ const entries = [
   {
     catalogId: 'demo',
     title: 'Diseño de experiencias',
+    level: 'Fundamental',
     percent: 25,
     className: 'QA Fase 6',
     isActive: true,
@@ -118,6 +119,7 @@ const entries = [
   {
     catalogId: 'base',
     title: 'Ingeniería de Software',
+    level: 'Intermedio',
     percent: 0,
     className: null,
     isActive: false,
@@ -144,23 +146,25 @@ beforeEach(() => {
 });
 
 describe('ModulesScreen', () => {
-  it('saluda al estudiante y lista sus cursos con la clase y el avance', () => {
-    const { getByText } = render(<ModulesScreen />);
+  it('saluda al estudiante y lista sus cursos con grupo y nivel', () => {
+    const { getByText, queryByText } = render(<ModulesScreen />);
 
     expect(getByText('Hola, Valentina Ríos')).toBeTruthy();
     expect(getByText('Mis cursos')).toBeTruthy();
-    expect(getByText('02')).toBeTruthy();
+    expect(queryByText('Tu biblioteca')).toBeNull();
+    expect(queryByText('02')).toBeNull();
     expect(getByText('Diseño de experiencias')).toBeTruthy();
-    expect(getByText('QA Fase 6 · 25% completado')).toBeTruthy();
+    expect(getByText('QA Fase 6')).toBeTruthy();
+    expect(getByText('Nivel: Fundamental')).toBeTruthy();
     expect(getByText('Ingeniería de Software')).toBeTruthy();
-    expect(getByText('Curso disponible · 0% completado')).toBeTruthy();
+    expect(getByText('Nivel: Intermedio')).toBeTruthy();
   });
 
   it('abre el curso seleccionado y lo marca como activo', async () => {
     const { getByLabelText } = render(<ModulesScreen />);
 
     fireEvent.press(
-      getByLabelText('Curso Diseño de experiencias, QA Fase 6 · 25% completado'),
+      getByLabelText('Curso Diseño de experiencias, QA Fase 6, Nivel Fundamental'),
     );
 
     expect(mockSelectCourse).toHaveBeenCalledWith('demo');

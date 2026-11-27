@@ -1,5 +1,5 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/shared/components/AppText';
@@ -7,11 +7,10 @@ import { Chevron } from '@/shared/components/Chevron';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Screen } from '@/shared/components/Screen';
 import { ScreenHeader } from '@/shared/components/ScreenHeader';
-import { SectionHeading } from '@/shared/components/SectionHeading';
 import { HubTile } from '@/features/modules/view/HubTile';
 import { SubtopicRow } from '@/features/modules/view/SubtopicRow';
 import { useTheme } from '@/shared/theme/ThemeProvider';
-import { accentForUnit } from '@/shared/theme/tokens';
+import { learningAccents } from '@/shared/theme/tokens';
 import { useLessonHub } from '@/features/modules/viewmodel/useLessonHub';
 import { useCourses } from '@/features/modules/viewmodel/useCourses';
 import { useSession } from '@/features/auth/viewmodel/useSession';
@@ -24,6 +23,7 @@ interface HubAction {
   note: string;
   accent: string;
   onPress: () => void;
+  status?: string;
 }
 
 function ActivityRow({
@@ -63,13 +63,17 @@ export default function TopicHubScreen() {
     exercises,
     evaluations,
     completed,
+    completionMap = {},
     isLoading,
     error,
     refresh,
   } = useLessonHub(topicId, activeCatalogId);
   const { record } = useSession();
   const router = useRouter();
-  const { colors, radius } = useTheme();
+  const { colors, radius, mode } = useTheme();
+  const accents = learningAccents[mode ?? 'dark'];
+  const [showLessons, setShowLessons] = useState(true);
+  const [showEvaluations, setShowEvaluations] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
@@ -127,14 +131,15 @@ export default function TopicHubScreen() {
   };
 
   const actions: HubAction[] = [];
-  if (lessons.length === 1) {
+  if (lessons.length > 0) {
     actions.push({
       key: 'lesson',
       icon: 'lesson',
       label: 'Lecciones',
-      note: 'Contenido de la lección',
-      accent: colors.primary,
-      onPress: () =>
+      note: 'Contenido teórico',
+      status: `${lessons.filter(lesson => completionMap[lesson.id]).length} de ${lessons.length} lecciones completadas`,
+      accent: accents.lesson,
+      onPress: () => lessons.length > 1 ? setShowLessons(current => !current) :
         router.push({ pathname: '/lecciones/[id]', params: { id: lessons[0]!.id } }),
     });
   }
@@ -143,8 +148,8 @@ export default function TopicHubScreen() {
       key: 'examples',
       icon: 'examples',
       label: 'Ejemplos',
-      note: 'Demostración guiada',
-      accent: colors.success,
+      note: 'Demostración y acompañamiento',
+      accent: accents.examples,
       onPress: () => go('/ejemplos'),
     });
   }
@@ -153,25 +158,20 @@ export default function TopicHubScreen() {
       key: 'exercises',
       icon: 'exercises',
       label: 'Ejercicios',
-      note: 'Práctica lo aprendido',
-      accent: colors.warning,
+      note: 'Pon en práctica lo aprendido',
+      accent: accents.exercises,
       onPress: () => go('/ejercicios'),
     });
   }
-  if (contextLesson && evaluations.length === 1) {
+  if (contextLesson && evaluations.length > 0) {
     actions.push({
       key: 'eval',
       icon: 'eval',
       label: 'Evaluación',
-      note: 'Comprueba tu avance',
-      accent: accentForUnit('violet'),
-      onPress: () => go('/evaluacion', evaluations[0]!.id),
+      note: evaluations.length === 1 ? '15 reactivos · Resultados al finalizar' : `${evaluations.length} evaluaciones disponibles`,
+      accent: accents.evaluation,
+      onPress: () => evaluations.length > 1 ? setShowEvaluations(current => !current) : go('/evaluacion', evaluations[0]!.id),
     });
-  }
-
-  const tileRows: HubAction[][] = [];
-  for (let index = 0; index < actions.length; index += 2) {
-    tileRows.push(actions.slice(index, index + 2));
   }
 
   const empty =
@@ -186,7 +186,10 @@ export default function TopicHubScreen() {
         onBack={() => router.back()}
         eyebrow={unit ? `Unidad ${unit.number} · Subtema` : 'Subtema'}
         title={topic.title}
+        stacked
       />
+
+      {topic.summary ? <AppText style={styles.summary}>{topic.summary}</AppText> : null}
 
       <View
         style={[
@@ -215,62 +218,48 @@ export default function TopicHubScreen() {
         />
       ) : null}
 
-      {tileRows.length > 0 ? (
+      {actions.length > 0 ? (
         <View style={styles.grid}>
-          {tileRows.map((row, rowIndex) => (
-            <View key={rowIndex} style={styles.gridRow}>
-              {row.map(action => (
-                <HubTile
-                  key={action.key}
-                  icon={action.icon}
-                  label={action.label}
-                  note={action.note}
-                  accent={action.accent}
-                  onPress={action.onPress}
-                />
-              ))}
-              {row.length === 1 ? <View style={styles.tileSpacer} /> : null}
+          <AppText variant="heading">Ruta de aprendizaje</AppText>
+          {actions.map(action => (
+            <View key={action.key} style={styles.list}>
+              <HubTile
+                icon={action.icon}
+                label={action.label}
+                note={action.note}
+                accent={action.accent}
+                onPress={action.onPress}
+                status={action.status}
+              />
+              {action.key === 'lesson' && lessons.length > 1 && showLessons ? (
+                <View style={styles.list}>
+                  {lessons.map(lesson => (
+                    <SubtopicRow
+                      key={lesson.id}
+                      lesson={lesson}
+                      completed={!!completionMap[lesson.id]}
+                      onPress={() =>
+                        router.push({ pathname: '/lecciones/[id]', params: { id: lesson.id } })
+                      }
+                    />
+                  ))}
+                </View>
+              ) : null}
+              {action.key === 'eval' && evaluations.length > 1 && showEvaluations ? (
+                <View style={styles.list}>
+                  {evaluations.map(evaluation => (
+                    <ActivityRow
+                      key={evaluation.id}
+                      label="Evaluación"
+                      detail={evaluation.title}
+                      onPress={() => go('/evaluacion', evaluation.id)}
+                    />
+                  ))}
+                </View>
+              ) : null}
             </View>
           ))}
         </View>
-      ) : null}
-
-      {lessons.length > 1 ? (
-        <>
-          <SectionHeading eyebrow="Lectura" title="Lecciones" trailing={String(lessons.length)} />
-          <View style={styles.list}>
-            {lessons.map(lesson => (
-              <SubtopicRow
-                key={lesson.id}
-                lesson={lesson}
-                completed={false}
-                onPress={() =>
-                  router.push({ pathname: '/lecciones/[id]', params: { id: lesson.id } })
-                }
-              />
-            ))}
-          </View>
-        </>
-      ) : null}
-
-      {evaluations.length > 1 ? (
-        <>
-          <SectionHeading
-            eyebrow="Comprobación"
-            title="Evaluaciones"
-            trailing={String(evaluations.length)}
-          />
-          <View style={styles.list}>
-            {evaluations.map(evaluation => (
-              <ActivityRow
-                key={evaluation.id}
-                label="Evaluación"
-                detail={evaluation.title}
-                onPress={() => go('/evaluacion', evaluation.id)}
-              />
-            ))}
-          </View>
-        </>
       ) : null}
     </Screen>
   );
@@ -293,8 +282,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   grid: { gap: 12 },
-  gridRow: { flexDirection: 'row', gap: 12 },
-  tileSpacer: { flex: 1 },
+  summary: { marginBottom: 20 },
   list: { gap: 10 },
   activityRow: {
     flexDirection: 'row',

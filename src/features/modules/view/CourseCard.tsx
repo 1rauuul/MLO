@@ -6,6 +6,11 @@ import { useTheme } from '@/shared/theme/ThemeProvider';
 import { initials } from '@/features/auth/viewmodel/auth.logic';
 import type { CourseLibraryEntry } from '@/features/modules/viewmodel/useCourseLibrary';
 
+function groupName(className: string, title: string): string {
+  const prefix = `${title} · `;
+  return className.startsWith(prefix) ? className.slice(prefix.length) : className;
+}
+
 export function CourseCard({
   entry,
   onPress,
@@ -14,15 +19,21 @@ export function CourseCard({
   onPress: () => void;
 }) {
   const { colors, radius } = useTheme();
-  const progress = entry.percent === 100 ? 'Completado' : `${entry.percent}% completado`;
-  const subtitle = entry.className
-    ? `${entry.className} · ${progress}`
-    : `Curso disponible · ${progress}`;
+  const group = entry.className ? groupName(entry.className, entry.title) : null;
+  const level = entry.level?.trim() ?? '';
+  const labelParts = [`Curso ${entry.title}`];
+  if (group) {
+    labelParts.push(group);
+  }
+  if (level) {
+    labelParts.push(`Nivel ${level}`);
+  }
+  const accessibilityLabel = labelParts.join(', ');
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Curso ${entry.title}, ${subtitle}`}
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected: entry.isActive }}
       onPress={onPress}
       style={({ pressed }) => [
@@ -34,30 +45,47 @@ export function CourseCard({
           opacity: pressed ? 0.85 : 1,
         },
       ]}>
-      <View style={[styles.badge, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
-        <AppText variant="code" color={colors.primary} weight="700">
-          {initials(entry.title)}
-        </AppText>
+      <View style={styles.top}>
+        <View style={[styles.badge, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
+          <AppText color={colors.primary} weight="700">
+            {initials(entry.title)}
+          </AppText>
+        </View>
+        <Chevron direction="right" size={20} color={colors.muted} strokeWidth={2.2} />
       </View>
       <View style={styles.copy}>
-        <AppText weight="600" numberOfLines={2}>
+        <AppText variant="heading">
           {entry.title}
         </AppText>
-        <AppText variant="small" numberOfLines={2}>
-          {subtitle}
-        </AppText>
+        {group ? (
+          <AppText variant="small" numberOfLines={1}>
+            {group}
+          </AppText>
+        ) : null}
+        {entry.description ? <AppText variant="small">{entry.description}</AppText> : null}
+        {level ? (
+          <AppText variant="small" numberOfLines={1}>
+            {`Nivel: ${level}`}
+          </AppText>
+        ) : null}
       </View>
-      <Chevron direction="right" size={18} color={colors.muted} strokeWidth={2.2} />
+      <View style={styles.top}>
+        {entry.unitCount !== undefined ? <AppText variant="small">{`${entry.unitCount} ${entry.unitCount === 1 ? 'unidad' : 'unidades'}`}</AppText> : <View />}
+        <AppText variant="small">{`${entry.percent}% completado`}</AppText>
+      </View>
+      <View accessibilityRole="progressbar" accessibilityLabel={`Progreso de ${entry.title}`}
+        accessibilityValue={{ min: 0, max: 100, now: entry.percent }} style={[styles.track, { backgroundColor: colors.soft }]}>
+        <View style={[styles.fill, { backgroundColor: colors.primary, width: `${Math.max(0, Math.min(100, entry.percent))}%` }]} />
+      </View>
+      <AppText color={colors.primary} weight="600">{entry.percent >= 100 ? 'Repasar curso' : entry.percent > 0 ? 'Continuar aprendizaje' : 'Comenzar curso'}</AppText>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 13,
-    padding: 15,
+    gap: 14,
+    padding: 18,
     borderWidth: 1,
   },
   badge: {
@@ -66,5 +94,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  copy: { flex: 1, gap: 3 },
+  copy: { gap: 6 },
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 },
+  track: { height: 6, borderRadius: 99, overflow: 'hidden' },
+  fill: { height: '100%' },
 });

@@ -20,28 +20,51 @@ interface TopicRowProps {
 export function TopicRow({ topic, unitNumber, progress, completed, onPress }: TopicRowProps) {
   const { colors, radius } = useTheme();
   const reduced = useReducedMotion();
-  const accent = completed ? colors.success : colors.primary;
+  const started = progress > 0;
+  const statusColor = completed ? colors.success : started ? colors.primary : colors.muted;
+  const status = completed
+    ? 'Completado'
+    : started
+      ? `En progreso · ${progress}%`
+      : 'Sin comenzar';
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${topic.title}, ${progress}% completado${completed ? '' : ', en progreso'}`}
+      accessibilityLabel={`${topic.title}, ${status.toLowerCase()}`}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && !reduced ? { opacity: 0.65 } : null]}>
-      <View style={[styles.marker, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
-        <AppText variant="code" color={accent}>
+      style={({ pressed }) => [
+        styles.row,
+        { backgroundColor: colors.soft, borderRadius: radius.control },
+        pressed && !reduced ? { opacity: 0.7 } : null,
+      ]}>
+      <View style={[styles.marker, { backgroundColor: colors.card, borderRadius: radius.control }]}>
+        <AppText variant="small" weight="700" color={statusColor}>
           {`${unitNumber}.${topic.position + 1}`}
         </AppText>
       </View>
       <View style={styles.copy}>
         <AppText weight="600">{topic.title}</AppText>
-        <AppText variant="small">{`${progress}%`}</AppText>
+        <View style={styles.status}>
+          {completed ? (
+            <Icon name="check" size={13} color={statusColor} strokeWidth={2.5} />
+          ) : null}
+          <AppText variant="small" weight="600" color={statusColor}>
+            {status}
+          </AppText>
+        </View>
+        {started && !completed ? (
+          <View style={[styles.track, { backgroundColor: colors.line }]}>
+            <View
+              style={[
+                styles.fill,
+                { width: `${progress}%`, backgroundColor: colors.primary },
+              ]}
+            />
+          </View>
+        ) : null}
       </View>
-      {completed ? (
-        <Icon name="check" size={17} color={colors.success} strokeWidth={2.5} />
-      ) : (
-        <Chevron direction="right" size={16} color={colors.muted} strokeWidth={2.2} />
-      )}
+      <Chevron direction="right" size={16} color={colors.muted} strokeWidth={2.2} />
     </Pressable>
   );
 }
@@ -50,14 +73,17 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 13,
-    paddingVertical: 12,
+    gap: 12,
+    padding: 12,
   },
   marker: {
-    width: 44,
-    height: 34,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  copy: { flex: 1, gap: 2 },
+  copy: { flex: 1, gap: 3 },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  track: { height: 3, borderRadius: 999, overflow: 'hidden', marginTop: 2 },
+  fill: { height: '100%', borderRadius: 999 },
 });

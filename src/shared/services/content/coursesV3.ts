@@ -22,6 +22,8 @@ const STUDENT_KEY_HEADER = 'X-MLO-Student-Key';
 export interface RemoteCourse {
   catalogId: string;
   title: string;
+  description?: string;
+  level?: string;
   status: 'published';
   usesBase: boolean;
   version: string;
@@ -73,6 +75,7 @@ export interface AccountCourses {
 interface CourseRow {
   catalog_id: string;
   title: string;
+  manifest?: string | null;
   status: string;
   uses_base: number;
   version: string;
@@ -345,10 +348,52 @@ export function fetchGroupRelease(
     .then(value => parseGroupRelease(value, catalogId));
 }
 
+function readCourseDescription(manifest?: string | null): string {
+  if (!manifest) {
+    return '';
+  }
+  try {
+    const parsed: unknown = JSON.parse(manifest);
+    if (!isRecord(parsed) || !isRecord(parsed.course)) {
+      return '';
+    }
+    return isString(parsed.course.description) ? parsed.course.description.trim() : '';
+  } catch {
+    return '';
+  }
+}
+
+function readCourseLevel(manifest?: string | null): string {
+  if (!manifest) {
+    return '';
+  }
+  try {
+    const parsed: unknown = JSON.parse(manifest);
+    if (!isRecord(parsed) || !Array.isArray(parsed.units)) {
+      return '';
+    }
+    for (const unit of parsed.units) {
+      if (isRecord(unit) && isString(unit.difficulty)) {
+        const level = unit.difficulty.trim();
+        if (level) {
+          return level;
+        }
+      }
+    }
+    return '';
+  } catch {
+    return '';
+  }
+}
+
 function mapCourse(row: CourseRow): RemoteCourse {
+  const description = readCourseDescription(row.manifest);
+  const level = readCourseLevel(row.manifest);
   return {
     catalogId: row.catalog_id,
     title: row.title,
+    ...(description ? { description } : {}),
+    ...(level ? { level } : {}),
     status: 'published',
     usesBase: row.uses_base === 1,
     version: row.version,

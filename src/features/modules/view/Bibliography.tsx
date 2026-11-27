@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import type { BibliographyReference } from '@/features/modules/model/bibliography.logic';
 import { AppText } from '@/shared/components/AppText';
 import { Chevron } from '@/shared/components/Chevron';
+import { Icon } from '@/shared/components/Icon';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 
 interface BibliographyProps {
@@ -27,8 +28,10 @@ export function Bibliography({ references }: BibliographyProps) {
         accessibilityLabel={`${expanded ? 'Ocultar' : 'Ver'} referencias bibliográficas`}
         onPress={() => setExpanded(value => !value)}
         style={styles.header}>
+        <View style={[styles.icon, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
+          <Icon name="book" size={18} color={colors.muted} />
+        </View>
         <View style={styles.copy}>
-          <AppText variant="eyebrow">Bibliografía del curso</AppText>
           <AppText variant="heading">Referencias bibliográficas</AppText>
           <AppText variant="small" color={colors.muted}>
             {references.length === 0
@@ -72,6 +75,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 16,
   },
+  icon: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1, gap: 4 },
   content: { borderTopWidth: 1, paddingHorizontal: 16, paddingBottom: 16, paddingTop: 14, gap: 10 },
 });

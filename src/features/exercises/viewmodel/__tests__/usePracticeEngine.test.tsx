@@ -137,3 +137,16 @@ it('califica solo las preguntas de la sesión con puntaje parcial', async () => 
   expect(result.current.summary.accuracy).toBeCloseTo(0.625);
   expect(result.current.summary.byQuestion.map(question => question.correct)).toEqual([1, 2]);
 });
+
+it('conserva la respuesta del estudiante junto a la solución para la revisión final', async () => {
+  const { result } = renderHook(() => usePracticeEngine('lesson-2'));
+  await waitFor(() => expect(result.current.isLoading).toBe(false));
+  act(() => result.current.submit('respuesta', false, { correct: 0, total: 1 }, {
+    type: 'fill', ordered: fillExercise.config.sentences ?? [], assignment: ['distractor'],
+  }));
+  act(() => result.current.next());
+  expect(result.current.phase).toBe('summary');
+  expect(result.current.review[0]).toMatchObject({
+    correct: false, response: 'El distractor guía el trabajo.', solution: 'El requisito guía el trabajo.',
+  });
+});

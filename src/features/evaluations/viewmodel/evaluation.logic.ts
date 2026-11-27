@@ -1,5 +1,6 @@
 import type { ActivityType, Question } from '@/shared/model/entities';
 import { BLANK_PATTERN } from '@/shared/utils/exerciseRules';
+import type { AttemptSummary } from '@/features/evaluations/viewmodel/analytics.logic';
 
 import {
   crosswordCells,
@@ -81,6 +82,43 @@ export interface AnswerFeedback {
   correct: boolean;
   solution: string;
   explanation: string;
+  response: string;
+}
+
+export function describeSubmittedAnswer(question: Question, answer: EvaluationAnswer | null): string {
+  if (!answer || answer.type !== question.type) return 'Sin respuesta';
+  switch (answer.type) {
+    case 'mcq': return question.options[answer.chosen] ?? 'Sin respuesta';
+    case 'order': return answer.steps.join(' → ');
+    case 'fill': {
+      let index = 0;
+      return (question.config.sentences ?? []).map(sentence =>
+        sentence.replace(BLANK_PATTERN, () => answer.assignment[index++] ?? '_____'),
+      ).join(' ');
+    }
+    case 'match': return (question.config.pairs ?? []).map((pair, index) => {
+      const assigned = answer.assignment[index];
+      return `${pair.left} → ${assigned == null ? 'Sin respuesta' : answer.rights[assigned] ?? 'Sin respuesta'}`;
+    }).join(' · ');
+    case 'crossword': return (question.config.crossword?.entries ?? []).map(entry =>
+      Array.from(entry.word).map((_, index) => answer.letters[
+        `${entry.row + (entry.direction === 'down' ? index : 0)}-${entry.col + (entry.direction === 'across' ? index : 0)}`
+      ] || '_').join(''),
+    ).join(' · ');
+  }
+}
+
+/** Resultados del intento actual, independientes del historial de práctica y evaluación. */
+export function summarizeEvaluation(questions: Question[], answers: (EvaluationAnswer | null)[]): AttemptSummary {
+  const byType: AttemptSummary['byType'] = {};
+  let correct = 0;
+  for (const item of summarizeAnswers(questions, answers)) {
+    const bucket = byType[item.type] ?? { total: 0, correct: 0 };
+    bucket.total += 1;
+    if (item.correct) { bucket.correct += 1; correct += 1; }
+    byType[item.type] = bucket;
+  }
+  return { total: questions.length, correct, accuracy: questions.length ? correct / questions.length : 0, byType };
 }
 
 // Retroalimentación por reactivo al terminar; no depende de resultados guardados
@@ -98,6 +136,7 @@ export function summarizeAnswers(
       correct: answer ? isAnswerCorrect(question, answer) : false,
       solution: describeCorrectAnswer(question),
       explanation: question.explanation,
+      response: describeSubmittedAnswer(question, answer),
     };
   });
 }
@@ -127,23 +166,59 @@ export interface EvaluationPool {
   questions: Question[];
   exercises: Question[];
   mixed: Question[];
+  isComplete: boolean;
 }
 
-function dedupeByPrompt(pool: Question[], seen: Set<string>): Question[] {
+function normalizedText(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('es-MX');
+}
+
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(stableValue);
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, stableValue(item)]),
+    );
+  }
+  return typeof value === 'string' ? normalizedText(value) : value;
+}
+
+function questionFingerprint(question: Question): string {
+  return JSON.stringify({
+    type: question.type,
+    prompt: normalizedText(question.prompt),
+    options: question.options.map(normalizedText),
+    answer: question.answer,
+    config: stableValue(question.config),
+  });
+}
+
+function dedupeQuestions(
+  pool: Question[],
+  seenIds: Set<string>,
+  seenFingerprints: Set<string>,
+): Question[] {
   return pool.filter(question => {
-    if (question.prompt.length === 0) {
-      return true;
-    }
-    if (seen.has(question.prompt)) {
+    const id = normalizedText(question.id);
+    const fingerprint = questionFingerprint(question);
+    if ((id && seenIds.has(id)) || seenFingerprints.has(fingerprint)) {
       return false;
     }
-    seen.add(question.prompt);
+    if (id) {
+      seenIds.add(id);
+    }
+    seenFingerprints.add(fingerprint);
     return true;
   });
 }
 
 // Arma el pool de la evaluación: 10 preguntas + 5 ejercicios, mezclados y
-// con las opciones de cada mcq barajadas. Descarta prompts repetidos.
+// con las opciones de cada mcq barajadas. Descarta el mismo reactivo aunque
+// llegue desde fuentes distintas, pero conserva consignas genéricas válidas.
 export function buildEvaluationPool(
   questionPool: Question[],
   exercisePool: Question[],
@@ -151,16 +226,28 @@ export function buildEvaluationPool(
   questionCount: number = EVALUATION_QUESTIONS_COUNT,
   exerciseCount: number = EVALUATION_EXERCISES_COUNT,
 ): EvaluationPool {
-  const questions = dedupeByPrompt(shuffleItems(questionPool, random), new Set()).slice(
+  const seenIds = new Set<string>();
+  const seenFingerprints = new Set<string>();
+  const questions = dedupeQuestions(
+    shuffleItems(questionPool, random),
+    seenIds,
+    seenFingerprints,
+  ).slice(
     0,
     questionCount,
   );
-  const exercises = dedupeByPrompt(
+  const exercises = dedupeQuestions(
     shuffleItems(exercisePool, random),
-    new Set(questions.map(question => question.prompt)),
+    seenIds,
+    seenFingerprints,
   ).slice(0, exerciseCount);
   const mixed = shuffleItems([...questions, ...exercises], random).map(question =>
     shuffleQuestionOptions(question, random),
   );
-  return { questions, exercises, mixed };
+  return {
+    questions,
+    exercises,
+    mixed,
+    isComplete: questions.length === questionCount && exercises.length === exerciseCount,
+  };
 }

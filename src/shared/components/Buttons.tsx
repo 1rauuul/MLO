@@ -60,7 +60,7 @@ export function PrimaryButton({
       <View style={styles.content}>
         {icon}
         {loading ? <ActivityIndicator size="small" color={colors.onPrimary} /> : null}
-        <AppText weight="600" color={colors.onPrimary} style={{ fontSize: 15 * scale }}>
+        <AppText weight="600" color={colors.onPrimary} style={{ fontSize: 15 * scale, flexShrink: 1, textAlign: 'center' }}>
           {label}
         </AppText>
       </View>
@@ -103,7 +103,7 @@ export function SecondaryButton({
       <View style={styles.content}>
         {icon}
         {loading ? <ActivityIndicator size="small" color={colors.text} /> : null}
-        <AppText weight="600" color={labelColor} style={{ fontSize: 15 * scale }}>
+        <AppText weight="600" color={labelColor} style={{ fontSize: 15 * scale, flexShrink: 1, textAlign: 'center' }}>
           {label}
         </AppText>
       </View>
@@ -158,6 +158,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 18,
+    paddingVertical: 10,
   },
   content: {
     flexDirection: 'row',

@@ -87,14 +87,10 @@ export default function LessonDetailScreen() {
 
   return (
     <Screen>
-      <ScreenHeader onBack={() => router.back()} eyebrow={lesson.eyebrow} title="Lecciones" />
+      <ScreenHeader onBack={() => router.back()} title="Lecciones" />
 
-      <View
-        style={[
-          styles.card,
-          { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card },
-        ]}>
-        <AppText variant="eyebrow">{lesson.eyebrow}</AppText>
+      <View style={styles.reading}>
+        {lesson.eyebrow ? <AppText variant="small">{lesson.eyebrow}</AppText> : null}
         <AppText variant="title">{lesson.title}</AppText>
 
         {lesson.content.length > 0 ? (
@@ -142,7 +138,7 @@ export default function LessonDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, padding: 20, gap: 6 },
+  reading: { gap: 12 },
   classExtra: { borderWidth: 1, padding: 14, gap: 4 },
   footer: { flexDirection: 'row', gap: 12, marginTop: 20 },
   footerButton: { flex: 1 },

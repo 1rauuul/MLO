@@ -69,6 +69,21 @@ describe('useEvaluationEngine', () => {
     expect(result.current.answer).toEqual({ type: 'mcq', chosen: 1 });
   });
 
+  it('mantiene la selección y las respuestas ante un rerender con el mismo pool', () => {
+    const { result, rerender } = renderHook(
+      ({ pool }: { pool: Question[] }) => useEvaluationEngine(pool, 'l1.2'),
+      { initialProps: { pool: questions } },
+    );
+
+    act(() => result.current.setAnswer({ type: 'mcq', chosen: result.current.items[0]!.answer }));
+    const firstItems = result.current.items;
+
+    rerender({ pool: questions.map(question => ({ ...question, options: [...question.options] })) });
+
+    expect(result.current.items).toBe(firstItems);
+    expect(result.current.answer).toEqual({ type: 'mcq', chosen: firstItems[0]!.answer });
+  });
+
   it('reintenta con nuevo orden y registra otro intento sin borrar el anterior', async () => {
     // El primer intento baraja; el reintento cae en el orden original.
     let calls = 0;
@@ -122,5 +137,21 @@ describe('useEvaluationEngine', () => {
     expect(result.current.phase).toBe('summary');
     expect(result.current.correctCount).toBe(1);
     expect(mockInsertAttempt).toHaveBeenCalledTimes(2);
+    expect(result.current.summary).toMatchObject({ total: 2, correct: 1, accuracy: 0.5, byType: { mcq: { total: 2, correct: 1 } } });
+    expect(mockSelectAttempts).not.toHaveBeenCalled();
+  });
+
+  it('conserva respuestas al saltar y no califica si faltan reactivos', () => {
+    const { result } = renderHook(() => useEvaluationEngine(questions, 'l1.2'));
+    act(() => result.current.goTo(1));
+    act(() => result.current.setAnswer({ type: 'mcq', chosen: 0 }));
+    act(() => result.current.send());
+    expect(result.current.phase).toBe('running');
+    expect(result.current.index).toBe(0);
+    expect(mockInsertAttempt).not.toHaveBeenCalled();
+    act(() => result.current.goTo(1));
+    expect(result.current.answer).toEqual({ type: 'mcq', chosen: 0 });
+    act(() => result.current.goTo(100));
+    expect(result.current.index).toBe(1);
   });
 });

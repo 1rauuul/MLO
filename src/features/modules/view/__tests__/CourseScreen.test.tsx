@@ -18,6 +18,8 @@ jest.mock('@/features/modules/viewmodel/useCourses', () => ({
       {
         catalogId: 'base',
         title: 'Contenido base',
+        description: 'Curso base',
+        level: 'Fundamental',
         status: 'published',
         usesBase: false,
         version: '7',
@@ -106,28 +108,55 @@ describe('CourseScreen', () => {
   it('muestra el curso, sus unidades y el avance de cada subtema', () => {
     const { getByText, getByLabelText, queryByText } = render(<CourseScreen />);
 
+    expect(getByText('Inicio')).toBeTruthy();
     expect(getByText('Ingeniería de Software')).toBeTruthy();
-    expect(getByText('Tus unidades')).toBeTruthy();
+    expect(getByText('Curso base')).toBeTruthy();
+    expect(getByText('Nivel Fundamental')).toBeTruthy();
+    expect(getByText('Unidades del curso')).toBeTruthy();
+    expect(getByText('En progreso')).toBeTruthy();
     expect(queryByText('Ruta de aprendizaje')).toBeNull();
     expect(getByLabelText('67% completado')).toBeTruthy();
 
-    fireEvent.press(getByText('Ver temas'));
+    fireEvent.press(getByText('Ver subtemas'));
 
+    expect(getByText('Subtemas')).toBeTruthy();
+    expect(getByText('1 de 2 completados')).toBeTruthy();
     expect(getByText('Subtema A')).toBeTruthy();
     expect(getByText('Subtema B')).toBeTruthy();
     expect(getByText('1.1')).toBeTruthy();
     expect(getByText('1.2')).toBeTruthy();
-    expect(getByText('100%')).toBeTruthy();
-    expect(getByText('50%')).toBeTruthy();
+    expect(getByText('Completado')).toBeTruthy();
+    expect(getByText('En progreso · 50%')).toBeTruthy();
     expect(queryByText('1 lecciones')).toBeNull();
     expect(queryByText('2 lecciones')).toBeNull();
   });
 
-  it('abre el subtema seleccionado', () => {
+  it('elige la acción del curso según el avance', () => {
+    const view = render(<CourseScreen />);
+    expect(view.getByText('Continuar curso')).toBeTruthy();
+
+    makeCatalog({ completionMap: {} });
+    view.rerender(<CourseScreen />);
+    expect(view.getByText('Comenzar curso')).toBeTruthy();
+
+    makeCatalog({ completionMap: { l1: true, l2: true, l3: true } });
+    view.rerender(<CourseScreen />);
+    expect(view.getByText('Repasar curso')).toBeTruthy();
+  });
+
+  it('abre el subtema seleccionado y ofrece continuar el curso', () => {
     const { getByText } = render(<CourseScreen />);
 
-    fireEvent.press(getByText('Ver temas'));
+    fireEvent.press(getByText('Ver subtemas'));
     fireEvent.press(getByText('Subtema B'));
+
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/tema/[id]',
+      params: { id: 't2' },
+    });
+
+    mockPush.mockClear();
+    fireEvent.press(getByText('Continuar curso'));
 
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/tema/[id]',
@@ -135,9 +164,13 @@ describe('CourseScreen', () => {
     });
   });
 
-  it('permite salir del curso con confirmación', async () => {
-    const { getByText, getByRole } = render(<CourseScreen />);
+  it('permite salir del curso con confirmación desde el menú', async () => {
+    const { getByText, getByRole, getByLabelText } = render(<CourseScreen />);
 
+    fireEvent.press(getByLabelText('Opciones del curso'));
+    expect(getByText('Opciones del curso')).toBeTruthy();
+    expect(getByText('Buscar actualizaciones')).toBeTruthy();
+    expect(getByText('Información del curso')).toBeTruthy();
     fireEvent.press(getByText('Salir del curso'));
     expect(getByText(/Saldrás de la clase Grupo A/)).toBeTruthy();
 

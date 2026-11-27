@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { VideoPlayer } from '@/features/modules/view/VideoPlayer';
 import type { ContentBlock } from '@/shared/model/entities';
@@ -68,8 +68,9 @@ function TableBlock({
 }) {
   const { colors, radius } = useTheme();
   return (
-    <View
-      style={[styles.table, { borderColor: colors.line, borderRadius: radius.control }]}>
+    <ScrollView horizontal accessibilityLabel="Tabla de contenido. Desliza para consultar todas las columnas."
+      showsHorizontalScrollIndicator contentContainerStyle={{ flexGrow: 1 }}>
+    <View style={[styles.table, { flex: 1, minWidth: Math.max(280, block.header.length * 150), borderColor: colors.line, borderRadius: radius.control }]}>
       <View style={[styles.tableRow, { backgroundColor: colors.soft, borderTopWidth: 0 }]}>
         {block.header.map((cell, cellIndex) => (
           <AppText key={`h${cellIndex}`} variant="small" weight="700" style={styles.cell}>
@@ -93,6 +94,7 @@ function TableBlock({
         </View>
       ))}
     </View>
+    </ScrollView>
   );
 }
 
@@ -194,13 +196,13 @@ const styles = StyleSheet.create({
   root: {},
   flex: { flex: 1, textAlign: 'justify' },
   paragraph: { textAlign: 'justify' },
-  heading: { marginTop: 4 },
+  heading: { marginTop: 16, marginBottom: 4 },
   list: { gap: 10 },
   listRow: { flexDirection: 'row', gap: 10 },
   listMark: { width: 20 },
   table: { borderWidth: 1, overflow: 'hidden' },
   tableRow: { flexDirection: 'row', gap: 10, padding: 12, borderTopWidth: 1 },
-  cell: { flex: 1, lineHeight: 18 },
+  cell: { flex: 1, minWidth: 0, textAlign: 'left' },
   center: { textAlign: 'center' },
   video: { overflow: 'hidden', borderWidth: 1 },
   videoThumb: { width: '100%', aspectRatio: 16 / 9 },

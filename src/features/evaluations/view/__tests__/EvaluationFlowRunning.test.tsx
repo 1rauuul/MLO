@@ -39,6 +39,7 @@ function makeEngine(overrides: Partial<EvaluationEngine> = {}): EvaluationEngine
     runId: 1,
     setAnswer: mockSetAnswer,
     goPrev: mockGoPrev,
+    goTo: jest.fn(),
     send: mockSend,
     restart: jest.fn(),
     ...overrides,
@@ -105,10 +106,25 @@ beforeEach(() => {
   mockEngine = makeEngine();
 });
 
-it('deshabilita Enviar sin respuesta y Anterior en el primer reactivo', () => {
-  const { getByRole } = render(<EvaluationFlow />);
+function startEvaluation() {
+  const screen = render(<EvaluationFlow />);
+  fireEvent.press(screen.getByRole('button', { name: 'Comenzar evaluación' }));
+  return screen;
+}
 
-  expect(getByRole('button', { name: 'Enviar' }).props.accessibilityState).toEqual({
+it('presenta una introducción sin revelar reactivos ni bloquear la salida', () => {
+  const screen = render(<EvaluationFlow />);
+  expect(screen.getByText('Comprueba tu aprendizaje')).toBeTruthy();
+  expect(screen.queryByText('Pregunta')).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: 'Volver' }));
+  expect(mockBack).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText('Salir de la evaluación')).toBeNull();
+});
+
+it('deshabilita Siguiente sin respuesta y Anterior en el primer reactivo', () => {
+  const { getByRole } = startEvaluation();
+
+  expect(getByRole('button', { name: 'Siguiente' }).props.accessibilityState).toEqual({
     disabled: true,
   });
   expect(getByRole('button', { name: 'Anterior' }).props.accessibilityState).toEqual({
@@ -116,17 +132,26 @@ it('deshabilita Enviar sin respuesta y Anterior en el primer reactivo', () => {
   });
 });
 
-it('envía el reactivo al pulsar Enviar cuando hay respuesta', () => {
+it('avanza al pulsar Siguiente cuando hay respuesta', () => {
   mockEngine = makeEngine({ canSend: true, answer: { type: 'mcq', chosen: 1 } });
-  const { getByRole } = render(<EvaluationFlow />);
+  const { getByRole } = startEvaluation();
 
-  fireEvent.press(getByRole('button', { name: 'Enviar' }));
+  fireEvent.press(getByRole('button', { name: 'Siguiente' }));
   expect(mockSend).toHaveBeenCalledTimes(1);
+});
+
+it('abre el navegador y permite elegir un reactivo sin revelar su solución', () => {
+  const screen = startEvaluation();
+  expect(screen.queryByText('Respuesta correcta')).toBeNull();
+  fireEvent.press(screen.getByRole('button', { name: 'Navegador de reactivos' }));
+  fireEvent.press(screen.getByRole('button', { name: 'Reactivo 1, actual, pendiente' }));
+  expect(mockEngine.goTo).toHaveBeenCalledWith(0);
+  expect(screen.queryByText('Respuesta correcta')).toBeNull();
 });
 
 it('permite regresar cuando no es el primer reactivo', () => {
   mockEngine = makeEngine({ index: 1 });
-  const { getByRole } = render(<EvaluationFlow />);
+  const { getByRole } = startEvaluation();
 
   const prev = getByRole('button', { name: 'Anterior' });
   expect(prev.props.accessibilityState).toEqual({ disabled: false });
@@ -134,16 +159,21 @@ it('permite regresar cuando no es el primer reactivo', () => {
   expect(mockGoPrev).toHaveBeenCalledTimes(1);
 });
 
-it('usa Calificar en el último reactivo', () => {
-  mockEngine = makeEngine({ index: 1, isLast: true, canSend: true, answer: { type: 'mcq', chosen: 0 } });
-  const { getByRole } = render(<EvaluationFlow />);
+it('confirma antes de calificar y permite seguir revisando', () => {
+  mockEngine = makeEngine({ total: 1, isLast: true, canSend: true, answers: [{ type: 'mcq', chosen: 0 }], answer: { type: 'mcq', chosen: 0 } });
+  const { getByRole } = startEvaluation();
 
+  fireEvent.press(getByRole('button', { name: 'Finalizar evaluación' }));
+  expect(mockSend).not.toHaveBeenCalled();
+  fireEvent.press(getByRole('button', { name: 'Seguir revisando' }));
+  expect(mockSend).not.toHaveBeenCalled();
+  fireEvent.press(getByRole('button', { name: 'Finalizar evaluación' }));
   fireEvent.press(getByRole('button', { name: 'Calificar' }));
   expect(mockSend).toHaveBeenCalledTimes(1);
 });
 
 it('advierte al salir durante la evaluación con un modal y descarta el intento', () => {
-  const { getByRole, getByText, queryByText } = render(<EvaluationFlow />);
+  const { getByRole, getByText, queryByText } = startEvaluation();
 
   expect(queryByText('Salir de la evaluación')).toBeNull();
 
@@ -156,7 +186,7 @@ it('advierte al salir durante la evaluación con un modal y descarta el intento'
 });
 
 it('conserva el intento si el alumno decide continuar', () => {
-  const { getByRole, queryByText } = render(<EvaluationFlow />);
+  const { getByRole, queryByText } = startEvaluation();
 
   fireEvent.press(getByRole('button', { name: 'Volver' }));
   fireEvent.press(getByRole('button', { name: 'Continuar' }));
@@ -168,7 +198,7 @@ it('conserva el intento si el alumno decide continuar', () => {
 
 it('pide confirmación al cambiar de pestaña desde la evaluación y descarta el intento', () => {
   const next = jest.fn();
-  const { getByRole, getByText } = render(<EvaluationFlow />);
+  const { getByRole, getByText } = startEvaluation();
 
   act(() => runOrGuardExit(next));
   expect(next).not.toHaveBeenCalled();

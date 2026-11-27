@@ -20,17 +20,17 @@ export interface ThemeColors {
 
 export const palette: Record<ThemeMode, ThemeColors> = {
   dark: {
-    bg: '#10151D',
-    surface: '#19212C',
-    card: '#1E2835',
+    bg: '#10171E',
+    surface: '#243444',
+    card: '#1B2835',
     text: '#F4F7FB',
     muted: '#9CABBC',
-    line: '#324050',
-    primary: '#4D7CFE',
+    line: '#304153',
+    primary: '#5285FF',
     primaryStrong: '#3563D9',
-    success: '#45D39A',
-    warning: '#F3BC61',
-    danger: '#EE6F7D',
+    success: '#2DD4A0',
+    warning: '#FFC266',
+    danger: '#FF7373',
     dangerStrong: '#C43D4B',
     soft: '#263447',
     code: '#121923',
@@ -57,7 +57,7 @@ export const palette: Record<ThemeMode, ThemeColors> = {
 
 export const radius = {
   card: 16,
-  control: 14,
+  control: 12,
   tile: 20,
   pill: 999,
 } as const;
@@ -94,9 +94,15 @@ export function accentForUnit(color: string): string {
 }
 
 export const typography = {
-  eyebrow: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' as const },
-  title: { fontSize: 30, lineHeight: 32, letterSpacing: -1 },
-  heading: { fontSize: 20, letterSpacing: -0.4 },
-  body: { fontSize: 15, lineHeight: 22 },
-  small: { fontSize: 12, lineHeight: 16 },
+  eyebrow: { fontFamily: fonts.sans, fontSize: 12, lineHeight: 18 },
+  title: { fontSize: 28, lineHeight: 32, letterSpacing: -0.5, fontWeight: '700' as const },
+  heading: { fontSize: 20, lineHeight: 26, letterSpacing: -0.4, fontWeight: '600' as const },
+  body: { fontSize: 16, lineHeight: 25 },
+  small: { fontSize: 14, lineHeight: 20 },
+  code: { fontFamily: fonts.mono, fontSize: 13, lineHeight: 20 },
+} as const;
+
+export const learningAccents = {
+  dark: { lesson: '#5285FF', examples: '#38BFA0', exercises: '#F0B454', evaluation: '#9483FF' },
+  light: { lesson: '#315FEC', examples: '#087D65', exercises: '#946013', evaluation: '#6951CC' },
 } as const;

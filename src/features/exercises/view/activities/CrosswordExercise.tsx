@@ -1,12 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { AppText } from '@/shared/components/AppText';
-import { PrimaryButton } from '@/shared/components/Buttons';
+import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
 import { Icon } from '@/shared/components/Icon';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { shuffleItems, crosswordScore, type ExerciseScore } from '@/features/exercises/viewmodel/exercise.logic';
 import type { CrosswordEngine } from '@/features/exercises/viewmodel/useExerciseEngine';
+import { ActivityFeedback } from '@/features/exercises/view/activities/ActivityFeedback';
 
 interface CrosswordExerciseProps {
   engine: CrosswordEngine;
@@ -26,6 +27,9 @@ export function CrosswordExercise({
   hideCheck = false,
 }: CrosswordExerciseProps) {
   const { colors, radius, spacing, fonts } = useTheme();
+  const [width, setWidth] = useState(0);
+  const [zoom, setZoom] = useState(false);
+  const cellSize = zoom ? 44 : Math.max(20, Math.min(36, Math.floor((width - Math.max(0, engine.cols - 1) * 2) / Math.max(1, engine.cols)) || CELL));
   const example = variant === 'example';
   const cellMap = new Map(engine.cells.map(cell => [`${cell.row}-${cell.col}`, cell]));
 
@@ -128,19 +132,20 @@ export function CrosswordExercise({
   const activeEntry = selected !== null ? engine.entries[selected] : undefined;
 
   return (
-    <View>
+    <View onLayout={event => setWidth(event.nativeEvent.layout.width)}>
       <AppText variant="small" color={colors.muted} style={styles.instruction}>
         Toca una celda y escribe la palabra que corresponde a la pista. Escribe sin tildes.
       </AppText>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gridScroll}>
+      <SecondaryButton label={zoom ? 'Ajustar tablero' : 'Ampliar tablero'} onPress={() => setZoom(current => !current)} style={{ marginBottom: spacing.sm }} />
+      <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={styles.gridScroll}>
         <View style={styles.grid}>
           {Array.from({ length: engine.rows }).map((_, row) => (
             <View key={`row-${row}`} style={styles.gridRow}>
               {Array.from({ length: engine.cols }).map((_, col) => {
                 const cell = cellMap.get(`${row}-${col}`);
                 if (!cell) {
-                  return <View key={`cell-${row}-${col}`} style={styles.blank} />;
+                  return <View key={`cell-${row}-${col}`} style={{ width: cellSize, height: cellSize }} />;
                 }
                 const active = selected !== null && cell.entryIndexes.includes(selected);
                 const start = startLabels.get(`${row}-${col}`);
@@ -153,10 +158,10 @@ export function CrosswordExercise({
                     accessibilityLabel={start ? `Inicio ${start.join(', ')}` : 'Celda'}
                     accessibilityState={{ disabled: locked }}
                     disabled={locked}
-                    hitSlop={10}
                     onPress={() => selectCellEntry(row, col)}
                     style={[
                       styles.cell,
+                      { width: cellSize, height: cellSize },
                       {
                         borderColor: engine.checked
                           ? cellCorrect
@@ -173,7 +178,7 @@ export function CrosswordExercise({
                         {start.join('/')}
                       </AppText>
                     ) : null}
-                    <AppText variant="small" weight="700">
+                    <AppText variant="small" weight="700" style={{ fontSize: zoom ? 20 : 14 }}>
                       {engine.letters[`${row}-${col}`] ?? ''}
                     </AppText>
                   </Pressable>
@@ -232,30 +237,35 @@ export function CrosswordExercise({
       />
 
       {example && bank.length > 0 ? (
-        <View style={[styles.bank, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
-          {bank.map((word, index) => (
-            <Pressable
-              key={`${word}-${index}`}
-              accessibilityRole="button"
-              accessibilityLabel={`Usar ${word}`}
-              accessibilityState={{ disabled: locked || !activeEntry }}
-              disabled={locked || !activeEntry}
-              hitSlop={8}
-              onPress={() => fillFromBank(word)}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: colors.line,
-                  borderRadius: radius.pill,
-                  opacity: locked || !activeEntry ? 0.5 : 1,
-                },
-              ]}>
-              <AppText variant="small" weight="600">
-                {word}
-              </AppText>
-            </Pressable>
-          ))}
+        <View>
+          <AppText variant="eyebrow" style={styles.bankLabel}>
+            Palabras disponibles
+          </AppText>
+          <View style={[styles.bank, { backgroundColor: colors.soft, borderRadius: radius.control }]}>
+            {bank.map((word, index) => (
+              <Pressable
+                key={`${word}-${index}`}
+                accessibilityRole="button"
+                accessibilityLabel={`Usar ${word}`}
+                accessibilityState={{ disabled: locked || !activeEntry }}
+                disabled={locked || !activeEntry}
+                hitSlop={8}
+                onPress={() => fillFromBank(word)}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.line,
+                    borderRadius: radius.pill,
+                    opacity: locked || !activeEntry ? 0.5 : 1,
+                  },
+                ]}>
+                <AppText variant="small" weight="600">
+                  {word}
+                </AppText>
+              </Pressable>
+            ))}
+          </View>
         </View>
       ) : null}
 
@@ -316,27 +326,15 @@ export function CrosswordExercise({
       )}
 
       {example && engine.checked ? (
-        <View
-          style={[
-            styles.feedback,
-            {
-              borderColor: engine.isCorrect ? colors.success : colors.danger,
-              backgroundColor: colors.card,
-              borderRadius: radius.control,
-            },
-          ]}>
-          <View style={styles.feedbackRow}>
-            <Icon
-              name={engine.isCorrect ? 'check' : 'refresh'}
-              size={16}
-              color={engine.isCorrect ? colors.success : colors.danger}
-              strokeWidth={2.5}
-            />
-            <AppText color={engine.isCorrect ? colors.success : colors.danger} weight="700">
-              {engine.isCorrect ? 'Crucigrama correcto' : 'Hay palabras incorrectas'}
-            </AppText>
-          </View>
-        </View>
+        <ActivityFeedback
+          correct={engine.isCorrect}
+          title={engine.isCorrect ? 'Crucigrama correcto' : 'Hay palabras incorrectas'}
+          message={
+            engine.isCorrect
+              ? 'Las palabras coinciden con sus pistas.'
+              : 'Revisa las celdas marcadas y vuelve a comprobar.'
+          }
+        />
       ) : null}
     </View>
   );
@@ -361,6 +359,7 @@ const styles = StyleSheet.create({
   input: { borderWidth: 2, paddingHorizontal: 12, paddingVertical: 10, letterSpacing: 3, fontWeight: '700' },
   entries: { gap: 8 },
   clueRow: {
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -368,8 +367,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   labelBadge: { minWidth: 30, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 7, alignItems: 'center' },
+  bankLabel: { marginTop: 12 },
   bank: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 12, marginTop: 12 },
-  chip: { paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1 },
-  feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
-  feedbackRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  chip: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1 },
 });

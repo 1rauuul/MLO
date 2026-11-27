@@ -104,27 +104,29 @@ beforeEach(() => {
 });
 
 describe('TopicScreen', () => {
-  it('muestra el estado y las actividades como mosaicos', () => {
+  it('muestra descripción y ruta vertical con las secciones disponibles', () => {
     const { getByText, getByLabelText, queryByLabelText } = render(<TopicScreen />);
 
     expect(getByText('Subtema con varias actividades')).toBeTruthy();
     expect(getByText('En progreso')).toBeTruthy();
-    expect(getByLabelText('Ejemplos. Demostración guiada')).toBeTruthy();
-    expect(getByLabelText('Ejercicios. Práctica lo aprendido')).toBeTruthy();
-    expect(queryByLabelText('Lecciones. Contenido de la lección')).toBeNull();
-    expect(queryByLabelText('Evaluación. Comprueba tu avance')).toBeNull();
+    expect(getByText(topic.summary)).toBeTruthy();
+    expect(getByText('Ruta de aprendizaje')).toBeTruthy();
+    expect(getByLabelText('Ejemplos. Demostración y acompañamiento')).toBeTruthy();
+    expect(getByLabelText('Ejercicios. Pon en práctica lo aprendido')).toBeTruthy();
+    expect(getByLabelText('Lecciones. Contenido teórico')).toBeTruthy();
+    expect(queryByLabelText('Evaluación. 15 reactivos · Resultados al finalizar')).toBeNull();
   });
 
   it('abre los ejemplos y ejercicios del subtema', () => {
     const { getByLabelText } = render(<TopicScreen />);
 
-    fireEvent.press(getByLabelText('Ejemplos. Demostración guiada'));
+    fireEvent.press(getByLabelText('Ejemplos. Demostración y acompañamiento'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/ejemplos',
       params: { lesson: 'demo-l1.1' },
     });
 
-    fireEvent.press(getByLabelText('Ejercicios. Práctica lo aprendido'));
+    fireEvent.press(getByLabelText('Ejercicios. Pon en práctica lo aprendido'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/ejercicios',
       params: { lesson: 'demo-l1.1' },
@@ -152,13 +154,13 @@ describe('TopicScreen', () => {
     const { getByLabelText, queryByText } = render(<TopicScreen />);
 
     expect(queryByText('Primera lección')).toBeNull();
-    fireEvent.press(getByLabelText('Lecciones. Contenido de la lección'));
+    fireEvent.press(getByLabelText('Lecciones. Contenido teórico'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/lecciones/[id]',
       params: { id: 'demo-l1.1' },
     });
 
-    fireEvent.press(getByLabelText('Evaluación. Comprueba tu avance'));
+    fireEvent.press(getByLabelText('Evaluación. 15 reactivos · Resultados al finalizar'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/evaluacion',
       params: { lesson: 'demo-l1.1', evaluationId: 'demo-ev1', catalog: 'demo' },

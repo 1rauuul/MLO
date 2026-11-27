@@ -1,12 +1,16 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ActivityView } from '@/features/exercises/view/activities/ActivityView';
 import { AppText } from '@/shared/components/AppText';
+import { AnswerReview } from '@/shared/components/AnswerReview';
+import { ActivityFeedback } from '@/features/exercises/view/activities/ActivityFeedback';
+import type { EvaluationAnswer } from '@/features/evaluations/viewmodel/evaluation.logic';
 import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { EmptyState } from '@/shared/components/EmptyState';
+import { ResultScoreCard } from '@/shared/components/ResultScoreCard';
 import { Screen } from '@/shared/components/Screen';
 import { ScreenHeader } from '@/shared/components/ScreenHeader';
 import type { ActivityType } from '@/shared/model/entities';
@@ -32,6 +36,7 @@ export default function PracticeScreen() {
   const { colors, radius, spacing } = useTheme();
   const exitGuard = useExitGuard(engine.phase === 'running' && !engine.isLoading);
   const [showBreakdown, setShowBreakdown] = useState(true);
+  const response = useRef<{ id: string; answer: EvaluationAnswer } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -80,14 +85,11 @@ export default function PracticeScreen() {
     return (
       <Screen>
         <ScreenHeader onBack={goBack} eyebrow={lesson ? `Tema ${lesson.code}` : 'Ejercicios'} title="Resultado" />
-        <View
-          style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
-          <AppText variant="eyebrow">Puntaje de ejercicios</AppText>
-          <AppText variant="title">{`${percent}%`}</AppText>
-          <AppText variant="small">
-            {`${formatPoints(summary.correct)} de ${summary.total} puntos · cada pregunta vale ${formatPoints(perQuestion)}%`}
-          </AppText>
-        </View>
+        <ResultScoreCard
+          eyebrow="Puntaje de ejercicios"
+          percent={percent}
+          detail={`${formatPoints(summary.correct)} de ${summary.total} puntos · cada pregunta vale ${formatPoints(perQuestion)}%`}
+        />
 
         <SecondaryButton
           label={showBreakdown ? 'Ocultar desglose' : 'Ver desglose completo'}
@@ -204,11 +206,13 @@ export default function PracticeScreen() {
           </View>
         )}
 
+        {engine.review?.length > 0 ? <AnswerReview items={engine.review} /> : null}
         <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
-          {lessonParam ? <PrimaryButton label="Ir a la evaluación" onPress={goEvaluation} /> : null}
-          {recommendation === 'lesson' ? (
-            <SecondaryButton label="Repasar la lección" onPress={goLesson} />
-          ) : null}
+          {recommendation === 'lesson' ? <PrimaryButton label="Repasar la lección" onPress={goLesson} /> : null}
+          {lessonParam ? recommendation === 'lesson'
+            ? <SecondaryButton label="Ir a la evaluación" onPress={goEvaluation} />
+            : <PrimaryButton label="Ir a la evaluación" onPress={goEvaluation} /> : null}
+          <SecondaryButton label="Volver al subtema" onPress={() => lesson ? router.navigate({ pathname: '/tema/[id]', params: { id: lesson.topicId ?? `t-${lesson.id}` } }) : goBack()} />
         </View>
       </Screen>
     );
@@ -238,7 +242,7 @@ export default function PracticeScreen() {
   const handleBack = () => exitGuard.request(goBack);
 
   return (
-    <Screen>
+    <Screen keyboardAvoiding>
       <ScreenHeader
         onBack={handleBack}
         eyebrow={lesson ? `Tema ${lesson.code} · ${TYPE_LABELS[exercise.type] ?? exercise.type}` : (TYPE_LABELS[exercise.type] ?? exercise.type)}
@@ -259,30 +263,15 @@ export default function PracticeScreen() {
           exercise={exercise}
           allowReset={false}
           locked={engine.answered}
-          onSubmit={(answer, correct, score) => engine.submit(answer, correct, score)}
+          onAnswerChange={answer => { response.current = { id: exercise.id, answer }; }}
+          onSubmit={(answer, correct, score) => engine.submit(answer, correct, score, response.current?.id === exercise.id ? response.current.answer : null)}
         />
       </View>
 
-      {engine.answered ? (
-        <View
-          style={[
-            styles.feedback,
-            {
-              borderColor: engine.lastCorrect ? colors.success : colors.danger,
-              backgroundColor: colors.card,
-              borderRadius: radius.control,
-            },
-          ]}>
-          <AppText color={engine.lastCorrect ? colors.success : colors.danger} weight="700">
-            {engine.lastCorrect ? '✓ Respuesta correcta' : '✗ Respuesta incorrecta'}
-          </AppText>
-          {exercise.explanation ? (
-            <AppText variant="small" style={{ textAlign: 'justify' }}>
-              {exercise.explanation}
-            </AppText>
-          ) : null}
-        </View>
-      ) : null}
+      {engine.answered ? <ActivityFeedback correct={!!engine.lastCorrect}
+        partial={(engine.summary.byQuestion[engine.index]?.correct ?? 0) > 0 && !engine.lastCorrect}
+        title={engine.lastCorrect ? 'Respuesta correcta' : (engine.summary.byQuestion[engine.index]?.correct ?? 0) > 0 ? 'Respuesta parcialmente correcta' : 'Revisa tu respuesta'}
+        message={exercise.explanation} /> : null}
 
       {engine.answered ? (
         <PrimaryButton
@@ -310,6 +299,5 @@ const styles = StyleSheet.create({
   list: { gap: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderWidth: 1 },
   scoreColumn: { alignItems: 'flex-end' },
-  card: { borderWidth: 1, padding: 18, gap: 4 },
   feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
 });

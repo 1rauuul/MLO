@@ -14,6 +14,7 @@ import {
   isMatchCorrect,
   isOrderCorrect,
   moveItem,
+  normalizeAnswer,
   reorderItem,
   scrambleOrder,
   shuffleItems,
@@ -165,6 +166,8 @@ export interface FillEngine {
   bank: string[];
   used: boolean[];
   assignment: (string | null)[];
+  /** Per-blank state preserves valid feedback when another blank is edited. */
+  blankStates: ('correct' | 'wrong' | null)[];
   activeBlank: number | null;
   checked: boolean;
   isCorrect: boolean;
@@ -205,6 +208,7 @@ export function useFillEngine(exercise: Exercise | null, initial?: FillInitial):
   const [bank, setBank] = useState<string[]>([]);
   const [used, setUsed] = useState<boolean[]>([]);
   const [assignment, setAssignment] = useState<(string | null)[]>([]);
+  const [blankStates, setBlankStates] = useState<('correct' | 'wrong' | null)[]>([]);
   const [activeBlank, setActiveBlank] = useState<number | null>(null);
   const [checked, setChecked] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
@@ -237,6 +241,7 @@ export function useFillEngine(exercise: Exercise | null, initial?: FillInitial):
     });
     setUsed(nextUsed);
     setAssignment(nextAssignment);
+    setBlankStates(expected.map(() => null));
     setActiveBlank(null);
     setChecked(false);
     setIsCorrect(false);
@@ -266,6 +271,7 @@ export function useFillEngine(exercise: Exercise | null, initial?: FillInitial):
       const nextAssignment = [...assignment];
       nextAssignment[target] = word;
       setAssignment(nextAssignment);
+      setBlankStates(previous => previous.map((state, index) => (index === target ? null : state)));
       setUsed(previous => previous.map((value, index) => (index === bankIndex ? true : value)));
       const nextEmpty = nextAssignment.findIndex(item => item === null);
       setActiveBlank(nextEmpty === -1 ? null : nextEmpty);
@@ -281,6 +287,7 @@ export function useFillEngine(exercise: Exercise | null, initial?: FillInitial):
         return;
       }
       setAssignment(previous => previous.map((value, position) => (position === index ? null : value)));
+      setBlankStates(previous => previous.map((state, position) => (position === index ? null : state)));
       setUsed(previous => {
         const bankIndex = bank.findIndex((item, position) => item === word && previous[position]);
         if (bankIndex === -1) {
@@ -298,10 +305,17 @@ export function useFillEngine(exercise: Exercise | null, initial?: FillInitial):
       const correct = isFillCorrect(ordered, assignment);
       setChecked(true);
       setIsCorrect(correct);
+      setBlankStates(
+        assignment.map((word, index) =>
+          word !== null && normalizeAnswer(word) === normalizeAnswer(answers[index] ?? '')
+            ? 'correct'
+            : 'wrong',
+        ),
+      );
       onResult?.(correct);
       return correct;
     },
-    [ordered, assignment],
+    [ordered, assignment, answers],
   );
 
   const solve = useCallback(() => {
@@ -314,6 +328,7 @@ export function useFillEngine(exercise: Exercise | null, initial?: FillInitial):
       }
     });
     setAssignment([...expected]);
+    setBlankStates(expected.map(() => 'correct'));
     setUsed(nextUsed);
     setActiveBlank(null);
     setIsCorrect(true);
@@ -327,6 +342,7 @@ export function useFillEngine(exercise: Exercise | null, initial?: FillInitial):
     bank,
     used,
     assignment,
+    blankStates,
     activeBlank,
     checked,
     isCorrect,

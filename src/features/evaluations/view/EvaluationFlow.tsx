@@ -1,21 +1,22 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ActivityView } from '@/features/exercises/view/activities/ActivityView';
 import { AppText } from '@/shared/components/AppText';
+import { AnswerReview } from '@/shared/components/AnswerReview';
 import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { EmptyState } from '@/shared/components/EmptyState';
-import { Icon } from '@/shared/components/Icon';
 import { QuizOption } from '@/features/exercises/view/QuizOption';
+import { ResultScoreCard } from '@/shared/components/ResultScoreCard';
 import { Screen } from '@/shared/components/Screen';
 import { ScreenHeader } from '@/shared/components/ScreenHeader';
 import type { ActivityType, Exercise, ExerciseType, Question } from '@/shared/model/entities';
 import { ACTIVITY_TYPE_LABELS as TYPE_LABELS } from '@/shared/utils/activityLabels';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { recommendReview } from '@/features/evaluations/viewmodel/analytics.logic';
-import { summarizeAnswers } from '@/features/evaluations/viewmodel/evaluation.logic';
+import { isAnswerComplete, summarizeAnswers } from '@/features/evaluations/viewmodel/evaluation.logic';
 import {
   useEvaluationEngine,
   useEvaluationForLesson,
@@ -74,7 +75,7 @@ export default function EvaluationFlow() {
   } = useLocalSearchParams<{ lesson?: string; evaluationId?: string; catalog?: string }>();
   const catalogId = catalogParam ?? 'base';
   const groupId = useActiveGroup(catalogId);
-  const { evaluation, questions, isLoading } = useEvaluationForLesson(
+  const { evaluation, questions, isLoading, error } = useEvaluationForLesson(
     lessonParam ?? null,
     evaluationParam ?? null,
     catalogId,
@@ -98,7 +99,11 @@ export default function EvaluationFlow() {
   const { colors, radius, spacing } = useTheme();
   // Un resultado por intento: cambia runId cuando el alumno reintenta.
   const recordedRunRef = useRef<number | null>(null);
-  const exitGuard = useExitGuard(engine.phase === 'running');
+  const [startedRun, setStartedRun] = useState<number | null>(null);
+  const [confirmFinish, setConfirmFinish] = useState(false);
+  const [showNavigator, setShowNavigator] = useState(false);
+  const started = startedRun === engine.runId;
+  const exitGuard = useExitGuard(started && engine.phase === 'running');
   const restartEvaluation = engine.restart;
   const confirmExitGuard = exitGuard.confirm;
   // Salir sin calificar descarta el intento: al volver se empieza de cero.
@@ -107,7 +112,7 @@ export default function EvaluationFlow() {
     confirmExitGuard();
   }, [restartEvaluation, confirmExitGuard]);
   // Un contenido nuevo no debe reemplazar los reactivos de una evaluación abierta.
-  useBlockContentUpdates(engine.phase === 'running');
+  useBlockContentUpdates(started && engine.phase === 'running');
 
   useFocusEffect(
     useCallback(() => {
@@ -136,7 +141,7 @@ export default function EvaluationFlow() {
       <Screen>
         <EmptyState
           title="Sin evaluación"
-          message="Este tema aún no tiene evaluación. Se agregará en una próxima actualización."
+          message={error ?? 'Este tema aún no tiene evaluación. Se agregará en una próxima actualización.'}
         />
       </Screen>
     );
@@ -153,22 +158,21 @@ export default function EvaluationFlow() {
   if (engine.phase === 'summary') {
     const percent = engine.total === 0 ? 0 : Math.round((engine.correctCount / engine.total) * 100);
     const recommendation = recommendReview(engine.summary);
-    const typeBreakdown = Object.entries(engine.summary.byType).filter(
-      ([type]) => type !== 'mcq',
-    );
+    const typeBreakdown = Object.entries(engine.summary.byType);
+    const resultColor = (correct: number, total: number) => {
+      const fraction = total === 0 ? 0 : correct / total;
+      return fraction === 1 ? colors.success : fraction === 0 ? colors.danger : colors.warning;
+    };
     return (
       <Screen>
         <ScreenHeader onBack={() => router.back()} eyebrow="Evaluación" title="Resultado" />
-        <View
-          style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
-          <AppText variant="eyebrow">Puntaje final</AppText>
-          <AppText variant="title">{`${percent}%`}</AppText>
-          <AppText variant="small">
-            {`${engine.correctCount} de ${engine.total} ${
-              engine.total === 1 ? 'reactivo correcto' : 'reactivos correctos'
-            }`}
-          </AppText>
-        </View>
+        <ResultScoreCard
+          eyebrow="Puntaje final"
+          percent={percent}
+          detail={`${engine.correctCount} de ${engine.total} ${
+            engine.total === 1 ? 'reactivo correcto' : 'reactivos correctos'
+          }`}
+        />
 
         {typeBreakdown.length > 0 ? (
           <>
@@ -183,7 +187,7 @@ export default function EvaluationFlow() {
                   <AppText weight="600" style={styles.flex}>
                     {TYPE_LABELS[type as ActivityType] ?? type}
                   </AppText>
-                  <AppText color={bucket.correct === bucket.total ? colors.success : colors.danger} weight="700">
+                  <AppText color={resultColor(bucket.correct, bucket.total)} weight="700">
                     {`${bucket.correct}/${bucket.total}`}
                   </AppText>
                 </View>
@@ -214,62 +218,30 @@ export default function EvaluationFlow() {
           </View>
         )}
 
-        <AppText variant="eyebrow" style={{ marginTop: spacing.lg }}>
-          Repaso de reactivos
-        </AppText>
-        <View style={styles.list}>
-          {feedback.map(item => (
-            <View
-              key={item.questionId}
-              style={[
-                styles.review,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: item.correct ? colors.success : colors.danger,
-                  borderRadius: radius.control,
-                },
-              ]}>
-              <Icon
-                name={item.correct ? 'check' : 'close'}
-                size={16}
-                color={item.correct ? colors.success : colors.danger}
-                strokeWidth={2.5}
-              />
-              <View style={styles.flex}>
-                <AppText weight="600">{item.prompt}</AppText>
-                {item.solution ? (
-                  <AppText variant="small" color={colors.success}>
-                    {`Respuesta correcta: ${item.solution}`}
-                  </AppText>
-                ) : null}
-                {item.explanation ? (
-                  <AppText variant="small" color={colors.muted}>
-                    {item.explanation}
-                  </AppText>
-                ) : null}
-              </View>
-            </View>
-          ))}
-        </View>
+        <AnswerReview items={feedback} />
 
         <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
-          <PrimaryButton label="Volver a Cursos" onPress={() => router.navigate('/')} />
-          <SecondaryButton label="Reintentar evaluación" onPress={engine.restart} />
           {recommendation === 'lesson' && lessonParam ? (
-            <SecondaryButton
+            <PrimaryButton
               label="Repasar la lección"
               onPress={() =>
                 router.push({ pathname: '/(app)/(modules)/lecciones/[id]', params: { id: lessonParam } })
               }
             />
           ) : recommendation === 'practice' && lessonParam ? (
-            <SecondaryButton
+            <PrimaryButton
               label="Resolver ejercicios"
               onPress={() =>
                 router.push({ pathname: '/(app)/(modules)/ejercicios', params: { lesson: lessonParam } })
               }
             />
           ) : null}
+          {recommendation !== 'none' && lessonParam ? (
+            <SecondaryButton label="Volver al subtema" onPress={() => lesson ? router.navigate({ pathname: '/tema/[id]', params: { id: lesson.topicId ?? `t-${lesson.id}` } }) : router.navigate('/')} />
+          ) : (
+            <PrimaryButton label="Volver al subtema" onPress={() => lesson ? router.navigate({ pathname: '/tema/[id]', params: { id: lesson.topicId ?? `t-${lesson.id}` } }) : router.navigate('/')} />
+          )}
+          <SecondaryButton label="Reintentar evaluación" onPress={engine.restart} />
         </View>
       </Screen>
     );
@@ -287,12 +259,34 @@ export default function EvaluationFlow() {
     );
   }
 
+  if (!started) {
+    return (
+      <Screen>
+        <ScreenHeader onBack={() => router.back()} title="Evaluación" />
+        <View style={styles.introduction}>
+          <AppText variant="title">Comprueba tu aprendizaje</AppText>
+          <AppText variant="heading">{lesson?.title ?? evaluation.title}</AppText>
+          {evaluation.description ? <AppText>{evaluation.description}</AppText> : null}
+          <View style={[styles.introDetails, { backgroundColor: colors.card, borderRadius: radius.card }]}>
+            <AppText weight="600">{`${engine.total} reactivos · Selección aleatoria`}</AppText>
+            <AppText>Las respuestas y la selección se conservan al navegar entre reactivos.</AppText>
+            <AppText>Verás la calificación y las soluciones al finalizar. Si sales antes, el intento se descarta.</AppText>
+          </View>
+          <PrimaryButton label="Comenzar evaluación" onPress={() => setStartedRun(engine.runId)} />
+        </View>
+      </Screen>
+    );
+  }
+
+  const answeredCount = engine.items.filter((item, index) => isAnswerComplete(item, engine.answers[index] ?? null)).length;
+  const allAnswered = answeredCount === engine.total;
+
   const handleExit = () => {
     exitGuard.request(() => router.back());
   };
 
   return (
-    <Screen>
+    <Screen keyboardAvoiding>
       <ScreenHeader
         onBack={handleExit}
         eyebrow={`Reactivo ${String(engine.index + 1).padStart(2, '0')} · ${TYPE_LABELS[question.type] ?? question.type}`}
@@ -311,6 +305,31 @@ export default function EvaluationFlow() {
             { width: `${((engine.index + 1) / engine.total) * 100}%`, backgroundColor: colors.primary },
           ]}
         />
+      </View>
+
+      <View style={styles.navigator}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Navegador de reactivos" accessibilityState={{ expanded: showNavigator }}
+          onPress={() => setShowNavigator(current => !current)} style={styles.navigatorToggle}>
+          <AppText variant="small">{`${answeredCount} de ${engine.total} respondidos`}</AppText>
+          <AppText color={colors.primary} weight="600">{showNavigator ? 'Ocultar reactivos' : 'Ver reactivos'}</AppText>
+        </Pressable>
+        {showNavigator ? <>
+        <View style={styles.questionButtons}>
+          {engine.items.map((item, index) => {
+            const answered = isAnswerComplete(item, engine.answers[index] ?? null);
+            const current = index === engine.index;
+            return (
+              <Pressable key={item.id} accessibilityRole="button"
+                accessibilityLabel={`Reactivo ${index + 1}, ${current ? 'actual, ' : ''}${answered ? 'respondido' : 'pendiente'}`}
+                accessibilityState={{ selected: current }} onPress={() => engine.goTo(index)}
+                style={[styles.questionButton, { borderColor: current ? colors.primary : colors.line, borderWidth: current ? 2 : 1, backgroundColor: answered ? colors.soft : colors.bg, borderRadius: radius.control }]}>
+                <AppText weight="600" color={current ? colors.primary : colors.text}>{index + 1}{answered ? ' ✓' : ''}</AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+        <AppText variant="small">Actual: borde azul · Respondido: marca de verificación · Pendiente: sin marca</AppText>
+        </> : null}
       </View>
 
       <AppText variant="heading" style={styles.prompt}>
@@ -346,9 +365,9 @@ export default function EvaluationFlow() {
           style={styles.navButton}
         />
         <PrimaryButton
-          label={engine.isLast ? 'Calificar' : 'Enviar'}
-          disabled={!engine.canSend}
-          onPress={engine.send}
+          label={engine.isLast ? 'Finalizar evaluación' : 'Siguiente'}
+          disabled={engine.isLast ? !allAnswered : !engine.canSend}
+          onPress={engine.isLast ? () => setConfirmFinish(true) : engine.send}
           style={styles.navButton}
         />
       </View>
@@ -361,6 +380,11 @@ export default function EvaluationFlow() {
         onCancel={exitGuard.cancel}
         onConfirm={confirmExit}
       />
+      <ConfirmModal visible={confirmFinish} title="Finalizar evaluación"
+        message={`Se calificarán los ${engine.total} reactivos de este intento. Después podrás revisar tus respuestas.`}
+        confirmLabel="Calificar" cancelLabel="Seguir revisando"
+        onCancel={() => setConfirmFinish(false)}
+        onConfirm={() => { setConfirmFinish(false); engine.send(); }} />
     </Screen>
   );
 }
@@ -372,9 +396,13 @@ const styles = StyleSheet.create({
   prompt: { marginTop: 8 },
   list: { gap: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderWidth: 1 },
-  review: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12, borderWidth: 1 },
-  card: { borderWidth: 1, padding: 18, gap: 4 },
   feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
   nav: { flexDirection: 'row', gap: 12 },
   navButton: { flex: 1 },
+  introduction: { gap: 20 },
+  introDetails: { padding: 20, gap: 16 },
+  navigator: { gap: 10, marginBottom: 20 },
+  questionButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  questionButton: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  navigatorToggle: { minHeight: 48, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
 });

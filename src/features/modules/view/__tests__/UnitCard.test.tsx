@@ -41,4 +41,39 @@ it('usa el singular cuando la unidad tiene un solo subtema', () => {
 
   expect(getByText('1 subtema')).toBeTruthy();
   expect(queryByText('1 subtemas')).toBeNull();
+  expect(getByText('Sin comenzar')).toBeTruthy();
+});
+
+it('muestra el estado de aprendizaje de la unidad', () => {
+  const unit = {
+    id: 'unit-1',
+    number: 1,
+    title: 'Fundamentos',
+    description: 'Descripción',
+    difficulty: 'Fundamental' as const,
+    color: 'blue' as const,
+  };
+  const view = render(
+    <UnitCard
+      unit={unit}
+      subtopicCount={2}
+      progress={100}
+      expanded={false}
+      onToggle={jest.fn()}
+    />,
+  );
+
+  expect(view.getByText('Completada')).toBeTruthy();
+
+  view.rerender(
+    <UnitCard
+      unit={unit}
+      subtopicCount={2}
+      progress={45}
+      expanded={false}
+      onToggle={jest.fn()}
+    />,
+  );
+
+  expect(view.getByText('En progreso')).toBeTruthy();
 });

@@ -5,6 +5,7 @@ import { useTheme } from '@/shared/theme/ThemeProvider';
 
 import { AppText } from '@/shared/components/AppText';
 import { Icon, type IconName } from '@/shared/components/Icon';
+import { Chevron } from '@/shared/components/Chevron';
 
 interface HubTileProps {
   icon: IconName;
@@ -12,9 +13,10 @@ interface HubTileProps {
   note: string;
   accent: string;
   onPress: () => void;
+  status?: string;
 }
 
-export function HubTile({ icon, label, note, accent, onPress }: HubTileProps) {
+export function HubTile({ icon, label, note, accent, onPress, status }: HubTileProps) {
   const { colors, radius } = useTheme();
   const reduced = useReducedMotion();
 
@@ -27,31 +29,34 @@ export function HubTile({ icon, label, note, accent, onPress }: HubTileProps) {
         styles.tile,
         {
           backgroundColor: colors.card,
-          borderColor: `${accent}4D`,
-          borderRadius: radius.tile,
+          borderColor: colors.line,
+          borderRadius: radius.card,
         },
         pressed && !reduced ? { transform: [{ scale: 0.97 }] } : null,
       ]}>
       <View style={[styles.icon, { backgroundColor: `${accent}1C` }]}>
         <Icon name={icon} size={22} color={accent} strokeWidth={2.2} />
       </View>
-      <View>
+      <View style={styles.copy}>
         <AppText variant="heading" style={styles.label}>
           {label}
         </AppText>
         <AppText variant="small">{note}</AppText>
+        {status ? <AppText variant="small" color={accent} weight="600">{status}</AppText> : null}
       </View>
+      <Chevron direction="right" size={20} color={colors.muted} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   tile: {
-    flex: 1,
-    aspectRatio: 1,
-    padding: 18,
+    minHeight: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 16,
     borderWidth: 1,
-    justifyContent: 'space-between',
   },
   icon: {
     width: 44,
@@ -61,6 +66,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontSize: 16,
+    fontSize: 18,
   },
+  copy: { flex: 1, minWidth: 0, gap: 3 },
 });

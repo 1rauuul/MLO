@@ -2,7 +2,6 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { useTheme } from '@/shared/theme/ThemeProvider';
-import { fonts } from '@/shared/theme/tokens';
 
 import { AppText } from '@/shared/components/AppText';
 
@@ -11,6 +10,8 @@ export function ProgressRing({ value, size = 56 }: { value: number; size?: numbe
   const clamped = Math.max(0, Math.min(100, value));
   const radius = 20;
   const circumference = 2 * Math.PI * radius;
+  const strokeColor =
+    clamped >= 100 ? colors.success : clamped > 0 ? colors.primary : colors.line;
 
   return (
     <View
@@ -25,7 +26,7 @@ export function ProgressRing({ value, size = 56 }: { value: number; size?: numbe
           cx={24}
           cy={24}
           r={radius}
-          stroke={colors.success}
+          stroke={strokeColor}
           strokeWidth={3}
           fill="none"
           strokeDasharray={circumference}
@@ -35,7 +36,10 @@ export function ProgressRing({ value, size = 56 }: { value: number; size?: numbe
         />
       </Svg>
       <View style={styles.center} pointerEvents="none">
-        <AppText variant="small" color={colors.text} style={styles.label}>
+        <AppText
+          variant="small"
+          color={clamped > 0 ? colors.text : colors.muted}
+          style={styles.label}>
           {clamped}%
         </AppText>
       </View>
@@ -56,6 +60,5 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     fontWeight: '500',
-    fontFamily: fonts.mono,
   },
 });

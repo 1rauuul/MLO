@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   View,
+  type ScrollViewInstance,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -18,6 +19,7 @@ interface ScreenProps {
   contentStyle?: StyleProp<ViewStyle>;
   edges?: ('top' | 'bottom' | 'left' | 'right')[];
   keyboardAvoiding?: boolean;
+  scrollRef?: RefObject<ScrollViewInstance | null>;
 }
 
 export function Screen({
@@ -26,15 +28,17 @@ export function Screen({
   contentStyle,
   edges = ['top'],
   keyboardAvoiding = false,
+  scrollRef,
 }: ScreenProps) {
   const { colors, spacing } = useTheme();
   const padding: StyleProp<ViewStyle> = [
-    { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xxl },
+    { paddingHorizontal: 20, paddingTop: spacing.lg, paddingBottom: spacing.xxl },
     contentStyle,
   ];
 
   const content = scroll ? (
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={padding}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled">

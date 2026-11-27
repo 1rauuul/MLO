@@ -5,6 +5,7 @@ import { useCourseLibrary } from '@/features/modules/viewmodel/useCourseLibrary'
 const mockSelectCourse = jest.fn(async () => {});
 const mockRefreshCourses = jest.fn(async () => {});
 const mockRefreshClasses = jest.fn(async () => {});
+const mockSelectUnits = jest.fn(async () => [{ id: 'u1' }]);
 const mockSelectLessons = jest.fn(async (catalogId: string) =>
   catalogId === 'base'
     ? [{ id: 'b1' }, { id: 'b2' }]
@@ -68,7 +69,7 @@ jest.mock('@/features/modules/viewmodel/useCourses', () => {
 });
 jest.mock('@/shared/services/data/DataProvider', () => ({
   useRepositories: () => ({
-    lessons: { selectLessons: mockSelectLessons },
+    lessons: { selectLessons: mockSelectLessons, selectUnits: mockSelectUnits },
     progress: { selectCompletionMap: mockSelectCompletionMap },
   }),
 }));
@@ -84,6 +85,7 @@ describe('useCourseLibrary', () => {
         catalogId: 'demo',
         title: 'Diseño de experiencias',
         percent: 25,
+        unitCount: 1,
         className: 'QA Fase 6',
         isActive: true,
         isBase: false,
@@ -92,6 +94,7 @@ describe('useCourseLibrary', () => {
         catalogId: 'base',
         title: 'Ingeniería de Software',
         percent: 50,
+        unitCount: 1,
         className: null,
         isActive: false,
         isBase: true,

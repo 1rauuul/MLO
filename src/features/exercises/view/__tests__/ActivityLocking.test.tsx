@@ -193,6 +193,7 @@ const makeFillEngine = (): FillEngine => ({
   bank: ['término', 'artefacto'],
   used: [false, false],
   assignment: ['requisito'],
+  blankStates: [null],
   activeBlank: null,
   checked: false,
   isCorrect: false,
@@ -244,6 +245,7 @@ const makeCrosswordEngine = (): CrosswordEngine => ({
 });
 
 const makePracticeEngine = (answered: boolean): PracticeEngine => ({
+  review: [],
   items: [fillExercise],
   phase: 'running',
   index: 0,
@@ -285,6 +287,7 @@ const makeEvaluationEngine = (answered: boolean): EvaluationEngine => ({
   runId: 1,
   setAnswer: jest.fn(),
   goPrev: jest.fn(),
+  goTo: jest.fn(),
   send: jest.fn(),
   restart: jest.fn(),
 });
@@ -605,7 +608,8 @@ describe('Ejercicios screen wiring', () => {
 describe('Evaluación flow wiring', () => {
   it('muestra la actividad editable, sin comprobar y con la respuesta inicial', () => {
     mockEvaluationEngine = makeEvaluationEngine(true);
-    render(<EvaluationFlow />);
+    const screen = render(<EvaluationFlow />);
+    fireEvent.press(screen.getByRole('button', { name: 'Comenzar evaluación' }));
 
     expect(mockCapturedActivityProps?.exercise.id).toBe('q-1');
     expect(mockCapturedActivityProps?.allowReset).toBe(false);

@@ -71,6 +71,7 @@ const makeEvaluationEngine = (): EvaluationEngine => ({
   runId: 1,
   setAnswer: jest.fn(),
   goPrev: jest.fn(),
+  goTo: jest.fn(),
   send: jest.fn(),
   restart: jest.fn(),
 });
@@ -171,7 +172,7 @@ it('shows no review action for an evaluation result with no recommendation', () 
   expect(queryByRole('button', { name: 'Resolver ejercicios' })).toBeNull();
 });
 
-it('oculta el desglose por tipo cuando solo hay reactivos mcq', () => {
+it('incluye opción múltiple en el desglose por tipo', () => {
   mockEvaluationSummary = {
     total: 2,
     correct: 1,
@@ -182,7 +183,7 @@ it('oculta el desglose por tipo cuando solo hay reactivos mcq', () => {
   const { getByText, queryByText } = render(<EvaluationFlow />);
 
   expect(getByText('Puntaje final')).toBeTruthy();
-  expect(queryByText('Puntaje por tipo')).toBeNull();
+  expect(queryByText('Puntaje por tipo')).toBeTruthy();
 });
 
 it('muestra el desglose por tipo cuando hay otros tipos de reactivo', () => {
@@ -194,13 +195,17 @@ it('muestra el desglose por tipo cuando hay otros tipos de reactivo', () => {
 });
 
 it('muestra aciertos, errores, respuesta correcta y explicación por reactivo', () => {
-  const { getByText } = render(<EvaluationFlow />);
+  const { getByText, getByRole, queryByText } = render(<EvaluationFlow />);
 
   expect(getByText('Reactivo acertado')).toBeTruthy();
   expect(getByText('Reactivo errado')).toBeTruthy();
-  expect(getByText('Respuesta correcta: a')).toBeTruthy();
-  expect(getByText('Respuesta correcta: b')).toBeTruthy();
+  fireEvent.press(getByRole('button', { name: 'Reactivo 1: Reactivo acertado' }));
+  expect(getByText('Respuesta correcta')).toBeTruthy();
+  expect(getByText('Tu respuesta')).toBeTruthy();
   expect(getByText('Explica el acierto')).toBeTruthy();
+  fireEvent.press(getByRole('tab', { name: 'Incorrectas' }));
+  expect(queryByText('Reactivo acertado')).toBeNull();
+  fireEvent.press(getByRole('button', { name: 'Reactivo 2: Reactivo errado' }));
   expect(getByText('Explica el error')).toBeTruthy();
 });
 

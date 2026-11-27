@@ -21,6 +21,7 @@ interface TopicHubResult {
   exercises: Exercise[];
   evaluations: Evaluation[];
   completed: boolean;
+  completionMap: Record<string, boolean>;
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -133,6 +134,7 @@ export function useLessonHub(
     exercises,
     evaluations: evaluationsByTopic,
     completed,
+    completionMap,
     isLoading,
     error,
     refresh,

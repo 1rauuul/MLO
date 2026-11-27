@@ -5,6 +5,7 @@ import type { HomeTab } from '@/shared/utils/navigation/tabRoutes';
 
 import { AppText } from '@/shared/components/AppText';
 import { Icon, type IconName } from '@/shared/components/Icon';
+import { TabIconPill } from '@/shared/components/TabIconPill';
 
 const tabs: { id: HomeTab; icon: IconName; label: string }[] = [
   { id: 'modules', icon: 'module', label: 'Cursos' },
@@ -42,17 +43,13 @@ export function BottomTabBar({ active, onChange, bottomInset = 0 }: BottomTabBar
             accessibilityLabel={tab.label}
             onPress={() => onChange(tab.id)}
             style={styles.tab}>
-            <View
-              style={[
-                styles.iconPill,
-                { backgroundColor: isActive ? `${colors.primary}2E` : 'transparent' },
-              ]}>
+            <TabIconPill active={isActive}>
               <Icon
                 name={tab.icon}
                 size={18}
                 color={isActive ? colors.primary : colors.muted}
               />
-            </View>
+            </TabIconPill>
             <AppText
               variant="small"
               color={isActive ? colors.primary : colors.muted}
@@ -78,12 +75,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 1,
-  },
-  iconPill: {
-    width: 44,
-    height: 28,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

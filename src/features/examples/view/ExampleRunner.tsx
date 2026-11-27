@@ -3,8 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { ActivityView } from '@/features/exercises/view/activities/ActivityView';
 import { AppText } from '@/shared/components/AppText';
-import { IconButton, PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
-import { Chevron } from '@/shared/components/Chevron';
+import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
 import { Magnifier } from '@/features/modules/view/Magnifier';
 import { ScreenHeader } from '@/shared/components/ScreenHeader';
 import type { Example, Exercise } from '@/shared/model/entities';
@@ -51,32 +50,37 @@ export function ExampleRunner({
   const source = exercise.className ?? example?.className;
   const sourceSuffix = source ? ` · ${source}` : '';
 
-  const advanceLabel = isLast ? 'Ir a ejercicios' : 'Siguiente ejemplo';
+  const advanceLabel = isLast ? 'Finalizar ejemplos' : 'Siguiente ejemplo';
   const nextAction = (
-    <IconButton
-      accessibilityLabel={advanceLabel}
+    <PrimaryButton
+      label={advanceLabel}
       disabled={!hasChecked}
-      onPress={isLast ? onGoExercises : onNext}>
-      <Chevron
-        direction="right"
-        size={18}
-        color={hasChecked ? colors.text : colors.muted}
-        strokeWidth={2.2}
-      />
-    </IconButton>
+      style={{ marginTop: spacing.lg }}
+      onPress={isLast ? onGoExercises : onNext} />
+  );
+  const header = (
+    <View style={styles.header}>
+      <ScreenHeader onBack={variant === 'B' ? () => setVariant('A') : onBack ?? onGoExercises}
+        title="Ejemplos" trailing={`${index + 1}/${total}`} />
+      <View style={[styles.phases, { borderColor: colors.line, borderRadius: radius.control }]}>
+        <View style={[styles.phase, { backgroundColor: variant === 'A' ? colors.soft : 'transparent' }]}>
+          <AppText variant="small" weight="600" color={variant === 'A' ? colors.primary : colors.muted}>1. Demostración</AppText>
+        </View>
+        <View style={[styles.phase, { backgroundColor: variant === 'B' ? colors.soft : 'transparent' }]}>
+          <AppText variant="small" weight="600" color={variant === 'B' ? colors.primary : colors.muted}>2. Acompañamiento</AppText>
+        </View>
+      </View>
+      <AppText variant="small">{`${label}${sourceSuffix}`}</AppText>
+      <AppText variant="heading">{title}</AppText>
+    </View>
   );
 
   if (variant === 'A') {
     return (
       <View>
-        <ScreenHeader
-          onBack={onBack ?? onGoExercises}
-          action={nextAction}
-          eyebrow={`Ejemplo ${index + 1}/${total} · A · Demostración · ${label}${sourceSuffix}`}
-          title={title}
-        />
+        {header}
 
-        <AppText variant="eyebrow">Solución completa paso a paso</AppText>
+        <AppText weight="600">Demostración paso a paso</AppText>
 
         {pairs.length > 0 && !example ? (
           <View
@@ -108,8 +112,8 @@ export function ExampleRunner({
               <View
                 key={`${step.text}-${stepIndex}`}
                 style={[styles.node, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
-                <AppText variant="code" color={colors.primary} weight="700">
-                  {String(stepIndex + 1).padStart(2, '0')}
+                <AppText color={colors.primary} weight="700">
+                  {stepIndex + 1}
                 </AppText>
                 <View style={styles.flex}>
                   <AppText weight="600" style={styles.justified}>
@@ -143,12 +147,7 @@ export function ExampleRunner({
 
   return (
     <View>
-      <ScreenHeader
-        onBack={() => setVariant('A')}
-        action={nextAction}
-        eyebrow={`Ejemplo ${index + 1}/${total} · B · Acompañamiento · ${label}${sourceSuffix}`}
-        title={title}
-      />
+      {header}
 
       <AppText variant="small" color={colors.muted} style={styles.hint}>
         Resuélvelo tú; si te atoras, usa una pista (no te da la respuesta).
@@ -163,6 +162,8 @@ export function ExampleRunner({
           onSubmit={() => setHasChecked(true)}
         />
       </View>
+
+      {nextAction}
 
       {solutionShown ? (
         <View
@@ -202,7 +203,7 @@ export function ExampleRunner({
           icon={<Magnifier size={16} color={colors.text} />}
           disabled={revealedHints >= hints.length}
           onPress={() => setRevealedHints(current => Math.min(hints.length, current + 1))}
-          style={styles.control}
+          style={[styles.control, { borderColor: colors.line }]}
           accessibilityLabel="Ver pista"
         />
         <SecondaryButton
@@ -210,9 +211,8 @@ export function ExampleRunner({
           onPress={() => {
             setSolveSignal(current => current + 1);
             setSolutionShown(true);
-            setHasChecked(true);
           }}
-          style={styles.control}
+          style={[styles.control, { borderColor: colors.line }]}
           accessibilityLabel="Ver solución"
         />
       </View>
@@ -238,7 +238,10 @@ const styles = StyleSheet.create({
   justified: { textAlign: 'justify' },
   hint: { lineHeight: 18 },
   hintBox: { padding: 12 },
-  controls: { flexDirection: 'row', gap: 12 },
-  control: { flex: 1 },
+  controls: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  control: { flexGrow: 1, flexBasis: '46%', minWidth: 130, borderWidth: 1 },
   solution: { borderWidth: 1, padding: 14, gap: 4 },
+  header: { gap: 12, marginBottom: 20 },
+  phases: { flexDirection: 'row', flexWrap: 'wrap', borderWidth: 1, overflow: 'hidden' },
+  phase: { flex: 1, minWidth: 130, minHeight: 48, padding: 10, justifyContent: 'center' },
 });

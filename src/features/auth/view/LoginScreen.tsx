@@ -60,8 +60,7 @@ export default function LoginScreen() {
   return (
     <Screen keyboardAvoiding contentStyle={styles.content}>
       <View style={styles.hero}>
-        <AppText variant="eyebrow">Objeto de aprendizaje</AppText>
-        <AppText variant="title">Ingeniería de Software</AppText>
+        <AppText variant="title">Objeto de aprendizaje móvil</AppText>
         <AppText variant="small">Continúa tu ruta de aprendizaje.</AppText>
       </View>
 
@@ -102,7 +101,7 @@ export default function LoginScreen() {
           textContentType="password"
           returnKeyType="go"
           onSubmitEditing={submit}
-          placeholder="••••••"
+          placeholder="••••••••••••"
           trailing={
             <Pressable
               accessibilityRole="button"

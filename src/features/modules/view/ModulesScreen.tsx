@@ -182,7 +182,7 @@ export default function ModulesScreen() {
 
       {!libraryLoading && !showLibrary ? (
         <>
-          <SectionHeading eyebrow="Tu biblioteca" title="Mis cursos" trailing="00" />
+          <SectionHeading title="Mis cursos" />
           <EmptyState
             title={libraryError ? 'No se pudieron cargar los cursos' : 'Aún no tienes cursos'}
             message={
@@ -249,11 +249,7 @@ export default function ModulesScreen() {
             </View>
           ) : null}
 
-          <SectionHeading
-            eyebrow="Tu biblioteca"
-            title="Mis cursos"
-            trailing={String(entries.length).padStart(2, '0')}
-          />
+          <SectionHeading title="Mis cursos" />
 
           <View style={styles.list}>
             {entries.map(entry => (

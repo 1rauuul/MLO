@@ -42,6 +42,14 @@ beforeEach(() => {
 });
 
 describe('LoginScreen', () => {
+  it('muestra el objeto de aprendizaje y el campo de contraseña amplio', () => {
+    const { getByPlaceholderText, getByText, queryByText } = render(<LoginScreen />);
+
+    expect(getByText('Objeto de aprendizaje móvil')).toBeTruthy();
+    expect(queryByText('Objeto de aprendizaje')).toBeNull();
+    expect(getByPlaceholderText('••••••••••••')).toBeTruthy();
+  });
+
   it('muestra el mensaje de credenciales inválidas', async () => {
     mockLogin.mockResolvedValue({ ok: false, error: 'invalid_credentials' });
 

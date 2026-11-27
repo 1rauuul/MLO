@@ -94,8 +94,19 @@ describe('solve de las actividades de ejemplo', () => {
     });
 
     expect(result.current.assignment).toEqual(['uno', 'dos']);
+    expect(result.current.blankStates).toEqual(['correct', 'correct']);
     expect(result.current.checked).toBe(true);
     expect(result.current.isCorrect).toBe(true);
+  });
+
+  it('conserva las marcas de los espacios no editados al corregir uno', () => {
+    const { result } = renderHook(() => useFillEngine(fillExercise));
+
+    act(() => result.current.solve());
+    act(() => result.current.clearBlank(0));
+
+    expect(result.current.blankStates).toEqual([null, 'correct']);
+    expect(result.current.checked).toBe(false);
   });
 
   it('enlazar asigna los pares correctos', () => {

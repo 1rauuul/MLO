@@ -366,6 +366,44 @@ describe('membresías y curso activo', () => {
     expect(result.courses).toHaveLength(1);
   });
 
+  it('lee la descripción y el nivel del manifiesto del curso', async () => {
+    const row = {
+      catalog_id: 'demo',
+      title: 'Diseño de experiencias',
+      manifest: JSON.stringify({
+        course: {
+          title: 'Diseño de experiencias',
+          description: '  Aprende a diseñar experiencias  ',
+          visibility: 'published',
+        },
+        units: [
+          {
+            id: 'u1',
+            number: 1,
+            title: 'Fundamentos',
+            description: '',
+            difficulty: ' Fundamental ',
+            color: 'blue',
+          },
+        ],
+      }),
+      status: 'published',
+      uses_base: 0,
+      version: '1',
+      hash: 'hash',
+      published_at: null,
+      empty: 0,
+      active: 1,
+      has_class: 1,
+    };
+    const { db } = makeDb({ rows: [row] });
+
+    const result = await loadAccountCourses(db, 3);
+
+    expect(result.courses[0]?.description).toBe('Aprende a diseñar experiencias');
+    expect(result.courses[0]?.level).toBe('Fundamental');
+  });
+
   it('selectCourse cambia el activo solo si hay acceso', async () => {
     const allowed = makeDb({ membership: true });
     await expect(selectCourse(allowed.db, 1, 'demo')).resolves.toBe(true);

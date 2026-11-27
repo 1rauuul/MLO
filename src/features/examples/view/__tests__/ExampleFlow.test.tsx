@@ -147,20 +147,23 @@ describe('Ejemplos sequential flow', () => {
     expect(mockNext).toHaveBeenCalledTimes(1);
   });
 
-  it('ofrece Ir a ejercicios en el último ejemplo solo tras comprobar', () => {
+  it('finaliza los ejemplos solo tras comprobar y ofrece continuar, sortear y volver', () => {
     mockEngine = makeEngine([firstExercise, secondExercise], 1);
     const { getByRole, queryByRole } = render(<ExamplesScreen />);
 
     fireEvent.press(getByRole('button', { name: 'Ahora inténtalo tú' }));
 
     expect(queryByRole('button', { name: 'Siguiente ejemplo' })).toBeNull();
-    fireEvent.press(getByRole('button', { name: 'Ir a ejercicios' }));
+    fireEvent.press(getByRole('button', { name: 'Finalizar ejemplos' }));
     expect(mockPush).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
 
     act(() => mockCapturedActivityProps?.onSubmit('respuesta', true));
 
-    fireEvent.press(getByRole('button', { name: 'Ir a ejercicios' }));
+    fireEvent.press(getByRole('button', { name: 'Finalizar ejemplos' }));
+    expect(getByRole('button', { name: 'Nuevo sorteo' })).toBeTruthy();
+    expect(getByRole('button', { name: 'Volver al subtema' })).toBeTruthy();
+    fireEvent.press(getByRole('button', { name: 'Continuar a ejercicios' }));
     expect(mockReplace).toHaveBeenCalledWith({
       pathname: '/ejercicios',
       params: { lesson: 'lesson-2', from: 'examples' },
@@ -202,7 +205,7 @@ describe('Ejemplos sequential flow', () => {
     expect(getByText('Pista 1: Lee la frase completa antes de colocar una palabra.')).toBeTruthy();
   });
 
-  it('resuelve la actividad y muestra la explicación debajo del ejercicio con Ver solución', () => {
+  it('muestra la solución sin contarla como una comprobación', () => {
     const { getByRole, getByText } = render(<ExamplesScreen />);
 
     fireEvent.press(getByRole('button', { name: 'Ahora inténtalo tú' }));
@@ -213,9 +216,9 @@ describe('Ejemplos sequential flow', () => {
     expect(getByText('El requisito define la necesidad.')).toBeTruthy();
 
     const next = getByRole('button', { name: 'Siguiente ejemplo' });
-    expect(next.props.accessibilityState).toEqual({ disabled: false });
+    expect(next.props.accessibilityState).toEqual({ disabled: true });
     fireEvent.press(next);
-    expect(mockNext).toHaveBeenCalledTimes(1);
+    expect(mockNext).not.toHaveBeenCalled();
   });
 
   it('avanza al siguiente ejemplo y vuelve a la variante A', () => {

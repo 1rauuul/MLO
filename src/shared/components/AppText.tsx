@@ -1,6 +1,7 @@
 import { Text, type TextProps, type TextStyle } from 'react-native';
 
 import { useTheme } from '@/shared/theme/ThemeProvider';
+import { typography } from '@/shared/theme/tokens';
 
 type Variant = 'eyebrow' | 'title' | 'heading' | 'body' | 'small' | 'code';
 
@@ -20,38 +21,21 @@ export function AppText({
   ...rest
 }: AppTextProps) {
   const { colors, fonts, scale } = useTheme();
-
-  const variantStyle: TextStyle = (() => {
-    switch (variant) {
-      case 'eyebrow':
-        return {
-          fontFamily: fonts.mono,
-          fontSize: 10 * scale,
-          letterSpacing: 1,
-          textTransform: 'uppercase',
-          color: colors.muted,
-        };
-      case 'title':
-        return { fontSize: 30 * scale, lineHeight: 33 * scale, letterSpacing: -1, fontWeight: '700' };
-      case 'heading':
-        return { fontSize: 20 * scale, lineHeight: 25 * scale, letterSpacing: -0.4, fontWeight: '700' };
-      case 'small':
-        return { fontSize: 12 * scale, lineHeight: 16 * scale, color: colors.muted };
-      case 'code':
-        return { fontFamily: fonts.mono, fontSize: 13 * scale, lineHeight: 19 * scale };
-      case 'body':
-      default:
-        return { fontSize: 15 * scale, lineHeight: 22 * scale };
-    }
-  })();
+  const token = typography[variant];
+  const variantStyle: TextStyle = {
+    ...token,
+    fontSize: token.fontSize * scale,
+    lineHeight: token.lineHeight * scale,
+  };
 
   return (
     <Text
       allowFontScaling={false}
       {...rest}
       style={[
-        { color: color ?? colors.text, fontFamily: fonts.sans },
+        { fontFamily: fonts.sans },
         variantStyle,
+        { color: color ?? (variant === 'small' || variant === 'eyebrow' ? colors.muted : colors.text) },
         weight ? { fontWeight: weight } : null,
         center ? { textAlign: 'center' } : null,
         style,

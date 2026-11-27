@@ -12,6 +12,10 @@ import { useRepositories } from '@/shared/services/data/DataProvider';
 export interface CourseLibraryEntry {
   catalogId: string;
   title: string;
+  /** Nivel de la primera unidad del curso, según el CMS. */
+  level?: string;
+  description?: string;
+  unitCount?: number;
   /** Lecciones completadas sobre el total del curso. */
   percent: number;
   className: string | null;
@@ -31,6 +35,7 @@ export interface CourseLibraryResult {
 export function useCourseLibrary(): CourseLibraryResult {
   const { lessons, progress } = useRepositories();
   const selectLessons = lessons.selectLessons;
+  const selectUnits = lessons.selectUnits;
   const selectCompletionMap = progress.selectCompletionMap;
   const { account } = useAuth();
   const { classes, refresh: refreshClasses } = useClasses();
@@ -43,39 +48,45 @@ export function useCourseLibrary(): CourseLibraryResult {
     error,
   } = useCourses();
   const [percents, setPercents] = useState<Record<string, number>>({});
+  const [unitCounts, setUnitCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!account || courses.length === 0) {
       setPercents({});
+      setUnitCounts({});
       return;
     }
     let active = true;
     void (async () => {
       const next: Record<string, number> = {};
+      const nextUnitCounts: Record<string, number> = {};
       for (const course of courses) {
         const classId =
           classes.find(klass => klass.courseCatalogId === course.catalogId)?.classId ?? null;
         try {
-          const [courseLessons, completion] = await Promise.all([
+          const [courseLessons, completion, courseUnits] = await Promise.all([
             selectLessons(course.catalogId, classId),
             selectCompletionMap(account.id, course.catalogId),
+            selectUnits(course.catalogId, classId),
           ]);
           const done = courseLessons.filter(lesson => completion[lesson.id]).length;
           next[course.catalogId] = courseLessons.length
             ? Math.round((done / courseLessons.length) * 100)
             : 0;
+          nextUnitCounts[course.catalogId] = courseUnits.length;
         } catch {
           next[course.catalogId] = 0;
         }
       }
       if (active) {
         setPercents(next);
+        setUnitCounts(nextUnitCounts);
       }
     })();
     return () => {
       active = false;
     };
-  }, [account, courses, classes, selectLessons, selectCompletionMap]);
+  }, [account, courses, classes, selectLessons, selectCompletionMap, selectUnits]);
 
   const refresh = useCallback(async () => {
     await Promise.all([refreshCourses(), refreshClasses()]);
@@ -86,9 +97,13 @@ export function useCourseLibrary(): CourseLibraryResult {
     return courses
       .map(course => {
         const className = classByCourse.get(course.catalogId) ?? null;
+        const level = course.level?.trim();
         return {
           catalogId: course.catalogId,
           title: displayCourseTitle(course),
+          ...(level ? { level } : {}),
+          ...(course.description?.trim() ? { description: course.description.trim() } : {}),
+          ...(unitCounts[course.catalogId] !== undefined ? { unitCount: unitCounts[course.catalogId] } : {}),
           percent: percents[course.catalogId] ?? 0,
           className,
           isActive: course.catalogId === activeCatalogId,
@@ -101,7 +116,7 @@ export function useCourseLibrary(): CourseLibraryResult {
           Number(a.isBase) - Number(b.isBase) ||
           a.title.localeCompare(b.title, 'es'),
       );
-  }, [courses, classes, percents, activeCatalogId]);
+  }, [courses, classes, percents, unitCounts, activeCatalogId]);
 
   return { entries, activeCatalogId, isLoading, error, refresh, selectCourse };
 }

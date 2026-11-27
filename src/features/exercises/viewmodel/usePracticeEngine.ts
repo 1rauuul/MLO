@@ -12,6 +12,7 @@ import { ensureLessonDraw } from '@/features/exercises/viewmodel/lessonDraw';
 import { useAuth } from '@/features/auth/viewmodel/useAuth';
 import { useActiveGroupForLesson } from '@/features/classes/viewmodel/useActiveGroup';
 import { useRepositories } from '@/shared/services/data/DataProvider';
+import { summarizeAnswers, type AnswerFeedback, type EvaluationAnswer } from '@/features/evaluations/viewmodel/evaluation.logic';
 
 export const PRACTICE_DRAW_COUNT = 10;
 
@@ -39,7 +40,8 @@ export interface PracticeEngine {
   lastCorrect: boolean | null;
   summary: PracticeSummary;
   isLoading: boolean;
-  submit: (answer: string, correct: boolean, score?: ExerciseScore) => void;
+  review: AnswerFeedback[];
+  submit: (answer: string, correct: boolean, score?: ExerciseScore, response?: EvaluationAnswer | null) => void;
   next: () => void;
 }
 
@@ -93,6 +95,7 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
   const [answered, setAnswered] = useState(false);
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
   const [results, setResults] = useState<Record<string, ExerciseScore>>({});
+  const [responses, setResponses] = useState<Record<string, EvaluationAnswer | null>>({});
   const [isLoading, setIsLoading] = useState(true);
   const answeredRef = useRef(false);
 
@@ -145,6 +148,7 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
         setAnswered(false);
         setLastCorrect(null);
         setResults({});
+        setResponses({});
         setPhase('running');
       } catch (caught) {
         if (__DEV__) {
@@ -166,9 +170,14 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
   }, [exerciseRepository, exampleState, lessonId, account, groupId]);
 
   const summary = useMemo(() => summarizeSession(order, results), [order, results]);
+  const review = useMemo(() => summarizeAnswers(order.map(exercise => ({
+    id: exercise.id, evaluationId: '', orderIndex: 0, type: exercise.type,
+    prompt: exercise.prompt, options: exercise.correctOrder, answer: 0,
+    config: exercise.config, explanation: exercise.explanation,
+  })), order.map(exercise => responses[exercise.id] ?? null)), [order, responses]);
 
   const submit = useCallback(
-    (answer: string, correct: boolean, score?: ExerciseScore) => {
+    (answer: string, correct: boolean, score?: ExerciseScore, response?: EvaluationAnswer | null) => {
       if (answeredRef.current) {
         return;
       }
@@ -176,6 +185,7 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
       setAnswered(true);
       setLastCorrect(correct);
       const itemId = currentItemId(order, index);
+      setResponses(previous => ({ ...previous, [itemId]: response ?? null }));
       setResults(previous => ({
         ...previous,
         [itemId]: score ?? { correct: correct ? 1 : 0, total: 1 },
@@ -218,6 +228,7 @@ export function usePracticeEngine(lessonId: string | null): PracticeEngine {
     lastCorrect,
     summary,
     isLoading,
+    review,
     submit,
     next,
   };

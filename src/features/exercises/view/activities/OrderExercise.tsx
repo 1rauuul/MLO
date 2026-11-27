@@ -16,7 +16,7 @@ import { useTheme } from '@/shared/theme/ThemeProvider';
 import { orderScore, type ExerciseScore } from '@/features/exercises/viewmodel/exercise.logic';
 import type { ExerciseEngine } from '@/features/exercises/viewmodel/useExerciseEngine';
 
-import { accentForIndex } from '@/features/exercises/view/activities/accents';
+import { ActivityFeedback } from '@/features/exercises/view/activities/ActivityFeedback';
 
 const ROW_GAP = 10;
 const FALLBACK_HEIGHT = 64;
@@ -108,7 +108,7 @@ export function OrderExercise({
   variant = 'default',
   hideCheck = false,
 }: OrderExerciseProps) {
-  const { colors, radius, spacing } = useTheme();
+  const { colors, spacing } = useTheme();
   const example = variant === 'example';
   const lastIndex = engine.steps.length - 1;
   const heights = useRef<Record<string, number>>({});
@@ -156,7 +156,7 @@ export function OrderExercise({
     <View>
       <View>
         {engine.steps.map((step, index) => {
-          const accent = accentForIndex(engine.correctOrder.indexOf(step));
+          const accent = colors.line;
           const state: RowState = engine.checked
             ? engine.steps[index] === engine.correctOrder[index]
               ? 'correct'
@@ -173,8 +173,8 @@ export function OrderExercise({
               onMeasure={measure}>
               <Icon name="reorder" size={18} color={colors.muted} />
               <View style={[styles.badge, { backgroundColor: `${accent}22` }]}>
-                <AppText variant="code" color={accent} weight="700">
-                  {String(index + 1).padStart(2, '0')}
+                <AppText color={colors.text} weight="600">
+                  {index + 1}
                 </AppText>
               </View>
               <AppText style={styles.flex} weight="600">
@@ -184,14 +184,14 @@ export function OrderExercise({
                 <IconButton
                   accessibilityLabel={`Subir ${step}`}
                   onPress={() => engine.move(index, -1)}
-                  disabled={locked || (example && index === 0)}
+                  disabled={locked || index === 0}
                   style={{ opacity: index === 0 ? 0.4 : 1 }}>
                   <Icon name="arrow-up" size={18} color={colors.text} />
                 </IconButton>
                 <IconButton
                   accessibilityLabel={`Bajar ${step}`}
                   onPress={() => engine.move(index, 1)}
-                  disabled={locked || (example && index === lastIndex)}
+                  disabled={locked || index === lastIndex}
                   style={{ opacity: index === lastIndex ? 0.4 : 1 }}>
                   <Icon name="arrow-down" size={18} color={colors.text} />
                 </IconButton>
@@ -208,27 +208,15 @@ export function OrderExercise({
       </AppText>
 
       {example && engine.checked ? (
-        <View
-          style={[
-            styles.feedback,
-            {
-              borderColor: engine.isCorrect ? colors.success : colors.danger,
-              backgroundColor: colors.card,
-              borderRadius: radius.control,
-            },
-          ]}>
-          <View style={styles.feedbackRow}>
-            <Icon
-              name={engine.isCorrect ? 'check' : 'refresh'}
-              size={16}
-              color={engine.isCorrect ? colors.success : colors.danger}
-              strokeWidth={2.5}
-            />
-            <AppText color={engine.isCorrect ? colors.success : colors.danger} weight="700">
-              {engine.isCorrect ? 'Secuencia correcta' : 'El orden no es el correcto'}
-            </AppText>
-          </View>
-        </View>
+        <ActivityFeedback
+          correct={engine.isCorrect}
+          title={engine.isCorrect ? 'Secuencia correcta' : 'El orden no es el correcto'}
+          message={
+            engine.isCorrect
+              ? 'La secuencia coincide con lo estudiado.'
+              : 'Reordena las tarjetas y vuelve a comprobar.'
+          }
+        />
       ) : null}
 
       {hideCheck ? null : (
@@ -244,7 +232,7 @@ export function OrderExercise({
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
+  flex: { flex: 1, minWidth: 0 },
   dragRow: {
     minHeight: 56,
     marginBottom: ROW_GAP,
@@ -264,6 +252,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   controls: { flexDirection: 'row', gap: 6 },
-  feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
-  feedbackRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

@@ -1,16 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Evaluation, Exercise, Question } from '@/shared/model/entities';
 import { useRepositories } from '@/shared/services/data/DataProvider';
 import { ACTIVITY_TYPES, EXERCISE_TYPES } from '@/shared/model/entities';
 import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
 
-import { summarizeAttempts, type AttemptSummary } from '@/features/evaluations/viewmodel/analytics.logic';
+import type { AttemptSummary } from '@/features/evaluations/viewmodel/analytics.logic';
 import {
   buildEvaluationPool,
+  EVALUATION_EXERCISES_COUNT,
+  EVALUATION_QUESTIONS_COUNT,
   isAnswerComplete,
   isAnswerCorrect,
   shuffleQuestionOptions,
+  summarizeEvaluation,
   type EvaluationAnswer,
 } from '@/features/evaluations/viewmodel/evaluation.logic';
 import { shuffleItems } from '@/features/exercises/viewmodel/exercise.logic';
@@ -20,6 +23,7 @@ interface UseEvaluationForLessonResult {
   evaluation: Evaluation | null;
   questions: Question[];
   isLoading: boolean;
+  error: string | null;
 }
 
 function questionFromExercise(exercise: Exercise, evaluationId: string): Question {
@@ -46,16 +50,19 @@ export function useEvaluationForLesson(
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!lessonId && !evaluationId) {
       setEvaluation(null);
       setQuestions([]);
+      setError(null);
       setIsLoading(false);
       return;
     }
     let active = true;
     setIsLoading(true);
+    setError(null);
     (async () => {
       try {
         const loadedEvaluation = evaluationId
@@ -67,6 +74,7 @@ export function useEvaluationForLesson(
           if (active) {
             setEvaluation(null);
             setQuestions([]);
+            setError(null);
           }
           return;
         }
@@ -81,25 +89,29 @@ export function useEvaluationForLesson(
         ]);
         const hasSelection = selected.length > 0;
         const sourceExercises = hasSelection ? selected : lessonExercises;
-        const exerciseCount = hasSelection
-          ? selected.length
-          : loadedEvaluation.exerciseCount ?? 0;
+        const questionCount = EVALUATION_QUESTIONS_COUNT;
+        const exerciseCount = EVALUATION_EXERCISES_COUNT;
         const questionPool = bankQuestions.filter(question => ACTIVITY_TYPES.includes(question.type));
         const exercisePool = sourceExercises
           .filter(exercise => EXERCISE_TYPES.includes(exercise.type))
           .map(exercise => questionFromExercise(exercise, loadedEvaluation.id));
-        const { mixed } = buildEvaluationPool(
+        const pool = buildEvaluationPool(
           questionPool,
           exercisePool,
           Math.random,
-          loadedEvaluation.questionCount,
+          questionCount,
           exerciseCount,
         );
         if (!active) {
           return;
         }
         setEvaluation(loadedEvaluation);
-        setQuestions(mixed);
+        setQuestions(pool.isComplete ? pool.mixed : []);
+        setError(
+          pool.isComplete
+            ? null
+            : `La evaluación requiere ${questionCount} preguntas y ${exerciseCount} ejercicios disponibles.`,
+        );
       } catch (caught) {
         if (__DEV__) {
           console.error('[evaluation] carga fallida', caught);
@@ -107,6 +119,7 @@ export function useEvaluationForLesson(
         if (active) {
           setEvaluation(null);
           setQuestions([]);
+          setError('No se pudo cargar la evaluación.');
         }
       } finally {
         if (active) {
@@ -119,7 +132,7 @@ export function useEvaluationForLesson(
     };
   }, [evaluations, exerciseRepository, lessonId, evaluationId, catalogId, groupId]);
 
-  return { evaluation, questions, isLoading };
+  return { evaluation, questions, isLoading, error };
 }
 
 export function useRecordEvaluationResult(): (
@@ -164,6 +177,7 @@ export interface EvaluationEngine {
   runId: number;
   setAnswer: (answer: EvaluationAnswer) => void;
   goPrev: () => void;
+  goTo: (index: number) => void;
   send: () => void;
   restart: () => void;
 }
@@ -185,19 +199,27 @@ export function useEvaluationEngine(
   const [correctCount, setCorrectCount] = useState(0);
   const [outcomes, setOutcomes] = useState<(boolean | null)[]>([]);
   const [phase, setPhase] = useState<'running' | 'summary'>('running');
-  const [summary, setSummary] = useState<AttemptSummary>(summarizeAttempts([]));
+  const [summary, setSummary] = useState<AttemptSummary>(summarizeEvaluation([], []));
+  const graded = useRef(false);
   const [runId, setRunId] = useState(0);
-
-  const refreshSummary = useCallback(async () => {
-    if (!account || !lessonId) {
-      setSummary(summarizeAttempts([]));
-      return;
-    }
-    const loaded = await attempts.selectAttemptsByLesson(account.id, lessonId);
-    setSummary(summarizeAttempts(loaded));
-  }, [attempts, account, lessonId]);
+  const poolSignature = useMemo(
+    () =>
+      JSON.stringify(
+        usable.map(question => ({
+          id: question.id,
+          type: question.type,
+          prompt: question.prompt,
+          options: question.options,
+          answer: question.answer,
+          config: question.config,
+        })),
+      ),
+    [usable],
+  );
+  const appliedPoolSignature = useRef<string | null>(null);
 
   const restart = useCallback(() => {
+    graded.current = false;
     const next = shuffleItems(usable, random).map(question =>
       shuffleQuestionOptions(question, random),
     );
@@ -211,8 +233,21 @@ export function useEvaluationEngine(
   }, [usable, random]);
 
   useEffect(() => {
-    restart();
-  }, [restart]);
+    if (appliedPoolSignature.current === poolSignature) {
+      return;
+    }
+    appliedPoolSignature.current = poolSignature;
+    graded.current = false;
+    setItems(usable);
+    setIndex(0);
+    setAnswers(usable.map(() => null));
+    setCorrectCount(0);
+    setOutcomes(usable.map(() => null));
+    setPhase('running');
+    if (usable.length > 0) {
+      setRunId(current => current + 1);
+    }
+  }, [poolSignature, usable]);
 
   const setAnswer = useCallback(
     (answer: EvaluationAnswer) => {
@@ -229,7 +264,15 @@ export function useEvaluationEngine(
     setIndex(current => Math.max(0, current - 1));
   }, []);
 
+  const goTo = useCallback((target: number) => {
+    if (phase === 'running' && Number.isInteger(target) && target >= 0 && target < items.length) {
+      setIndex(target);
+    }
+  }, [phase, items.length]);
+
   const grade = useCallback(() => {
+    if (graded.current) return;
+    graded.current = true;
     const results = items.map((question, i) => {
       const answer = answers[i];
       return answer ? isAnswerCorrect(question, answer) : false;
@@ -251,9 +294,9 @@ export function useEvaluationEngine(
         }
       });
     }
-    void refreshSummary();
+    setSummary(summarizeEvaluation(items, answers));
     setPhase('summary');
-  }, [items, answers, attempts, account, lessonId, refreshSummary]);
+  }, [items, answers, attempts, account, lessonId]);
 
   const send = useCallback(() => {
     const question = items[index];
@@ -265,6 +308,8 @@ export function useEvaluationEngine(
       setIndex(current => current + 1);
       return;
     }
+    const missing = items.findIndex((item, position) => !isAnswerComplete(item, answers[position] ?? null));
+    if (missing >= 0) { setIndex(missing); return; }
     grade();
   }, [items, answers, index, grade]);
 
@@ -287,6 +332,7 @@ export function useEvaluationEngine(
     runId,
     setAnswer,
     goPrev,
+    goTo,
     send,
     restart,
   };

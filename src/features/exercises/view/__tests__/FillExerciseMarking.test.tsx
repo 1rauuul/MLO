@@ -28,6 +28,7 @@ function makeEngine(overrides: Partial<FillEngine>): FillEngine {
     bank: [],
     used: [],
     assignment: ['malo'],
+    blankStates: ['wrong'],
     activeBlank: null,
     checked: true,
     isCorrect: false,
@@ -46,18 +47,19 @@ it('marca en rojo el espacio incorrecto tras comprobar', () => {
 
   const style = StyleSheet.flatten(getByText('malo').props.style);
   expect(style.borderColor).toBe('#ff0000');
-  expect(style.backgroundColor).toBe('#ff000022');
+  expect(style.backgroundColor).toBe('#ff000012');
+  expect(style.borderBottomWidth).toBe(2);
 });
 
 it('marca en verde el espacio correcto tras comprobar', () => {
   const { getByText } = render(
     <FillExercise
-      engine={makeEngine({ assignment: ['bueno'], isCorrect: true })}
+      engine={makeEngine({ assignment: ['bueno'], blankStates: ['correct'], isCorrect: true })}
       onSubmit={jest.fn()}
     />,
   );
 
   const style = StyleSheet.flatten(getByText('bueno').props.style);
   expect(style.borderColor).toBe('#00ff00');
-  expect(style.backgroundColor).toBe('#00ff0022');
+  expect(style.backgroundColor).toBe('#00ff0012');
 });

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/shared/theme/ThemeProvider';
@@ -5,9 +6,10 @@ import { matchScore, type ExerciseScore } from '@/features/exercises/viewmodel/e
 import type { MatchEngine } from '@/features/exercises/viewmodel/useExerciseEngine';
 
 import { AppText } from '@/shared/components/AppText';
-import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
 import { Icon } from '@/shared/components/Icon';
+import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
 import { accentForIndex } from '@/features/exercises/view/activities/accents';
+import { ActivityFeedback } from '@/features/exercises/view/activities/ActivityFeedback';
 
 interface MatchExerciseProps {
   engine: MatchEngine;
@@ -27,6 +29,8 @@ export function MatchExercise({
   hideCheck = false,
 }: MatchExerciseProps) {
   const { colors, radius, spacing } = useTheme();
+  const [width, setWidth] = useState(0);
+  const stacked = width > 0 && (width < 340 || (width < 600 && engine.rights.some(right => right.length > 55)));
   const example = variant === 'example';
   const complete = engine.assignment.every(item => item !== null);
 
@@ -45,13 +49,14 @@ export function MatchExercise({
   };
 
   return (
-    <View>
+    <View onLayout={event => setWidth(event.nativeEvent.layout.width)}>
       <AppText variant="small" style={[styles.hint, { color: colors.muted }]}>
-        Toca un concepto y después la definición que le corresponde. Cada par se marca con su color.
+        Toca un concepto y después su definición. Los números identifican cada par.
       </AppText>
 
-      <View style={[styles.columns, { marginTop: spacing.md }]}>
-        <View style={styles.column}>
+      <View style={[styles.columns, { marginTop: spacing.md, flexDirection: stacked ? 'column' : 'row' }]}>
+        <View style={[styles.column, stacked ? styles.stackedColumn : null]}>
+          <AppText weight="600">Conceptos</AppText>
           {engine.lefts.map((left, index) => {
             const accent = accentForIndex(index);
             const selected = engine.selectedLeft === index;
@@ -60,7 +65,7 @@ export function MatchExercise({
               ? correct
                 ? colors.success
                 : colors.danger
-              : accent;
+              : selected || engine.assignment[index] !== null ? accent : colors.line;
             const stateBackground = engine.checked
               ? `${correct ? colors.success : colors.danger}22`
               : selected
@@ -83,20 +88,23 @@ export function MatchExercise({
                     borderRadius: radius.control,
                   },
                 ]}>
-                <View style={[styles.badge, { backgroundColor: accent }]}>
-                  <AppText variant="small" color={colors.onPrimary} weight="700">
+                <View style={[styles.badge, { backgroundColor: colors.soft }]}>
+                  <AppText variant="small" color={colors.text} weight="700">
                     {index + 1}
                   </AppText>
                 </View>
                 <AppText variant="small" weight="600" style={styles.flex}>
                   {left}
                 </AppText>
+                {engine.checked ? <Icon name={correct ? 'check' : 'close'} size={16} color={stateColor} /> : null}
               </Pressable>
             );
           })}
         </View>
 
-        <View style={styles.column}>
+        <View style={[styles.column, stacked ? styles.stackedColumn : null]}>
+          <AppText weight="600">Definiciones</AppText>
+          {stacked && engine.selectedLeft !== null ? <AppText variant="small" color={colors.primary}>{`Concepto seleccionado: ${engine.lefts[engine.selectedLeft]}`}</AppText> : null}
           {engine.rights.map((right, position) => {
             const owner = engine.assignment.indexOf(position);
             const assigned = owner !== -1;
@@ -128,22 +136,25 @@ export function MatchExercise({
                     opacity: engine.selectedLeft === null && owner === -1 ? 0.85 : 1,
                   },
                 ]}>
-                <View style={[styles.badge, { backgroundColor: assigned ? accent : colors.soft }]}>
+                <View style={[styles.badge, { backgroundColor: colors.soft }]}>
                   <AppText
                     variant="small"
-                    color={assigned ? colors.onPrimary : colors.muted}
+                    color={colors.text}
                     weight="700">
-                    {assigned ? owner + 1 : position + 1}
+                    {assigned ? owner + 1 : '–'}
                   </AppText>
                 </View>
                 <AppText variant="small" style={styles.flex}>
                   {right}
                 </AppText>
+                {engine.checked && assigned ? <Icon name={correct ? 'check' : 'close'} size={16} color={stateColor} /> : null}
               </Pressable>
             );
           })}
         </View>
       </View>
+
+      <AppText variant="small" style={{ marginTop: spacing.md }}>{`${engine.assignment.filter(item => item !== null).length} de ${engine.lefts.length} conceptos enlazados`}</AppText>
 
       {hideCheck && !showReset ? null : (
         <View style={[styles.actions, { marginTop: spacing.lg }]}>
@@ -160,32 +171,15 @@ export function MatchExercise({
       )}
 
       {example && engine.checked ? (
-        <View
-          style={[
-            styles.feedback,
-            {
-              backgroundColor: colors.card,
-              borderColor: engine.isCorrect ? colors.success : colors.danger,
-              borderRadius: radius.control,
-            },
-          ]}>
-          <View style={styles.feedbackRow}>
-            <Icon
-              name={engine.isCorrect ? 'check' : 'refresh'}
-              size={16}
-              color={engine.isCorrect ? colors.success : colors.danger}
-              strokeWidth={2.5}
-            />
-            <AppText color={engine.isCorrect ? colors.success : colors.danger} weight="700">
-              {engine.isCorrect ? 'Conceptos enlazados' : 'Hay enlaces que no corresponden'}
-            </AppText>
-          </View>
-          <AppText variant="small">
-            {engine.isCorrect
+        <ActivityFeedback
+          correct={engine.isCorrect}
+          title={engine.isCorrect ? 'Conceptos enlazados' : 'Hay enlaces que no corresponden'}
+          message={
+            engine.isCorrect
               ? 'Cada concepto quedó con su definición correcta.'
-              : 'Toca un concepto y elige otra definición para corregir.'}
-          </AppText>
-        </View>
+              : 'Toca un concepto y elige otra definición para corregir.'
+          }
+        />
       ) : null}
     </View>
   );
@@ -194,7 +188,8 @@ export function MatchExercise({
 const styles = StyleSheet.create({
   hint: { lineHeight: 18 },
   columns: { flexDirection: 'row', gap: 10 },
-  column: { flex: 1, gap: 8 },
+  column: { flex: 1, minWidth: 0, gap: 8 },
+  stackedColumn: { flex: 0, flexBasis: 'auto' },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -203,7 +198,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     minHeight: 52,
   },
-  flex: { flex: 1 },
+  flex: { flex: 1, minWidth: 0 },
   badge: {
     width: 22,
     height: 22,
@@ -213,6 +208,4 @@ const styles = StyleSheet.create({
   },
   actions: { flexDirection: 'row', gap: 12 },
   action: { flex: 1 },
-  feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
-  feedbackRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

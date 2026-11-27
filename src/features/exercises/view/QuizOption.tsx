@@ -78,7 +78,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  label: {
-    flex: 1,
-  },
+  label: { flex: 1, minWidth: 0 },
 });

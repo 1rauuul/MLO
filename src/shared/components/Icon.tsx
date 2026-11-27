@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 
 export type IconName =
   | 'check'
@@ -20,12 +20,17 @@ export type IconName =
   | 'eye'
   | 'eye-off'
   | 'info'
-  | 'circle';
+  | 'circle'
+  | 'database'
+  | 'book'
+  | 'logout'
+  | 'more';
 
 type ChildConfig =
   | { kind: 'path'; d: string }
   | { kind: 'circle'; cx: number; cy: number; r: number; fill?: boolean }
-  | { kind: 'rect'; x: number; y: number; width: number; height: number; rx?: number; fill?: boolean };
+  | { kind: 'rect'; x: number; y: number; width: number; height: number; rx?: number; fill?: boolean }
+  | { kind: 'ellipse'; cx: number; cy: number; rx: number; ry: number };
 
 const DEFS: Record<IconName, ChildConfig[]> = {
   check: [{ kind: 'path', d: 'M5 12.5 L9.5 17 L19 7' }],
@@ -111,6 +116,25 @@ const DEFS: Record<IconName, ChildConfig[]> = {
     { kind: 'path', d: 'M12 8h.01' },
   ],
   circle: [{ kind: 'circle', cx: 12, cy: 12, r: 8 }],
+  database: [
+    { kind: 'ellipse', cx: 12, cy: 5, rx: 8, ry: 3 },
+    { kind: 'path', d: 'M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5' },
+    { kind: 'path', d: 'M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3' },
+  ],
+  book: [
+    { kind: 'path', d: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20' },
+    { kind: 'path', d: 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' },
+  ],
+  logout: [
+    { kind: 'path', d: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4' },
+    { kind: 'path', d: 'M16 17l5-5-5-5' },
+    { kind: 'path', d: 'M21 12H9' },
+  ],
+  more: [
+    { kind: 'circle', cx: 12, cy: 5, r: 1.5, fill: true },
+    { kind: 'circle', cx: 12, cy: 12, r: 1.5, fill: true },
+    { kind: 'circle', cx: 12, cy: 19, r: 1.5, fill: true },
+  ],
 };
 
 interface IconProps {
@@ -144,6 +168,20 @@ export function Icon({ name, size = 20, color, strokeWidth = 2 }: IconProps) {
           cy={config.cy}
           r={config.r}
           fill={config.fill ? color : 'none'}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+        />
+      );
+    }
+    if (config.kind === 'ellipse') {
+      return (
+        <Ellipse
+          key={index}
+          cx={config.cx}
+          cy={config.cy}
+          rx={config.rx}
+          ry={config.ry}
+          fill="none"
           stroke={stroke}
           strokeWidth={strokeWidth}
         />
