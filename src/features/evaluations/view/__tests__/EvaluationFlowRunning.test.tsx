@@ -35,6 +35,7 @@ function makeEngine(overrides: Partial<EvaluationEngine> = {}): EvaluationEngine
     isLast: false,
     correctCount: 0,
     outcomes: [],
+    touched: [false],
     summary: { total: 0, correct: 0, accuracy: 1, byType: {} },
     runId: 1,
     setAnswer: mockSetAnswer,
@@ -159,8 +160,33 @@ it('permite regresar cuando no es el primer reactivo', () => {
   expect(mockGoPrev).toHaveBeenCalledTimes(1);
 });
 
+it('no cuenta un orden inicial como respondido en el navegador', () => {
+  const orderQuestion = {
+    ...question,
+    type: 'order' as const,
+    options: ['A', 'B', 'C'],
+    config: {},
+  };
+  mockEngine = makeEngine({
+    index: 0,
+    total: 1,
+    items: [orderQuestion],
+    question: orderQuestion,
+    answers: [{ type: 'order', steps: ['B', 'A', 'C'] }],
+    answer: { type: 'order', steps: ['B', 'A', 'C'] },
+    canSend: false,
+    touched: [false],
+  });
+  const { getByRole, getByText } = startEvaluation();
+
+  expect(getByText('0 de 1 respondidos')).toBeTruthy();
+  expect(getByRole('button', { name: 'Siguiente' }).props.accessibilityState).toEqual({
+    disabled: true,
+  });
+});
+
 it('confirma antes de calificar y permite seguir revisando', () => {
-  mockEngine = makeEngine({ total: 1, isLast: true, canSend: true, answers: [{ type: 'mcq', chosen: 0 }], answer: { type: 'mcq', chosen: 0 } });
+  mockEngine = makeEngine({ total: 1, isLast: true, canSend: true, touched: [true], answers: [{ type: 'mcq', chosen: 0 }], answer: { type: 'mcq', chosen: 0 } });
   const { getByRole } = startEvaluation();
 
   fireEvent.press(getByRole('button', { name: 'Finalizar evaluación' }));

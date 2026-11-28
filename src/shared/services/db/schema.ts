@@ -1,4 +1,4 @@
-export const DATABASE_VERSION = 24;
+export const DATABASE_VERSION = 25;
 
 export const SCHEMA_DDL = `
 CREATE TABLE IF NOT EXISTS accounts (
@@ -275,6 +275,8 @@ CREATE TABLE IF NOT EXISTS remote_courses (
   empty INTEGER NOT NULL DEFAULT 1,
   is_base INTEGER NOT NULL DEFAULT 0,
   manifest TEXT,
+  icon TEXT,
+  level TEXT,
   applied_hash TEXT,
   fetched_at TEXT NOT NULL
 );

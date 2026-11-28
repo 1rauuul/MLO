@@ -181,6 +181,7 @@ export default function CourseScreen() {
         title={courseTitle}
         description={course?.description}
         level={course?.level}
+        icon={course?.icon}
         accent={accent}
         unitCount={units.length}
         subtopicCount={catalogTopics.length}

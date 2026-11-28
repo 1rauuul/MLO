@@ -26,6 +26,7 @@ import {
   selectEvaluationById,
   selectEvaluationExercises,
   selectEvaluationSummaries,
+  selectEvaluationScoresByLesson,
   selectEvaluationsByTopic,
   selectSelectedExercises,
   selectQuestions,
@@ -164,6 +165,8 @@ export function createRepositories(db: SQLiteDatabase) {
         selectRecentEvaluationResults(db, accountId, limit, catalogId),
       selectEvaluationSummaries: (catalogId?: string) =>
         selectEvaluationSummaries(db, catalogId),
+      selectEvaluationScoresByLesson: (accountId: number) =>
+        selectEvaluationScoresByLesson(db, accountId),
     },
     examples: {
       selectExamplesByLesson: (lessonId: string, groupId?: string | null) =>

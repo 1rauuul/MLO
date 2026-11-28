@@ -47,7 +47,7 @@ it('marca en rojo el espacio incorrecto tras comprobar', () => {
 
   const style = StyleSheet.flatten(getByText('malo').props.style);
   expect(style.borderColor).toBe('#ff0000');
-  expect(style.backgroundColor).toBe('#ff000012');
+  expect(style.backgroundColor).toBe('#ff000033');
   expect(style.borderBottomWidth).toBe(2);
 });
 
@@ -61,5 +61,5 @@ it('marca en verde el espacio correcto tras comprobar', () => {
 
   const style = StyleSheet.flatten(getByText('bueno').props.style);
   expect(style.borderColor).toBe('#00ff00');
-  expect(style.backgroundColor).toBe('#00ff0012');
+  expect(style.backgroundColor).toBe('#00ff0033');
 });

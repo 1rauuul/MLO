@@ -25,7 +25,7 @@ export function FillExercise({
   variant = 'default',
   hideCheck = false,
 }: FillExerciseProps) {
-  const { colors, radius, spacing, scale } = useTheme();
+  const { colors, radius, spacing, scale, mode } = useTheme();
   const example = variant === 'example';
   const complete = engine.assignment.every(item => item !== null);
   const errors = engine.assignment.filter((word, index) => {
@@ -52,7 +52,7 @@ export function FillExercise({
           ? colors.primary
           : colors.line;
     const stateBackground = result
-      ? `${result === 'correct' ? colors.success : colors.danger}12`
+      ? `${stateColor}33`
       : 'transparent';
     return (
       <Text
@@ -74,9 +74,11 @@ export function FillExercise({
           {
             backgroundColor: stateBackground,
             borderColor: stateColor,
-            color: word ? colors.text : colors.muted,
+            color: result && mode !== 'light' ? stateColor : word ? colors.text : colors.muted,
             fontSize: 16 * scale,
-            borderBottomWidth: result === 'wrong' ? 2 : 1,
+            borderBottomWidth: result ? 2 : 1,
+            textDecorationLine: result ? 'underline' : 'none',
+            textDecorationColor: stateColor,
           },
         ]}>
         {word ?? '_____'}

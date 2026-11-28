@@ -106,7 +106,7 @@ function expectMigrated(db: InstanceType<NonNullable<typeof DatabaseSync>>): voi
     .get() as { name?: string } | undefined;
   expect(table?.name).toBe('content_references');
   const version = db.prepare('PRAGMA user_version').get() as { user_version: number };
-  expect(version.user_version).toBe(24);
+  expect(version.user_version).toBe(25);
   const remoteSession = db
     .prepare("SELECT name FROM sqlite_master WHERE name = 'remote_session'")
     .get() as { name?: string } | undefined;

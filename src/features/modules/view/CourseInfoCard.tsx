@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/shared/components/AppText';
 import { PrimaryButton } from '@/shared/components/Buttons';
+import { CourseIcon } from '@/shared/components/CourseIcon';
 import { Icon } from '@/shared/components/Icon';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 
@@ -9,6 +10,7 @@ interface CourseInfoCardProps {
   title: string;
   description?: string;
   level?: string;
+  icon?: string;
   accent: string;
   unitCount: number;
   subtopicCount: number;
@@ -22,6 +24,7 @@ export function CourseInfoCard({
   title,
   description,
   level,
+  icon,
   accent,
   unitCount,
   subtopicCount,
@@ -45,7 +48,7 @@ export function CourseInfoCard({
             styles.icon,
             { backgroundColor: `${accent}1C`, borderRadius: radius.control },
           ]}>
-          <Icon name="database" size={22} color={accent} />
+          <CourseIcon name={icon} size={22} color={accent} />
         </View>
         {level ? (
           <View
@@ -62,7 +65,7 @@ export function CourseInfoCard({
 
       <AppText variant="heading">{title}</AppText>
       {description ? (
-        <AppText variant="small" numberOfLines={3}>
+        <AppText variant="small">
           {description}
         </AppText>
       ) : null}

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/shared/theme/ThemeProvider';
@@ -29,8 +28,6 @@ export function MatchExercise({
   hideCheck = false,
 }: MatchExerciseProps) {
   const { colors, radius, spacing } = useTheme();
-  const [width, setWidth] = useState(0);
-  const stacked = width > 0 && (width < 340 || (width < 600 && engine.rights.some(right => right.length > 55)));
   const example = variant === 'example';
   const complete = engine.assignment.every(item => item !== null);
 
@@ -49,13 +46,13 @@ export function MatchExercise({
   };
 
   return (
-    <View onLayout={event => setWidth(event.nativeEvent.layout.width)}>
+    <View>
       <AppText variant="small" style={[styles.hint, { color: colors.muted }]}>
         Toca un concepto y después su definición. Los números identifican cada par.
       </AppText>
 
-      <View style={[styles.columns, { marginTop: spacing.md, flexDirection: stacked ? 'column' : 'row' }]}>
-        <View style={[styles.column, stacked ? styles.stackedColumn : null]}>
+      <View style={[styles.columns, { marginTop: spacing.md }]}>
+        <View style={styles.column}>
           <AppText weight="600">Conceptos</AppText>
           {engine.lefts.map((left, index) => {
             const accent = accentForIndex(index);
@@ -88,23 +85,24 @@ export function MatchExercise({
                     borderRadius: radius.control,
                   },
                 ]}>
-                <View style={[styles.badge, { backgroundColor: colors.soft }]}>
-                  <AppText variant="small" color={colors.text} weight="700">
-                    {index + 1}
-                  </AppText>
+                <View style={styles.itemHeader}>
+                  <View style={[styles.badge, { backgroundColor: colors.soft }]}>
+                    <AppText variant="small" color={colors.text} weight="700">
+                      {index + 1}
+                    </AppText>
+                  </View>
+                  {engine.checked ? <Icon name={correct ? 'check' : 'close'} size={16} color={stateColor} /> : null}
                 </View>
-                <AppText variant="small" weight="600" style={styles.flex}>
+                <AppText variant="small" weight="600" style={styles.copy}>
                   {left}
                 </AppText>
-                {engine.checked ? <Icon name={correct ? 'check' : 'close'} size={16} color={stateColor} /> : null}
               </Pressable>
             );
           })}
         </View>
 
-        <View style={[styles.column, stacked ? styles.stackedColumn : null]}>
+        <View style={styles.column}>
           <AppText weight="600">Definiciones</AppText>
-          {stacked && engine.selectedLeft !== null ? <AppText variant="small" color={colors.primary}>{`Concepto seleccionado: ${engine.lefts[engine.selectedLeft]}`}</AppText> : null}
           {engine.rights.map((right, position) => {
             const owner = engine.assignment.indexOf(position);
             const assigned = owner !== -1;
@@ -136,18 +134,20 @@ export function MatchExercise({
                     opacity: engine.selectedLeft === null && owner === -1 ? 0.85 : 1,
                   },
                 ]}>
-                <View style={[styles.badge, { backgroundColor: colors.soft }]}>
-                  <AppText
-                    variant="small"
-                    color={colors.text}
-                    weight="700">
-                    {assigned ? owner + 1 : '–'}
-                  </AppText>
+                <View style={styles.itemHeader}>
+                  <View style={[styles.badge, { backgroundColor: colors.soft }]}>
+                    <AppText
+                      variant="small"
+                      color={colors.text}
+                      weight="700">
+                      {assigned ? owner + 1 : '–'}
+                    </AppText>
+                  </View>
+                  {engine.checked && assigned ? <Icon name={correct ? 'check' : 'close'} size={16} color={stateColor} /> : null}
                 </View>
-                <AppText variant="small" style={styles.flex}>
+                <AppText variant="small" style={styles.copy}>
                   {right}
                 </AppText>
-                {engine.checked && assigned ? <Icon name={correct ? 'check' : 'close'} size={16} color={stateColor} /> : null}
               </Pressable>
             );
           })}
@@ -189,16 +189,15 @@ const styles = StyleSheet.create({
   hint: { lineHeight: 18 },
   columns: { flexDirection: 'row', gap: 10 },
   column: { flex: 1, minWidth: 0, gap: 8 },
-  stackedColumn: { flex: 0, flexBasis: 'auto' },
   item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
+    alignItems: 'stretch',
+    gap: 6,
+    padding: 10,
     borderWidth: 2,
     minHeight: 52,
   },
-  flex: { flex: 1, minWidth: 0 },
+  itemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  copy: { minWidth: 0 },
   badge: {
     width: 22,
     height: 22,

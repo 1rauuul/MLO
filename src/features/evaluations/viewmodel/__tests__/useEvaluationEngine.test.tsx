@@ -141,6 +141,50 @@ describe('useEvaluationEngine', () => {
     expect(mockSelectAttempts).not.toHaveBeenCalled();
   });
 
+  it('no cuenta un reactivo de orden como respondido hasta que el alumno lo mueve', () => {
+    const orderQuestion: Question = {
+      id: 'o1',
+      evaluationId: 'ev',
+      orderIndex: 0,
+      type: 'order',
+      config: {},
+      prompt: 'ordena',
+      options: ['A', 'B', 'C'],
+      answer: 0,
+      explanation: '',
+    };
+    const { result } = renderHook(() => useEvaluationEngine([orderQuestion], 'l1.2'));
+
+    act(() => result.current.setAnswer({ type: 'order', steps: ['B', 'A', 'C'] }));
+    expect(result.current.canSend).toBe(false);
+    expect(result.current.touched[0]).toBe(false);
+
+    act(() => result.current.setAnswer({ type: 'order', steps: ['A', 'B', 'C'] }));
+    expect(result.current.touched[0]).toBe(true);
+    expect(result.current.canSend).toBe(true);
+  });
+
+  it('marca como respondido un reactivo de completar solo cuando está completo', () => {
+    const fillQuestion: Question = {
+      id: 'f1',
+      evaluationId: 'ev',
+      orderIndex: 0,
+      type: 'fill',
+      config: { sentences: ['Uno {{dos}}'] },
+      prompt: 'completa',
+      options: [],
+      answer: 0,
+      explanation: '',
+    };
+    const { result } = renderHook(() => useEvaluationEngine([fillQuestion], 'l1.2'));
+
+    act(() => result.current.setAnswer({ type: 'fill', ordered: [], assignment: [null] }));
+    expect(result.current.touched[0]).toBe(false);
+
+    act(() => result.current.setAnswer({ type: 'fill', ordered: [], assignment: ['dos'] }));
+    expect(result.current.touched[0]).toBe(true);
+  });
+
   it('conserva respuestas al saltar y no califica si faltan reactivos', () => {
     const { result } = renderHook(() => useEvaluationEngine(questions, 'l1.2'));
     act(() => result.current.goTo(1));

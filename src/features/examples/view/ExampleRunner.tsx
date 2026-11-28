@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { ActivityView } from '@/features/exercises/view/activities/ActivityView';
 import { AppText } from '@/shared/components/AppText';
 import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
+import { ContinuationButton } from '@/shared/components/ContinuationButton';
 import { Magnifier } from '@/features/modules/view/Magnifier';
 import { ScreenHeader } from '@/shared/components/ScreenHeader';
 import type { Example, Exercise } from '@/shared/model/entities';
@@ -38,7 +39,8 @@ export function ExampleRunner({
   const { colors, radius, spacing } = useTheme();
   const [variant, setVariant] = useState<'A' | 'B'>('A');
   const [revealedHints, setRevealedHints] = useState(0);
-  const [hasChecked, setHasChecked] = useState(false);
+  const [checkCount, setCheckCount] = useState(0);
+  const hasChecked = checkCount > 0;
   const [solveSignal, setSolveSignal] = useState(0);
   const [solutionShown, setSolutionShown] = useState(false);
 
@@ -52,9 +54,10 @@ export function ExampleRunner({
 
   const advanceLabel = isLast ? 'Finalizar ejemplos' : 'Siguiente ejemplo';
   const nextAction = (
-    <PrimaryButton
+    <ContinuationButton
       label={advanceLabel}
       disabled={!hasChecked}
+      revealSignal={checkCount}
       style={{ marginTop: spacing.lg }}
       onPress={isLast ? onGoExercises : onNext} />
   );
@@ -159,7 +162,7 @@ export function ExampleRunner({
           allowReset
           variant="example"
           revealSignal={solveSignal}
-          onSubmit={() => setHasChecked(true)}
+          onSubmit={() => setCheckCount(current => current + 1)}
         />
       </View>
 

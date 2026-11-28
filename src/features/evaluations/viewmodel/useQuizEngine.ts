@@ -172,6 +172,8 @@ export interface EvaluationEngine {
   isLast: boolean;
   correctCount: number;
   outcomes: (boolean | null)[];
+  /** Reactivo con interacción real del alumno; el orden inicial no cuenta. */
+  touched: boolean[];
   summary: AttemptSummary;
   /** Sube en cada reintento para distinguir el intento al guardar el resultado. */
   runId: number;
@@ -196,8 +198,10 @@ export function useEvaluationEngine(
   const [items, setItems] = useState<Question[]>(usable);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<(EvaluationAnswer | null)[]>([]);
+  const [touched, setTouched] = useState<boolean[]>([]);
   const [correctCount, setCorrectCount] = useState(0);
   const [outcomes, setOutcomes] = useState<(boolean | null)[]>([]);
+  const firstOrderRef = useRef<Record<number, string>>({});
   const [phase, setPhase] = useState<'running' | 'summary'>('running');
   const [summary, setSummary] = useState<AttemptSummary>(summarizeEvaluation([], []));
   const graded = useRef(false);
@@ -226,6 +230,8 @@ export function useEvaluationEngine(
     setItems(next);
     setIndex(0);
     setAnswers(next.map(() => null));
+    setTouched(next.map(() => false));
+    firstOrderRef.current = {};
     setCorrectCount(0);
     setOutcomes(next.map(() => null));
     setPhase('running');
@@ -241,6 +247,8 @@ export function useEvaluationEngine(
     setItems(usable);
     setIndex(0);
     setAnswers(usable.map(() => null));
+    setTouched(usable.map(() => false));
+    firstOrderRef.current = {};
     setCorrectCount(0);
     setOutcomes(usable.map(() => null));
     setPhase('running');
@@ -256,8 +264,29 @@ export function useEvaluationEngine(
         next[index] = answer;
         return next;
       });
+      const question = items[index];
+      if (!question) {
+        return;
+      }
+      if (answer.type === 'order') {
+        const signature = answer.steps.join('\u0001');
+        const initial = firstOrderRef.current[index];
+        if (initial === undefined) {
+          // ActivityView emite el orden inicial al montar: no es una respuesta.
+          firstOrderRef.current[index] = signature;
+          return;
+        }
+        if (initial === signature) {
+          return;
+        }
+      } else if (answer.type !== 'mcq' && !isAnswerComplete(question, answer)) {
+        return;
+      }
+      setTouched(previous =>
+        previous.map((value, position) => (position === index ? true : value)),
+      );
     },
-    [index],
+    [index, items],
   );
 
   const goPrev = useCallback(() => {
@@ -301,17 +330,20 @@ export function useEvaluationEngine(
   const send = useCallback(() => {
     const question = items[index];
     const answer = answers[index] ?? null;
-    if (!question || !isAnswerComplete(question, answer)) {
+    if (!question || !isAnswerComplete(question, answer) || !touched[index]) {
       return;
     }
     if (index < items.length - 1) {
       setIndex(current => current + 1);
       return;
     }
-    const missing = items.findIndex((item, position) => !isAnswerComplete(item, answers[position] ?? null));
+    const missing = items.findIndex(
+      (item, position) =>
+        !isAnswerComplete(item, answers[position] ?? null) || !touched[position],
+    );
     if (missing >= 0) { setIndex(missing); return; }
     grade();
-  }, [items, answers, index, grade]);
+  }, [items, answers, index, grade, touched]);
 
   const question = items[index] ?? null;
   const answer = answers[index] ?? null;
@@ -324,10 +356,11 @@ export function useEvaluationEngine(
     phase,
     answers,
     answer,
-    canSend: question ? isAnswerComplete(question, answer) : false,
+    canSend: question ? isAnswerComplete(question, answer) && !!touched[index] : false,
     isLast: index >= items.length - 1,
     correctCount,
     outcomes,
+    touched,
     summary,
     runId,
     setAnswer,

@@ -7,7 +7,10 @@ import { AppText } from '@/shared/components/AppText';
 import { AnswerReview } from '@/shared/components/AnswerReview';
 import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { DisclosureRow } from '@/shared/components/DisclosureRow';
 import { EmptyState } from '@/shared/components/EmptyState';
+import { Icon } from '@/shared/components/Icon';
+import { PerformanceBreakdown } from '@/shared/components/PerformanceBreakdown';
 import { QuizOption } from '@/features/exercises/view/QuizOption';
 import { ResultScoreCard } from '@/shared/components/ResultScoreCard';
 import { Screen } from '@/shared/components/Screen';
@@ -102,6 +105,7 @@ export default function EvaluationFlow() {
   const [startedRun, setStartedRun] = useState<number | null>(null);
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [showNavigator, setShowNavigator] = useState(false);
+  const [showReview, setShowReview] = useState(false);
   const started = startedRun === engine.runId;
   const exitGuard = useExitGuard(started && engine.phase === 'running');
   const restartEvaluation = engine.restart;
@@ -126,6 +130,10 @@ export default function EvaluationFlow() {
       }
     }, [lesson, recordLocation]),
   );
+
+  useEffect(() => {
+    setShowReview(false);
+  }, [engine.runId]);
 
   useEffect(() => {
     if (engine.phase !== 'summary' || !evaluation || recordedRunRef.current === engine.runId) {
@@ -158,43 +166,28 @@ export default function EvaluationFlow() {
   if (engine.phase === 'summary') {
     const percent = engine.total === 0 ? 0 : Math.round((engine.correctCount / engine.total) * 100);
     const recommendation = recommendReview(engine.summary);
-    const typeBreakdown = Object.entries(engine.summary.byType);
-    const resultColor = (correct: number, total: number) => {
-      const fraction = total === 0 ? 0 : correct / total;
-      return fraction === 1 ? colors.success : fraction === 0 ? colors.danger : colors.warning;
-    };
+    const typeRows = Object.entries(engine.summary.byType).map(([type, bucket]) => ({
+      key: type,
+      label: TYPE_LABELS[type as ActivityType] ?? type,
+      percent: bucket.total === 0 ? 0 : (bucket.correct / bucket.total) * 100,
+      detail: `${bucket.correct} de ${bucket.total}`,
+    }));
     return (
       <Screen>
         <ScreenHeader onBack={() => router.back()} eyebrow="Evaluación" title="Resultado" />
         <ResultScoreCard
           eyebrow="Puntaje final"
           percent={percent}
+          title="Evaluación finalizada"
           detail={`${engine.correctCount} de ${engine.total} ${
             engine.total === 1 ? 'reactivo correcto' : 'reactivos correctos'
           }`}
         />
-
-        {typeBreakdown.length > 0 ? (
-          <>
-            <AppText variant="eyebrow" style={{ marginTop: spacing.lg }}>
-              Puntaje por tipo
-            </AppText>
-            <View style={styles.list}>
-              {typeBreakdown.map(([type, bucket]) => (
-                <View
-                  key={type}
-                  style={[styles.row, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control }]}>
-                  <AppText weight="600" style={styles.flex}>
-                    {TYPE_LABELS[type as ActivityType] ?? type}
-                  </AppText>
-                  <AppText color={resultColor(bucket.correct, bucket.total)} weight="700">
-                    {`${bucket.correct}/${bucket.total}`}
-                  </AppText>
-                </View>
-              ))}
-            </View>
-          </>
-        ) : null}
+        <PerformanceBreakdown
+          rows={typeRows}
+          correct={engine.correctCount}
+          incorrect={engine.total - engine.correctCount}
+        />
 
         {recommendation !== 'none' ? (
           <View
@@ -218,7 +211,14 @@ export default function EvaluationFlow() {
           </View>
         )}
 
-        <AnswerReview items={feedback} />
+        <View style={styles.disclosures}>
+          <DisclosureRow
+            label="Revisar respuestas"
+            expanded={showReview}
+            onPress={() => setShowReview(visible => !visible)}
+            trailing={`${feedback.length} reactivos`}
+          />
+        </View>
 
         <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
           {recommendation === 'lesson' && lessonParam ? (
@@ -243,6 +243,8 @@ export default function EvaluationFlow() {
           )}
           <SecondaryButton label="Reintentar evaluación" onPress={engine.restart} />
         </View>
+
+        {showReview ? <AnswerReview items={feedback} showHeading={false} /> : null}
       </Screen>
     );
   }
@@ -264,21 +266,39 @@ export default function EvaluationFlow() {
       <Screen>
         <ScreenHeader onBack={() => router.back()} title="Evaluación" />
         <View style={styles.introduction}>
+          <View style={[styles.introIcon, { backgroundColor: colors.soft, borderRadius: radius.card }]}>
+            <Icon name="eval" size={34} color={colors.primary} strokeWidth={2} />
+          </View>
           <AppText variant="title">Comprueba tu aprendizaje</AppText>
           <AppText variant="heading">{lesson?.title ?? evaluation.title}</AppText>
           {evaluation.description ? <AppText>{evaluation.description}</AppText> : null}
           <View style={[styles.introDetails, { backgroundColor: colors.card, borderRadius: radius.card }]}>
-            <AppText weight="600">{`${engine.total} reactivos · Selección aleatoria`}</AppText>
-            <AppText>Las respuestas y la selección se conservan al navegar entre reactivos.</AppText>
-            <AppText>Verás la calificación y las soluciones al finalizar. Si sales antes, el intento se descarta.</AppText>
+            <View style={styles.introRow}>
+              <Icon name="eval" size={18} color={colors.primary} strokeWidth={2.2} />
+              <AppText weight="600" style={styles.flex}>{`${engine.total} reactivos`}</AppText>
+            </View>
+            <View style={styles.introRow}>
+              <Icon name="refresh" size={18} color={colors.primary} strokeWidth={2.2} />
+              <AppText weight="600" style={styles.flex}>Selección aleatoria</AppText>
+            </View>
+            <View style={styles.introRow}>
+              <Icon name="chart" size={18} color={colors.primary} strokeWidth={2.2} />
+              <AppText weight="600" style={styles.flex}>Resultados al finalizar</AppText>
+            </View>
           </View>
+          <AppText variant="small">
+            Podrás revisar tus respuestas antes de finalizar. Si sales antes, el intento se descarta.
+          </AppText>
           <PrimaryButton label="Comenzar evaluación" onPress={() => setStartedRun(engine.runId)} />
         </View>
       </Screen>
     );
   }
 
-  const answeredCount = engine.items.filter((item, index) => isAnswerComplete(item, engine.answers[index] ?? null)).length;
+  const answeredCount = engine.items.filter(
+    (item, index) =>
+      engine.touched[index] && isAnswerComplete(item, engine.answers[index] ?? null),
+  ).length;
   const allAnswered = answeredCount === engine.total;
 
   const handleExit = () => {
@@ -307,7 +327,7 @@ export default function EvaluationFlow() {
         />
       </View>
 
-      <View style={styles.navigator}>
+      <View style={[styles.navigator, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Navegador de reactivos" accessibilityState={{ expanded: showNavigator }}
           onPress={() => setShowNavigator(current => !current)} style={styles.navigatorToggle}>
           <AppText variant="small">{`${answeredCount} de ${engine.total} respondidos`}</AppText>
@@ -316,19 +336,33 @@ export default function EvaluationFlow() {
         {showNavigator ? <>
         <View style={styles.questionButtons}>
           {engine.items.map((item, index) => {
-            const answered = isAnswerComplete(item, engine.answers[index] ?? null);
+            const answered = engine.touched[index] && isAnswerComplete(item, engine.answers[index] ?? null);
             const current = index === engine.index;
             return (
               <Pressable key={item.id} accessibilityRole="button"
                 accessibilityLabel={`Reactivo ${index + 1}, ${current ? 'actual, ' : ''}${answered ? 'respondido' : 'pendiente'}`}
                 accessibilityState={{ selected: current }} onPress={() => engine.goTo(index)}
-                style={[styles.questionButton, { borderColor: current ? colors.primary : colors.line, borderWidth: current ? 2 : 1, backgroundColor: answered ? colors.soft : colors.bg, borderRadius: radius.control }]}>
-                <AppText weight="600" color={current ? colors.primary : colors.text}>{index + 1}{answered ? ' ✓' : ''}</AppText>
+                style={[styles.questionButton, {
+                  borderColor: current ? colors.primary : answered ? colors.success : colors.line,
+                  borderWidth: current ? 2 : 1,
+                  backgroundColor: answered ? `${colors.success}22` : colors.bg,
+                  borderRadius: radius.control,
+                }]}>
+                <AppText weight="600" color={current ? colors.primary : answered ? colors.success : colors.text}>
+                  {index + 1}
+                </AppText>
               </Pressable>
             );
           })}
         </View>
-        <AppText variant="small">Actual: borde azul · Respondido: marca de verificación · Pendiente: sin marca</AppText>
+        <View style={styles.legend}>
+          <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
+          <AppText variant="small">Respondido</AppText>
+          <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+          <AppText variant="small">Actual</AppText>
+          <View style={[styles.legendDot, { backgroundColor: colors.line }]} />
+          <AppText variant="small">Pendiente</AppText>
+        </View>
         </> : null}
       </View>
 
@@ -356,6 +390,12 @@ export default function EvaluationFlow() {
           />
         )}
       </View>
+
+      {question.type === 'order' && !engine.touched[engine.index] ? (
+        <AppText variant="small" style={{ marginTop: spacing.sm }}>
+          Mueve al menos una tarjeta para registrar tu respuesta.
+        </AppText>
+      ) : null}
 
       <View style={[styles.nav, { marginTop: spacing.lg }]}>
         <SecondaryButton
@@ -394,15 +434,18 @@ const styles = StyleSheet.create({
   progressTrack: { height: 4, borderRadius: 99, overflow: 'hidden', marginBottom: 20 },
   progressValue: { height: '100%' },
   prompt: { marginTop: 8 },
-  list: { gap: 10 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderWidth: 1 },
   feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
+  disclosures: { gap: 10, marginTop: 16 },
   nav: { flexDirection: 'row', gap: 12 },
   navButton: { flex: 1 },
   introduction: { gap: 20 },
+  introIcon: { width: 76, height: 76, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   introDetails: { padding: 20, gap: 16 },
-  navigator: { gap: 10, marginBottom: 20 },
+  introRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  navigator: { gap: 10, marginBottom: 20, padding: 14, borderWidth: 1 },
   questionButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   questionButton: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   navigatorToggle: { minHeight: 48, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
+  legendDot: { width: 8, height: 8, borderRadius: 999 },
 });

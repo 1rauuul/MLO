@@ -339,6 +339,8 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
           empty INTEGER NOT NULL DEFAULT 1,
           is_base INTEGER NOT NULL DEFAULT 0,
           manifest TEXT,
+          icon TEXT,
+          level TEXT,
           fetched_at TEXT NOT NULL
         );
         CREATE TABLE IF NOT EXISTS account_courses (
@@ -537,6 +539,15 @@ export async function migrateAndSeed(db: SQLiteDatabase): Promise<void> {
       await db.execAsync('PRAGMA user_version = 24');
     });
     version = 24;
+  }
+
+  if (version < 25) {
+    await db.withTransactionAsync(async () => {
+      await ensureColumn(db, 'remote_courses', 'icon', 'TEXT');
+      await ensureColumn(db, 'remote_courses', 'level', 'TEXT');
+      await db.execAsync('PRAGMA user_version = 25');
+    });
+    version = 25;
   }
 
   await db.withTransactionAsync(() => backfillLegacyTopics(db));

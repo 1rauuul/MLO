@@ -67,6 +67,7 @@ const makeEvaluationEngine = (): EvaluationEngine => ({
   isLast: false,
   correctCount: 1,
   outcomes: [true, false],
+  touched: [true, true],
   summary: mockEvaluationSummary,
   runId: 1,
   setAnswer: jest.fn(),
@@ -117,7 +118,7 @@ jest.mock('@/features/classes/viewmodel/useActiveGroup', () => ({
   useActiveGroup: () => null,
 }));
 jest.mock('@/features/exercises/viewmodel/usePracticeEngine', () => ({
-  usePracticeEngine: () => ({ phase: 'summary', summary: lessonSummary }),
+  usePracticeEngine: () => ({ phase: 'summary', summary: lessonSummary, review: [] }),
 }));
 jest.mock('@/features/modules/viewmodel/useModuleProgress', () => ({
   useModuleProgress: () => ({ markCompleted: mockMarkCompleted }),
@@ -151,18 +152,21 @@ it('keeps the lesson recommendation and shows no exit button in the exercise sum
   expect(queryByRole('button', { name: 'Volver a módulos' })).toBeNull();
 });
 
-it('muestra el desglose por pregunta y por tipo, y permite colapsarlo', () => {
-  const { getByRole, getByText, queryByText } = render(<PracticeScreen />);
+it('muestra el desempeño por tipo y colapsa el desglose por pregunta', () => {
+  const { getByRole, getByText, getAllByText, queryByText } = render(<PracticeScreen />);
+
+  expect(getByText('Desempeño por tipo')).toBeTruthy();
+  expect(queryByText('Desglose por pregunta')).toBeNull();
+
+  fireEvent.press(getByRole('button', { name: 'Ver desglose completo' }));
 
   expect(getByText('Desglose por pregunta')).toBeTruthy();
-  expect(getByText('Desglose por tipo de ejercicio')).toBeTruthy();
-  expect(getByText('Ordena · 1/4 reactivos')).toBeTruthy();
-  expect(getByText('25%')).toBeTruthy();
+  expect(getByText('Ordena · 1 de 4')).toBeTruthy();
+  expect(getAllByText('25%').length).toBeGreaterThan(0);
 
-  fireEvent.press(getByRole('button', { name: 'Ocultar desglose' }));
+  fireEvent.press(getByRole('button', { name: 'Ver desglose completo' }));
 
   expect(queryByText('Desglose por pregunta')).toBeNull();
-  expect(queryByText('Desglose por tipo de ejercicio')).toBeNull();
 });
 
 it('shows no review action for an evaluation result with no recommendation', () => {
@@ -183,7 +187,7 @@ it('incluye opción múltiple en el desglose por tipo', () => {
   const { getByText, queryByText } = render(<EvaluationFlow />);
 
   expect(getByText('Puntaje final')).toBeTruthy();
-  expect(queryByText('Puntaje por tipo')).toBeTruthy();
+  expect(queryByText('Desempeño por tipo')).toBeTruthy();
 });
 
 it('muestra el desglose por tipo cuando hay otros tipos de reactivo', () => {
@@ -191,12 +195,14 @@ it('muestra el desglose por tipo cuando hay otros tipos de reactivo', () => {
 
   const { getByText } = render(<EvaluationFlow />);
 
-  expect(getByText('Puntaje por tipo')).toBeTruthy();
+  expect(getByText('Desempeño por tipo')).toBeTruthy();
 });
 
 it('muestra aciertos, errores, respuesta correcta y explicación por reactivo', () => {
   const { getByText, getByRole, queryByText } = render(<EvaluationFlow />);
 
+  expect(queryByText('Reactivo acertado')).toBeNull();
+  fireEvent.press(getByRole('button', { name: 'Revisar respuestas' }));
   expect(getByText('Reactivo acertado')).toBeTruthy();
   expect(getByText('Reactivo errado')).toBeTruthy();
   fireEvent.press(getByRole('button', { name: 'Reactivo 1: Reactivo acertado' }));

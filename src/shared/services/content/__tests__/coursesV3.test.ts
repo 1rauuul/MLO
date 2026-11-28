@@ -19,7 +19,7 @@ const FIXTURES_DIR = join(__dirname, '..', 'remote', '__fixtures__', 'v3', 'x02'
 const STUDENT_KEY = '11111111-1111-4111-8111-111111111111';
 
 const EXPECTED_HASHES: Record<string, string> = {
-  'course-list.json': '1cd49563defad51f900b709a5154be3c9d89957fa2a7ab4a54768b2a61cbd6f6',
+  'course-list.json': 'dea78975a1b3e9c3b7bc6d1b458f37a98b337f9b4afba12241759ab7852ed7bf',
   'manifest-empty.json': '016248a4ed7b8d5d77aa42889a12ce21cd808c6412518af3092fdad1008b8729',
 };
 
@@ -136,6 +136,8 @@ describe('parseCourseList', () => {
     expect(list.courses).toHaveLength(2);
     expect(list.courses[0]?.catalogId).toBe('base');
     expect(list.courses[0]?.version).toBe('7');
+    expect(list.courses[0]?.level).toBe('Fundamental');
+    expect(list.courses[0]?.icon).toBe('code');
     expect(list.courses[1]?.empty).toBe(true);
   });
 
@@ -402,6 +404,46 @@ describe('membresías y curso activo', () => {
 
     expect(result.courses[0]?.description).toBe('Aprende a diseñar experiencias');
     expect(result.courses[0]?.level).toBe('Fundamental');
+  });
+
+  it('prefiere el nivel y el icono de la lista sobre el manifiesto', async () => {
+    const row = {
+      catalog_id: 'demo',
+      title: 'Diseño de experiencias',
+      manifest: JSON.stringify({
+        course: {
+          title: 'Diseño de experiencias',
+          description: '',
+          visibility: 'published',
+        },
+        units: [
+          {
+            id: 'u1',
+            number: 1,
+            title: 'Fundamentos',
+            description: '',
+            difficulty: 'Fundamental',
+            color: 'blue',
+          },
+        ],
+      }),
+      level: 'Intermedio',
+      icon: 'ai',
+      status: 'published',
+      uses_base: 0,
+      version: '1',
+      hash: 'hash',
+      published_at: null,
+      empty: 0,
+      active: 1,
+      has_class: 1,
+    };
+    const { db } = makeDb({ rows: [row] });
+
+    const result = await loadAccountCourses(db, 3);
+
+    expect(result.courses[0]?.level).toBe('Intermedio');
+    expect(result.courses[0]?.icon).toBe('ai');
   });
 
   it('selectCourse cambia el activo solo si hay acceso', async () => {

@@ -283,6 +283,7 @@ const makeEvaluationEngine = (answered: boolean): EvaluationEngine => ({
   isLast: true,
   correctCount: 0,
   outcomes: [answered],
+  touched: [answered],
   summary: noneSummary,
   runId: 1,
   setAnswer: jest.fn(),
@@ -502,6 +503,7 @@ describe('CrosswordExercise locking', () => {
     fireEvent.press(cell);
     expect(engine.selectEntry).not.toHaveBeenCalled();
 
+    fireEvent.press(getByRole('button', { name: 'Todas las pistas' }));
     const clue = getByRole('button', { name: 'H1 Estrella del día' });
     expect(clue.props.accessibilityState).toEqual({ disabled: true });
     fireEvent.press(clue);
@@ -531,6 +533,7 @@ describe('CrosswordExercise locking', () => {
     fireEvent.press(getByRole('button', { name: 'Inicio H1' }));
     expect(engine.selectEntry).toHaveBeenCalledWith(0);
 
+    fireEvent.press(getByRole('button', { name: 'Todas las pistas' }));
     fireEvent.press(getByRole('button', { name: 'H1 Estrella del día' }));
     expect(engine.selectEntry).toHaveBeenCalledTimes(2);
 

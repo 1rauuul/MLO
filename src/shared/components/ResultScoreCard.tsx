@@ -1,12 +1,14 @@
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/shared/components/AppText';
+import { ProgressRing } from '@/shared/components/ProgressRing';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 
 interface ResultScoreCardProps {
   eyebrow: string;
   percent: number;
   detail: string;
+  title?: string;
 }
 
 function scoreColor(percent: number, success: string, warning: string, danger: string): string {
@@ -17,7 +19,7 @@ function scoreColor(percent: number, success: string, warning: string, danger: s
 }
 
 /** Common score treatment for practice and evaluation results. */
-export function ResultScoreCard({ eyebrow, percent, detail }: ResultScoreCardProps) {
+export function ResultScoreCard({ eyebrow, percent, detail, title }: ResultScoreCardProps) {
   const { colors, radius } = useTheme();
   const safePercent = Math.max(0, Math.min(100, percent));
   const color = scoreColor(safePercent, colors.success, colors.warning, colors.danger);
@@ -25,29 +27,23 @@ export function ResultScoreCard({ eyebrow, percent, detail }: ResultScoreCardPro
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.card }]}>
       <AppText variant="eyebrow">{eyebrow}</AppText>
-      <View style={styles.scoreRow}>
-        <AppText variant="title" color={color}>
-          {`${safePercent}%`}
-        </AppText>
-        <AppText variant="small" style={styles.detail}>
-          {detail}
-        </AppText>
+      <View style={styles.ring}>
+        <ProgressRing value={safePercent} size={148} color={color} label={`${safePercent}%`} />
       </View>
-      <View
-        accessibilityRole="progressbar"
-        accessibilityLabel={`${eyebrow}: ${safePercent}%`}
-        accessibilityValue={{ min: 0, max: 100, now: safePercent }}
-        style={[styles.track, { backgroundColor: colors.soft }]}>
-        <View style={[styles.value, { width: `${safePercent}%`, backgroundColor: color }]} />
-      </View>
+      {title ? (
+        <AppText variant="heading" center>
+          {title}
+        </AppText>
+      ) : null}
+      <AppText variant="small" center style={styles.detail}>
+        {detail}
+      </AppText>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, padding: 18, gap: 8 },
-  scoreRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
-  detail: { flex: 1, paddingBottom: 4 },
-  track: { height: 6, borderRadius: 999, overflow: 'hidden' },
-  value: { height: '100%', borderRadius: 999 },
+  card: { borderWidth: 1, padding: 18, gap: 8, alignItems: 'center' },
+  ring: { marginVertical: 6 },
+  detail: { maxWidth: 260 },
 });

@@ -15,14 +15,14 @@ export interface ReviewItem {
   explanation: string;
 }
 
-export function AnswerReview({ items }: { items: ReviewItem[] }) {
+export function AnswerReview({ items, showHeading = true }: { items: ReviewItem[]; showHeading?: boolean }) {
   const { colors, radius } = useTheme();
   const [filter, setFilter] = useState<'all' | 'correct' | 'incorrect'>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
   const visible = items.filter(item => filter === 'all' || item.correct === (filter === 'correct'));
   return (
     <View style={styles.root}>
-      <AppText variant="heading">Revisión de respuestas</AppText>
+      {showHeading ? <AppText variant="heading">Revisión de respuestas</AppText> : null}
       <View accessibilityRole="tablist" style={styles.filters}>
         {(['all', 'correct', 'incorrect'] as const).map((value, index) => (
           <Pressable key={value} accessibilityRole="tab" accessibilityState={{ selected: filter === value }}

@@ -30,7 +30,7 @@ describe('migrateAndSeed', () => {
 
     await migrateAndSeed(db);
 
-    expect(statements.some(statement => statement === 'PRAGMA user_version = 24')).toBe(true);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 25')).toBe(true);
     expect(statements.some(statement => statement.startsWith('INSERT INTO units'))).toBe(false);
     expect(statements.some(statement => statement.startsWith('INSERT INTO lessons'))).toBe(false);
     expect(statements.some(statement => statement.startsWith('INSERT INTO accounts'))).toBe(false);
@@ -53,7 +53,7 @@ describe('migrateAndSeed', () => {
     expect(cleanup).not.toContain('DELETE FROM remote_courses');
     expect(cleanup).not.toContain('DELETE FROM accounts');
     expect(cleanup).not.toContain('DELETE FROM learner_profile');
-    expect(statements.some(statement => statement === 'PRAGMA user_version = 24')).toBe(true);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 25')).toBe(true);
   });
 
   test('una base ya en v22 crea la sesión remota y el correo', async () => {
@@ -63,7 +63,7 @@ describe('migrateAndSeed', () => {
 
     expect(statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS remote_session'))).toBe(true);
     expect(statements.some(statement => statement.includes('ALTER TABLE accounts ADD COLUMN email'))).toBe(true);
-    expect(statements.some(statement => statement === 'PRAGMA user_version = 24')).toBe(true);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 25')).toBe(true);
     expect(statements.some(statement => statement.startsWith('DELETE FROM'))).toBe(false);
     expect(statements.some(statement => statement.startsWith('INSERT INTO units'))).toBe(false);
   });
@@ -74,7 +74,7 @@ describe('migrateAndSeed', () => {
     await migrateAndSeed(db);
 
     expect(statements.some(statement => statement.includes('ALTER TABLE accounts ADD COLUMN email'))).toBe(true);
-    expect(statements.some(statement => statement === 'PRAGMA user_version = 24')).toBe(true);
+    expect(statements.some(statement => statement === 'PRAGMA user_version = 25')).toBe(true);
     expect(statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS remote_session'))).toBe(false);
   });
 });

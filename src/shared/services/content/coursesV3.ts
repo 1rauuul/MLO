@@ -24,6 +24,7 @@ export interface RemoteCourse {
   title: string;
   description?: string;
   level?: string;
+  icon?: string;
   status: 'published';
   usesBase: boolean;
   version: string;
@@ -76,6 +77,8 @@ interface CourseRow {
   catalog_id: string;
   title: string;
   manifest?: string | null;
+  icon?: string | null;
+  level?: string | null;
   status: string;
   uses_base: number;
   version: string;
@@ -127,6 +130,8 @@ function parseCourse(value: unknown): RemoteCourse {
   return {
     catalogId,
     title: value.title,
+    ...(isString(value.level) ? { level: value.level } : {}),
+    ...(isString(value.icon) ? { icon: value.icon } : {}),
     status: 'published',
     usesBase: value.usesBase,
     version: courseVersion(value.version),
@@ -388,12 +393,14 @@ function readCourseLevel(manifest?: string | null): string {
 
 function mapCourse(row: CourseRow): RemoteCourse {
   const description = readCourseDescription(row.manifest);
-  const level = readCourseLevel(row.manifest);
+  const level = row.level?.trim() || readCourseLevel(row.manifest);
+  const icon = row.icon?.trim();
   return {
     catalogId: row.catalog_id,
     title: row.title,
     ...(description ? { description } : {}),
     ...(level ? { level } : {}),
+    ...(icon ? { icon } : {}),
     status: 'published',
     usesBase: row.uses_base === 1,
     version: row.version,
@@ -573,13 +580,13 @@ export async function refreshCourseList(
       }
       await db.runAsync(
         `INSERT INTO remote_courses
-           (catalog_id, title, status, uses_base, version, hash, published_at, empty, is_base, manifest, fetched_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           (catalog_id, title, status, uses_base, version, hash, published_at, empty, is_base, manifest, fetched_at, icon, level)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(catalog_id) DO UPDATE SET
            title = excluded.title, status = excluded.status, uses_base = excluded.uses_base,
            version = excluded.version, hash = excluded.hash, published_at = excluded.published_at,
            empty = excluded.empty, is_base = excluded.is_base, manifest = excluded.manifest,
-           fetched_at = excluded.fetched_at`,
+           fetched_at = excluded.fetched_at, icon = excluded.icon, level = excluded.level`,
         course.catalogId,
         course.title,
         course.status,
@@ -591,6 +598,8 @@ export async function refreshCourseList(
         course.catalogId === BASE_CATALOG_ID ? 1 : 0,
         manifests.get(course.catalogId) ? JSON.stringify(manifests.get(course.catalogId)) : null,
         now,
+        course.icon ?? null,
+        course.level ?? null,
       );
       // Todos los cursos autorizados forman la biblioteca; solo uno queda activo.
       await db.runAsync(

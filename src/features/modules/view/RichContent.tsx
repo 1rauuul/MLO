@@ -67,10 +67,18 @@ function TableBlock({
   block: Extract<ContentBlock, { type: 'table' }>;
 }) {
   const { colors, radius } = useTheme();
-  return (
-    <ScrollView horizontal accessibilityLabel="Tabla de contenido. Desliza para consultar todas las columnas."
-      showsHorizontalScrollIndicator contentContainerStyle={{ flexGrow: 1 }}>
-    <View style={[styles.table, { flex: 1, minWidth: Math.max(280, block.header.length * 150), borderColor: colors.line, borderRadius: radius.control }]}>
+  const [availableWidth, setAvailableWidth] = useState(0);
+  const wide = block.header.length > 3;
+  const table = (
+    <View
+      style={[
+        styles.table,
+        {
+          width: wide ? Math.max(availableWidth, block.header.length * 120) : '100%',
+          borderColor: colors.line,
+          borderRadius: radius.control,
+        },
+      ]}>
       <View style={[styles.tableRow, { backgroundColor: colors.soft, borderTopWidth: 0 }]}>
         {block.header.map((cell, cellIndex) => (
           <AppText key={`h${cellIndex}`} variant="small" weight="700" style={styles.cell}>
@@ -94,7 +102,17 @@ function TableBlock({
         </View>
       ))}
     </View>
-    </ScrollView>
+  );
+
+  return (
+    <View style={styles.tableContainer} onLayout={event => setAvailableWidth(event.nativeEvent.layout.width)}>
+      {wide ? (
+        <ScrollView horizontal accessibilityLabel="Tabla de contenido. Desliza para consultar todas las columnas."
+          showsHorizontalScrollIndicator>
+          {table}
+        </ScrollView>
+      ) : table}
+    </View>
   );
 }
 
@@ -200,9 +218,10 @@ const styles = StyleSheet.create({
   list: { gap: 10 },
   listRow: { flexDirection: 'row', gap: 10 },
   listMark: { width: 20 },
+  tableContainer: { width: '100%', minWidth: 0 },
   table: { borderWidth: 1, overflow: 'hidden' },
-  tableRow: { flexDirection: 'row', gap: 10, padding: 12, borderTopWidth: 1 },
-  cell: { flex: 1, minWidth: 0, textAlign: 'left' },
+  tableRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 10, borderTopWidth: 1 },
+  cell: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0, textAlign: 'left' },
   center: { textAlign: 'center' },
   video: { overflow: 'hidden', borderWidth: 1 },
   videoThumb: { width: '100%', aspectRatio: 16 / 9 },

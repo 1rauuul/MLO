@@ -155,7 +155,17 @@ describe('crossword', () => {
     expect(isCrosswordCorrect(config, { '0-0': 'X' })).toBe(false);
   });
 
-  it('puntúa cada celda correcta por separado', () => {
-    expect(crosswordScore(crosswordCells(config), { '0-0': 'S' })).toEqual({ correct: 1, total: 5 });
+  it('puntúa palabras completas en lugar de letras', () => {
+    expect(crosswordScore(config.crossword.entries, { '0-0': 'S', '0-1': 'O', '0-2': 'L' })).toEqual({
+      correct: 1,
+      total: 2,
+    });
+    expect(
+      crosswordScore(config.crossword.entries, { '0-0': 'S', '0-1': 'O', '1-0': 'A', '2-0': 'L' }),
+    ).toEqual({ correct: 1, total: 2 });
+    expect(crosswordScore(config.crossword.entries, { '0-0': 'S' })).toEqual({
+      correct: 0,
+      total: 2,
+    });
   });
 });

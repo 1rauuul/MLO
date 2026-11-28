@@ -6,7 +6,7 @@ del usuario, 6 090 mensajes en total) entre el 21 de septiembre y el 13 de novie
 (base local de OpenCode), contrastadas con los 37 commits del historial de git. Las fechas son
 locales (America/Mexico_City).  
 **Corte:** 13 de noviembre de 2026.  
-**Actualización:** 26 de noviembre de 2026 (cierre pre-deadline: API v3 única, SecureStore, CI).  
+**Actualización:** 27 de noviembre de 2026 (iconos de curso y rediseño de la experiencia).  
 **Historial del CMS:** [`historial-cms.md`](./historial-cms.md).
 
 ## Resumen por fases
@@ -399,20 +399,42 @@ contrato v3 con los bloques nuevos.
 - **Git.** CMS en `50b1558` y app en `2fcc592` antes de los commits de documentación de
   esta entrada.
 
+### 27 nov — Iconos de curso y rediseño de la experiencia
+
+- **Iconos de curso.** El CMS define 30 claves en cinco grupos (7 PNG y el resto SVG) y
+  `courses.icon`; la migración `20261127000000_course_icon.sql` ya está aplicada. La app usa
+  el icono en la ficha del curso y cae a un icono por defecto si la clave no existe.
+- **Lista de cursos v3.** La respuesta incluye `icon` y `level`, y la descripción real del
+  curso se publica en el release v3 (antes iba vacía).
+- **Biblioteca y curso.** Tarjetas más compactas con nivel, descripción y progreso; la ficha
+  del curso usa el icono del curso y la tarjeta de la biblioteca conserva las iniciales.
+- **Progreso por subtema.** `topicProgress.logic.ts` combina lecciones, intentos de práctica
+  y la mejor evaluación; el subtema muestra Pendiente, En progreso o Completado.
+- **Resultados y actividades.** `PerformanceBreakdown`, anillo de puntaje, revisión de
+  respuestas contraída, navegador con leyenda y feedback en completar, relacionar y
+  crucigrama; se añaden `ContinuationButton`, `DisclosureRow` y la animación de `Screen`.
+- **Datos locales.** `DATABASE_VERSION` 25 (`remote_courses.icon/level`); `versionCode` 14;
+  iconos en `assets/course-icons/`.
+- **Verificación.** CMS 188 pruebas unitarias + 13 de base, `lint`, `tsc` y build; app 615
+  pruebas Jest, `tsc` y lint. Sin commit ni push de esta iteración.
+
 ## Estado del repositorio
 
-- App en `2fcc592` (26 nov) con el cliente único v3, el token en SecureStore y el CI;
-  los commits de documentación de este registro van después de ese HEAD.
-- CMS (`mlo-teachers`) en `50b1558` (26 nov) con la API v2 retirada, las migraciones
-  registradas, el rate limit de `join` y el CI; la documentación va en commits
-  posteriores.
-- La base local sigue en `DATABASE_VERSION` 24; el token de alumno ya no se guarda en
-  SQLite sino en `expo-secure-store`.
-- Contrato de contenido en v3 y **única API HTTP**; los releases v2 quedan como datos
-  históricos y ya no se consumen.
+- App en `b30c597` («UI rework», 27 nov) más el lote sin commit de iconos de curso, tarjetas,
+  progreso por subtema y resultados; `DATABASE_VERSION` 25 y `versionCode` 14.
+- CMS en `846050d` («UI buttons position in grupos/id», 27 nov) más el cambio sin commit de
+  iconos de curso; migración `20261127000000_course_icon.sql` aplicada.
+- Contrato v3 con `icon`/`level` en la lista de cursos; la descripción del curso se publica
+  en el release v3.
+- Sin commit ni push de esta iteración al registrar esta entrada.
 
 ## Pendientes señalados en las propias sesiones
 
+- Probar en dispositivo el rediseño: iconos de curso, tarjetas, progreso por subtema,
+  resultados y feedback de actividades.
+- Generar y validar un APK con `versionCode` 14, además de los perfiles EAS `preview` y
+  `production`.
+- Commitear y subir el lote pendiente de ambos repos (iconos de curso y rediseño de la app).
 - Probar en dispositivo el flujo completo de cuentas: registrar, avanzar, sincronizar, borrar
   datos, entrar y restaurar; vincular una cuenta antigua; sin red después de entrar; token
   caducado; límite de intentos.

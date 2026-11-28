@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { useRepositories } from '@/shared/services/data/DataProvider';
 import type {
@@ -12,6 +12,8 @@ import type {
 
 import { BASE_CATALOG_ID } from '@/features/modules/model/catalog';
 import { useCatalog } from '@/features/modules/viewmodel/useCatalog';
+import { useAuth } from '@/features/auth/viewmodel/useAuth';
+import { computeTopicProgress, topicSection, type TopicProgress } from '@/features/modules/viewmodel/topicProgress.logic';
 
 interface TopicHubResult {
   topic: Topic | null;
@@ -22,6 +24,7 @@ interface TopicHubResult {
   evaluations: Evaluation[];
   completed: boolean;
   completionMap: Record<string, boolean>;
+  progress: TopicProgress | null;
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -40,13 +43,16 @@ export function useLessonHub(
     examples: exampleRepository,
     exercises: exerciseRepository,
     evaluations,
+    attempts,
   } = useRepositories();
+  const { account } = useAuth();
   const { units, completionMap, activeGroupId, refresh } = useCatalog(catalogId);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [lessonsByTopic, setLessonsByTopic] = useState<Lesson[]>([]);
   const [examples, setExamples] = useState<Example[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [evaluationsByTopic, setEvaluationsByTopic] = useState<Evaluation[]>([]);
+  const [progress, setProgress] = useState<TopicProgress | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,6 +63,7 @@ export function useLessonHub(
       setExamples([]);
       setExercises([]);
       setEvaluationsByTopic([]);
+      setProgress(null);
       setIsLoading(false);
       return;
     }
@@ -80,6 +87,7 @@ export function useLessonHub(
             setExamples([]);
             setExercises([]);
             setEvaluationsByTopic([]);
+            setProgress(null);
           }
           return;
         }
@@ -90,6 +98,27 @@ export function useLessonHub(
             exerciseRepository.selectExercisesByTopic(loadedTopic.id, catalogId, activeGroupId),
             evaluations.selectEvaluationsByTopic(loadedTopic.id, catalogId, activeGroupId),
           ]);
+        let loadedProgress: TopicProgress | null = null;
+        if (account) {
+          try {
+            const [attemptGroups, evaluationScores] = await Promise.all([
+              Promise.all(
+                loadedLessons.map(lesson => attempts.selectAttemptsByLesson(account.id, lesson.id)),
+              ),
+              evaluations.selectEvaluationScoresByLesson(account.id),
+            ]);
+            loadedProgress = computeTopicProgress({
+              lessonIds: loadedLessons.map(lesson => lesson.id),
+              completionMap,
+              exercises: loadedExercises,
+              attempts: attemptGroups.flat(),
+              evaluationScores,
+            });
+          } catch {
+            // El avance es secundario: si falla, el subtema sigue disponible.
+            loadedProgress = null;
+          }
+        }
         if (!active) {
           return;
         }
@@ -98,6 +127,7 @@ export function useLessonHub(
         setExamples(loadedExamples);
         setExercises(loadedExercises);
         setEvaluationsByTopic(loadedEvaluations);
+        setProgress(loadedProgress);
       } catch {
         if (active) {
           setError('No se pudo cargar el subtema.');
@@ -116,15 +146,19 @@ export function useLessonHub(
     exampleRepository,
     exerciseRepository,
     evaluations,
+    attempts,
+    account,
     topicId,
     catalogId,
     activeGroupId,
+    completionMap,
   ]);
 
   const unit = units.find(item => item.id === topic?.unitId) ?? null;
   const completed =
     lessonsByTopic.length > 0 &&
     lessonsByTopic.every(lesson => !!completionMap[lesson.id]);
+  const lessonsDone = lessonsByTopic.filter(lesson => !!completionMap[lesson.id]).length;
 
   return {
     topic,
@@ -135,6 +169,9 @@ export function useLessonHub(
     evaluations: evaluationsByTopic,
     completed,
     completionMap,
+    progress: progress
+      ? { ...progress, lessons: topicSection(lessonsDone, lessonsByTopic.length) }
+      : null,
     isLoading,
     error,
     refresh,

@@ -8,7 +8,7 @@ import { useTheme } from '@/shared/theme/ThemeProvider';
 import { AppText } from '@/shared/components/AppText';
 import { Chevron } from '@/shared/components/Chevron';
 import { Icon } from '@/shared/components/Icon';
-import { ProgressRing } from '@/features/modules/view/ProgressRing';
+import { ProgressRing } from '@/shared/components/ProgressRing';
 
 interface UnitCardProps {
   unit: Unit;

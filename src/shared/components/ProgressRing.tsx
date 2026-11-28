@@ -5,19 +5,26 @@ import { useTheme } from '@/shared/theme/ThemeProvider';
 
 import { AppText } from '@/shared/components/AppText';
 
-export function ProgressRing({ value, size = 56 }: { value: number; size?: number }) {
+interface ProgressRingProps {
+  value: number;
+  size?: number;
+  label?: string;
+  color?: string;
+}
+
+export function ProgressRing({ value, size = 56, label, color }: ProgressRingProps) {
   const { colors } = useTheme();
   const clamped = Math.max(0, Math.min(100, value));
   const radius = 20;
   const circumference = 2 * Math.PI * radius;
   const strokeColor =
-    clamped >= 100 ? colors.success : clamped > 0 ? colors.primary : colors.line;
+    color ?? (clamped >= 100 ? colors.success : clamped > 0 ? colors.primary : colors.line);
 
   return (
     <View
       accessible
       accessibilityRole="progressbar"
-      accessibilityLabel={`${clamped}% completado`}
+      accessibilityLabel={label ?? `${clamped}% completado`}
       accessibilityValue={{ min: 0, max: 100, now: clamped }}
       style={{ width: size, height: size }}>
       <Svg viewBox="0 0 48 48" width={size} height={size}>
@@ -27,7 +34,7 @@ export function ProgressRing({ value, size = 56 }: { value: number; size?: numbe
           cy={24}
           r={radius}
           stroke={strokeColor}
-          strokeWidth={3}
+          strokeWidth={Math.max(1.5, size / 16)}
           fill="none"
           strokeDasharray={circumference}
           strokeDashoffset={circumference * (1 - clamped / 100)}
@@ -39,8 +46,8 @@ export function ProgressRing({ value, size = 56 }: { value: number; size?: numbe
         <AppText
           variant="small"
           color={clamped > 0 ? colors.text : colors.muted}
-          style={styles.label}>
-          {clamped}%
+          style={[styles.label, { fontSize: Math.max(11, size * 0.2), lineHeight: size * 0.24 }]}>
+          {label ?? `${clamped}%`}
         </AppText>
       </View>
     </View>
@@ -58,7 +65,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontWeight: '700',
   },
 });

@@ -9,7 +9,10 @@ import { ActivityFeedback } from '@/features/exercises/view/activities/ActivityF
 import type { EvaluationAnswer } from '@/features/evaluations/viewmodel/evaluation.logic';
 import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { ContinuationButton } from '@/shared/components/ContinuationButton';
+import { DisclosureRow } from '@/shared/components/DisclosureRow';
 import { EmptyState } from '@/shared/components/EmptyState';
+import { PerformanceBreakdown } from '@/shared/components/PerformanceBreakdown';
 import { ResultScoreCard } from '@/shared/components/ResultScoreCard';
 import { Screen } from '@/shared/components/Screen';
 import { ScreenHeader } from '@/shared/components/ScreenHeader';
@@ -35,7 +38,8 @@ export default function PracticeScreen() {
   const router = useRouter();
   const { colors, radius, spacing } = useTheme();
   const exitGuard = useExitGuard(engine.phase === 'running' && !engine.isLoading);
-  const [showBreakdown, setShowBreakdown] = useState(true);
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const [showReview, setShowReview] = useState(false);
   const response = useRef<{ id: string; answer: EvaluationAnswer } | null>(null);
 
   useFocusEffect(
@@ -77,10 +81,14 @@ export default function PracticeScreen() {
     const recommendation = recommendReview(summary);
     const topics = weakTopics(summary);
     const percent = Math.round(summary.accuracy * 100);
-    const perQuestion = summary.total > 0 ? 100 / summary.total : 0;
-    const shareOf = (points: number) => (summary.total > 0 ? (points / summary.total) * 100 : 0);
     const colorFor = (fraction: number) =>
       fraction === 1 ? colors.success : fraction === 0 ? colors.danger : colors.warning;
+    const typeRows = Object.entries(summary.byType).map(([type, bucket]) => ({
+      key: type,
+      label: TYPE_LABELS[type as ActivityType] ?? type,
+      percent: bucket.total === 0 ? 0 : (bucket.correct / bucket.total) * 100,
+      detail: `${bucket.total} ${bucket.total === 1 ? 'actividad' : 'actividades'}`,
+    }));
 
     return (
       <Screen>
@@ -88,97 +96,21 @@ export default function PracticeScreen() {
         <ResultScoreCard
           eyebrow="Puntaje de ejercicios"
           percent={percent}
-          detail={`${formatPoints(summary.correct)} de ${summary.total} puntos · cada pregunta vale ${formatPoints(perQuestion)}%`}
+          title="Ejercicios finalizados"
+          detail={`${formatPoints(summary.correct)} de ${summary.total} puntos`}
         />
-
-        <SecondaryButton
-          label={showBreakdown ? 'Ocultar desglose' : 'Ver desglose completo'}
-          onPress={() => setShowBreakdown(visible => !visible)}
-          style={{ marginTop: spacing.lg }}
-        />
-
-        {showBreakdown ? (
-          <>
-            <AppText variant="eyebrow" style={{ marginTop: spacing.lg }}>
-              Desglose por pregunta
-            </AppText>
-            <View style={styles.list}>
-              {summary.byQuestion.map(question => {
-                const fraction = question.total === 0 ? 0 : question.correct / question.total;
-                return (
-                  <View
-                    key={question.exerciseId}
-                    style={[
-                      styles.row,
-                      { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control },
-                    ]}>
-                    <View style={styles.flex}>
-                      <AppText weight="600">{`Pregunta ${question.index + 1}`}</AppText>
-                      <AppText variant="small">
-                        {`${TYPE_LABELS[question.type] ?? question.type} · ${question.correct}/${question.total} reactivos`}
-                      </AppText>
-                    </View>
-                    <View style={styles.scoreColumn}>
-                      <AppText color={colorFor(fraction)} weight="700">
-                        {`${Math.round(fraction * 100)}%`}
-                      </AppText>
-                      <AppText variant="small">
-                        {`${formatPoints(shareOf(fraction))}% del total`}
-                      </AppText>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-
-            <AppText variant="eyebrow" style={{ marginTop: spacing.lg }}>
-              Desglose por tipo de ejercicio
-            </AppText>
-            <View style={styles.list}>
-              {Object.entries(summary.byType).map(([type, bucket]) => {
-                const fraction = bucket.total === 0 ? 0 : bucket.correct / bucket.total;
-                return (
-                  <View
-                    key={type}
-                    style={[
-                      styles.row,
-                      { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control },
-                    ]}>
-                    <View style={styles.flex}>
-                      <AppText weight="600">{TYPE_LABELS[type as ActivityType] ?? type}</AppText>
-                      <AppText variant="small">
-                        {`${formatPoints(bucket.correct)} de ${bucket.total} preguntas`}
-                      </AppText>
-                    </View>
-                    <View style={styles.scoreColumn}>
-                      <AppText color={colorFor(fraction)} weight="700">
-                        {`${Math.round(fraction * 100)}%`}
-                      </AppText>
-                      <AppText variant="small">
-                        {`${formatPoints(shareOf(bucket.correct))}% del total`}
-                      </AppText>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          </>
-        ) : null}
+        <PerformanceBreakdown rows={typeRows} />
 
         {topics.length > 0 ? (
           <>
             <AppText variant="eyebrow" style={{ marginTop: spacing.lg }}>
               Temas a reforzar
             </AppText>
-            <View style={styles.list}>
+            <View style={styles.topicList}>
               {topics.map(topic => (
-                <View
-                  key={topic}
-                  style={[styles.row, { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control }]}>
-                  <AppText weight="600" style={styles.flex}>
-                    {TOPIC_LABELS[topic] ?? topic}
-                  </AppText>
-                </View>
+                <AppText key={topic} variant="small">
+                  {TOPIC_LABELS[topic] ?? topic}
+                </AppText>
               ))}
             </View>
           </>
@@ -206,7 +138,20 @@ export default function PracticeScreen() {
           </View>
         )}
 
-        {engine.review?.length > 0 ? <AnswerReview items={engine.review} /> : null}
+        <View style={styles.disclosures}>
+          <DisclosureRow
+            label="Ver desglose completo"
+            expanded={showBreakdown}
+            onPress={() => setShowBreakdown(visible => !visible)}
+          />
+          <DisclosureRow
+            label="Revisar respuestas"
+            expanded={showReview}
+            onPress={() => setShowReview(visible => !visible)}
+            trailing={`${engine.review.length} reactivos`}
+          />
+        </View>
+
         <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
           {recommendation === 'lesson' ? <PrimaryButton label="Repasar la lección" onPress={goLesson} /> : null}
           {lessonParam ? recommendation === 'lesson'
@@ -214,6 +159,41 @@ export default function PracticeScreen() {
             : <PrimaryButton label="Ir a la evaluación" onPress={goEvaluation} /> : null}
           <SecondaryButton label="Volver al subtema" onPress={() => lesson ? router.navigate({ pathname: '/tema/[id]', params: { id: lesson.topicId ?? `t-${lesson.id}` } }) : goBack()} />
         </View>
+
+        {showBreakdown ? (
+          <>
+            <AppText variant="eyebrow" style={{ marginTop: spacing.lg }}>
+              Desglose por pregunta
+            </AppText>
+            <View style={styles.list}>
+              {summary.byQuestion.map(question => {
+                const fraction = question.total === 0 ? 0 : question.correct / question.total;
+                return (
+                  <View
+                    key={question.exerciseId}
+                    style={[
+                      styles.row,
+                      { backgroundColor: colors.card, borderColor: colors.line, borderRadius: radius.control },
+                    ]}>
+                    <View style={styles.flex}>
+                      <AppText weight="600">{`Pregunta ${question.index + 1}`}</AppText>
+                      <AppText variant="small">
+                        {`${TYPE_LABELS[question.type] ?? question.type} · ${formatPoints(question.correct)} de ${question.total}`}
+                      </AppText>
+                    </View>
+                    <AppText color={colorFor(fraction)} weight="700">
+                      {`${Math.round(fraction * 100)}%`}
+                    </AppText>
+                  </View>
+                );
+              })}
+            </View>
+          </>
+        ) : null}
+
+        {showReview && engine.review.length > 0 ? (
+          <AnswerReview items={engine.review} showHeading={false} />
+        ) : null}
       </Screen>
     );
   }
@@ -268,16 +248,26 @@ export default function PracticeScreen() {
         />
       </View>
 
-      {engine.answered ? <ActivityFeedback correct={!!engine.lastCorrect}
-        partial={(engine.summary.byQuestion[engine.index]?.correct ?? 0) > 0 && !engine.lastCorrect}
-        title={engine.lastCorrect ? 'Respuesta correcta' : (engine.summary.byQuestion[engine.index]?.correct ?? 0) > 0 ? 'Respuesta parcialmente correcta' : 'Revisa tu respuesta'}
-        message={exercise.explanation} /> : null}
-
       {engine.answered ? (
-        <PrimaryButton
-          label={isLast ? 'Ver resumen' : 'Siguiente ejercicio'}
-          onPress={engine.next}
-          style={{ marginTop: spacing.lg }}
+        <ActivityFeedback
+          correct={!!engine.lastCorrect}
+          partial={(engine.summary.byQuestion[engine.index]?.correct ?? 0) > 0 && !engine.lastCorrect}
+          title={
+            engine.lastCorrect
+              ? 'Respuesta correcta'
+              : (engine.summary.byQuestion[engine.index]?.correct ?? 0) > 0
+                ? 'Respuesta parcialmente correcta'
+                : 'Revisa tu respuesta'
+          }
+          detailLabel="Explicación"
+          message={exercise.explanation}
+          action={
+            <ContinuationButton
+              label={isLast ? 'Ver resumen' : 'Siguiente ejercicio'}
+              onPress={engine.next}
+              revealSignal={1}
+            />
+          }
         />
       ) : null}
 
@@ -295,9 +285,9 @@ export default function PracticeScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  small: { fontSize: 14 },
   list: { gap: 10 },
+  disclosures: { gap: 10, marginTop: 16 },
+  topicList: { gap: 4, marginTop: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderWidth: 1 },
-  scoreColumn: { alignItems: 'flex-end' },
   feedback: { borderWidth: 1, padding: 14, gap: 4, marginTop: 14 },
 });

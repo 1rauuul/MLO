@@ -23,6 +23,17 @@ export type IconName =
   | 'circle'
   | 'database'
   | 'book'
+  | 'algorithm'
+  | 'math'
+  | 'security'
+  | 'graphics'
+  | 'mobile'
+  | 'cloud'
+  | 'chip'
+  | 'nlp'
+  | 'robot'
+  | 'game'
+  | 'chart'
   | 'logout'
   | 'more';
 
@@ -124,6 +135,60 @@ const DEFS: Record<IconName, ChildConfig[]> = {
   book: [
     { kind: 'path', d: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20' },
     { kind: 'path', d: 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' },
+  ],
+  algorithm: [
+    { kind: 'circle', cx: 6, cy: 6, r: 2.5 },
+    { kind: 'circle', cx: 18, cy: 6, r: 2.5 },
+    { kind: 'circle', cx: 12, cy: 18, r: 2.5 },
+    { kind: 'path', d: 'M8.5 6h7' },
+    { kind: 'path', d: 'M7.2 8.2l3.6 7.6' },
+    { kind: 'path', d: 'M16.8 8.2l-3.6 7.6' },
+  ],
+  math: [{ kind: 'path', d: 'M18 5H7l5.5 7L7 19h11' }],
+  security: [
+    { kind: 'path', d: 'M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6l-7-3Z' },
+    { kind: 'path', d: 'm9 12 2 2 4-4' },
+  ],
+  graphics: [
+    { kind: 'path', d: 'M4 18c4-9 8-13 16-13' },
+    { kind: 'circle', cx: 4, cy: 18, r: 2 },
+    { kind: 'circle', cx: 20, cy: 5, r: 2 },
+    { kind: 'path', d: 'M6 20h14' },
+  ],
+  mobile: [
+    { kind: 'rect', x: 7, y: 2.5, width: 10, height: 19, rx: 2.5 },
+    { kind: 'path', d: 'M10.5 5h3M11 18.5h2' },
+  ],
+  cloud: [
+    { kind: 'path', d: 'M7 18a4 4 0 0 1 0-8 5.5 5.5 0 0 1 10.6-1.4A4.5 4.5 0 0 1 18 18H7Z' },
+  ],
+  chip: [
+    { kind: 'rect', x: 7, y: 7, width: 10, height: 10, rx: 2 },
+    { kind: 'rect', x: 10.5, y: 10.5, width: 3, height: 3, rx: 0.5 },
+    { kind: 'path', d: 'M9 3v4M15 3v4M9 17v4M15 17v4M3 9h4M3 15h4M17 9h4M17 15h4' },
+  ],
+  nlp: [
+    { kind: 'path', d: 'M21 12a8 8 0 0 1-8 8H6l-3 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z' },
+    { kind: 'path', d: 'M8 11h8M8 15h5' },
+  ],
+  robot: [
+    { kind: 'rect', x: 4, y: 8, width: 16, height: 11, rx: 3 },
+    { kind: 'path', d: 'M12 8V4M8 4h8' },
+    { kind: 'circle', cx: 9, cy: 13, r: 1.2, fill: true },
+    { kind: 'circle', cx: 15, cy: 13, r: 1.2, fill: true },
+    { kind: 'path', d: 'M9 16h6' },
+  ],
+  game: [
+    { kind: 'rect', x: 4, y: 4, width: 16, height: 16, rx: 3 },
+    { kind: 'circle', cx: 8.5, cy: 8.5, r: 1.2, fill: true },
+    { kind: 'circle', cx: 15.5, cy: 8.5, r: 1.2, fill: true },
+    { kind: 'circle', cx: 12, cy: 12, r: 1.2, fill: true },
+    { kind: 'circle', cx: 8.5, cy: 15.5, r: 1.2, fill: true },
+    { kind: 'circle', cx: 15.5, cy: 15.5, r: 1.2, fill: true },
+  ],
+  chart: [
+    { kind: 'path', d: 'M4 20V4M4 20h16' },
+    { kind: 'path', d: 'M8 16v-4M12 16V8M16 16v-6M20 16V6' },
   ],
   logout: [
     { kind: 'path', d: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4' },

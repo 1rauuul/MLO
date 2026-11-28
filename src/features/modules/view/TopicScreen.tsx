@@ -64,6 +64,7 @@ export default function TopicHubScreen() {
     evaluations,
     completed,
     completionMap = {},
+    progress,
     isLoading,
     error,
     refresh,
@@ -137,7 +138,13 @@ export default function TopicHubScreen() {
       icon: 'lesson',
       label: 'Lecciones',
       note: 'Contenido teórico',
-      status: `${lessons.filter(lesson => completionMap[lesson.id]).length} de ${lessons.length} lecciones completadas`,
+      status: progress
+        ? progress.lessons.state === 'completed'
+          ? 'Completado'
+          : progress.lessons.state === 'in-progress'
+            ? `En progreso · ${progress.lessons.done} de ${progress.lessons.total}`
+            : 'Pendiente'
+        : `${lessons.filter(lesson => completionMap[lesson.id]).length} de ${lessons.length} lecciones completadas`,
       accent: accents.lesson,
       onPress: () => lessons.length > 1 ? setShowLessons(current => !current) :
         router.push({ pathname: '/lecciones/[id]', params: { id: lessons[0]!.id } }),
@@ -149,6 +156,7 @@ export default function TopicHubScreen() {
       icon: 'examples',
       label: 'Ejemplos',
       note: 'Demostración y acompañamiento',
+      status: `${examples.length} ${examples.length === 1 ? 'ejemplo' : 'ejemplos'}`,
       accent: accents.examples,
       onPress: () => go('/ejemplos'),
     });
@@ -159,6 +167,13 @@ export default function TopicHubScreen() {
       icon: 'exercises',
       label: 'Ejercicios',
       note: 'Pon en práctica lo aprendido',
+      status: progress
+        ? progress.exercises.state === 'completed'
+          ? `Completado · ${progress.exercises.done} de ${progress.exercises.total}`
+          : progress.exercises.state === 'in-progress'
+            ? `En progreso · ${progress.exercises.done} de ${progress.exercises.total}`
+            : 'Pendiente'
+        : `${exercises.length} ejercicios`,
       accent: accents.exercises,
       onPress: () => go('/ejercicios'),
     });
@@ -169,6 +184,9 @@ export default function TopicHubScreen() {
       icon: 'eval',
       label: 'Evaluación',
       note: evaluations.length === 1 ? '15 reactivos · Resultados al finalizar' : `${evaluations.length} evaluaciones disponibles`,
+      status: progress?.evaluation.score != null
+        ? `Mejor resultado: ${progress.evaluation.score}%`
+        : 'Pendiente',
       accent: accents.evaluation,
       onPress: () => evaluations.length > 1 ? setShowEvaluations(current => !current) : go('/evaluacion', evaluations[0]!.id),
     });

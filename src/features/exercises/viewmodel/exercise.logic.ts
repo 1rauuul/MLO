@@ -1,4 +1,4 @@
-import type { ExerciseConfig, MatchPair } from '@/shared/model/entities';
+import type { CrosswordEntry, ExerciseConfig, MatchPair } from '@/shared/model/entities';
 import {
   BLANK_PATTERN,
   crosswordCells,
@@ -167,14 +167,19 @@ export function matchScore(
   };
 }
 
+// Un crucigrama se califica por palabra completa: la unidad de sentido es la entrada.
 export function crosswordScore(
-  cells: CrosswordCell[],
+  entries: CrosswordEntry[],
   letters: Record<string, string>,
 ): ExerciseScore {
-  return {
-    correct: cells.filter(
-      cell => (letters[`${cell.row}-${cell.col}`] ?? '').toUpperCase() === cell.solution,
-    ).length,
-    total: cells.length,
-  };
+  const correct = entries.filter(entry => {
+    const stepRow = entry.direction === 'down' ? 1 : 0;
+    const stepCol = entry.direction === 'across' ? 1 : 0;
+    return Array.from(entry.word).every((character, offset) => {
+      const row = entry.row + stepRow * offset;
+      const col = entry.col + stepCol * offset;
+      return (letters[`${row}-${col}`] ?? '').toUpperCase() === character.toUpperCase();
+    });
+  }).length;
+  return { correct, total: entries.length };
 }

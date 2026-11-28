@@ -4,6 +4,43 @@ Registro legible de los cambios del panel y su impacto en la app. El estado deta
 panel vive en el repositorio `mlo-teachers` (`PLAN.md`); los contratos, en
 `mlo-teachers/docs/contracts/`; y la cronología de la app en `linea-de-tiempo.md`.
 
+## 2026-11-27 · Iconos de curso y rediseño de la experiencia
+
+### Panel (`mlo-teachers`)
+
+- **Catálogo de iconos.** 30 claves en cinco grupos (Generales, Teoría de la Computación,
+  Inteligencia Artificial, Sistemas de Cómputo y Sistemas de Información); 7 son PNG y el
+  resto SVG. La clave se guarda en `courses.icon` y la comparte la app.
+- **Migración.** `20261127000000_course_icon.sql` añade `courses.icon` con valor por defecto
+  `code`; la columna ya está aplicada en la base.
+- **Crear curso.** El formulario incorpora un selector visual de icono agrupado, con vista
+  previa de la tarjeta y el nivel como control segmentado.
+- **Contrato v3.** La lista de cursos incluye `icon` y `level`; la descripción real del curso
+  se publica en el release v3 (antes iba vacía). Contrato, fixtures x02 y pruebas
+  actualizados.
+- **Verificación.** 188 pruebas unitarias, 13 de base (incluye la E2E v3), `lint`, `tsc` y
+  `build` en verde.
+
+### App (`MLO-Ingenieria-software`)
+
+- **Biblioteca y curso.** Tarjetas más compactas con nivel, descripción y progreso; la ficha
+  del curso usa el icono del CMS con fallback si la clave no se reconoce. La tarjeta de la
+  biblioteca conserva las iniciales.
+- **Progreso por subtema.** `topicProgress.logic.ts` calcula lecciones, ejercicios y
+  evaluación desde el progreso real; la pantalla del subtema muestra “Pendiente”, “En
+  progreso” o “Completado” y el mejor resultado de la evaluación.
+- **Resultados.** La evaluación muestra el desglose por tipo, el anillo de puntaje y
+  “Revisar respuestas” contraído; el navegador distingue respondido, actual y pendiente.
+- **Actividades.** Retroalimentación y revisión de respuestas en completar, relacionar y
+  crucigrama; se añaden `ContinuationButton`, `PerformanceBreakdown`, `DisclosureRow` y la
+  animación de entrada de `Screen`.
+- **Datos locales.** `DATABASE_VERSION` 25 añade `remote_courses.icon` y
+  `remote_courses.level`; `versionCode` 14.
+- **Verificación.** 615 pruebas Jest, `tsc` y `lint` limpios.
+
+> Estado al registrar esta entrada: los dos repos tienen cambios **sin commit** de esta
+> iteración (iconos de curso en el CMS y rediseño en la app); no se hizo commit ni push.
+
 ## 2026-11-26 · Cierre pre-deadline: API v3 única, migraciones registradas y CI
 
 ### Panel (`mlo-teachers`)

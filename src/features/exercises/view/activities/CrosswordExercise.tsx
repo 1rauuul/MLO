@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, TextInput, View, type TextInputInstance } from 'react-native';
 
 import { AppText } from '@/shared/components/AppText';
-import { PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
+import { IconButton, PrimaryButton, SecondaryButton } from '@/shared/components/Buttons';
+import { DisclosureRow } from '@/shared/components/DisclosureRow';
 import { Icon } from '@/shared/components/Icon';
 import { useTheme } from '@/shared/theme/ThemeProvider';
 import { shuffleItems, crosswordScore, type ExerciseScore } from '@/features/exercises/viewmodel/exercise.logic';
@@ -17,8 +18,6 @@ interface CrosswordExerciseProps {
   hideCheck?: boolean;
 }
 
-const CELL = 24;
-
 export function CrosswordExercise({
   engine,
   onSubmit,
@@ -29,7 +28,11 @@ export function CrosswordExercise({
   const { colors, radius, spacing, fonts } = useTheme();
   const [width, setWidth] = useState(0);
   const [zoom, setZoom] = useState(false);
-  const cellSize = zoom ? 44 : Math.max(20, Math.min(36, Math.floor((width - Math.max(0, engine.cols - 1) * 2) / Math.max(1, engine.cols)) || CELL));
+  const [showAllClues, setShowAllClues] = useState(false);
+  const inputRef = useRef<TextInputInstance>(null);
+  const cellSize = zoom
+    ? 44
+    : Math.max(32, Math.min(40, Math.floor((width - Math.max(0, engine.cols - 1) * 2) / Math.max(1, engine.cols)) || 32));
   const example = variant === 'example';
   const cellMap = new Map(engine.cells.map(cell => [`${cell.row}-${cell.col}`, cell]));
 
@@ -67,7 +70,7 @@ export function CrosswordExercise({
 
   const check = () => {
     const correct = engine.submit();
-    onSubmit(JSON.stringify(engine.letters), correct, crosswordScore(engine.cells, engine.letters));
+    onSubmit(JSON.stringify(engine.letters), correct, crosswordScore(engine.entries, engine.letters));
   };
 
   const entryValue = (index: number): string => {
@@ -115,7 +118,17 @@ export function CrosswordExercise({
     const pick = startEntry ?? cell.entryIndexes[0];
     if (pick !== undefined) {
       engine.selectEntry(pick);
+      inputRef.current?.focus();
     }
+  };
+
+  const selectNeighbor = (step: number) => {
+    if (engine.selectedEntry === null || engine.entries.length === 0) {
+      return;
+    }
+    const next = (engine.selectedEntry + step + engine.entries.length) % engine.entries.length;
+    engine.selectEntry(next);
+    inputRef.current?.focus();
   };
 
   const fillFromBank = (word: string) => {
@@ -137,7 +150,74 @@ export function CrosswordExercise({
         Toca una celda y escribe la palabra que corresponde a la pista. Escribe sin tildes.
       </AppText>
 
-      <SecondaryButton label={zoom ? 'Ajustar tablero' : 'Ampliar tablero'} onPress={() => setZoom(current => !current)} style={{ marginBottom: spacing.sm }} />
+      {activeEntry ? (
+        <View
+          style={[
+            styles.activeClue,
+            { backgroundColor: colors.soft, borderRadius: radius.control },
+          ]}>
+          <View style={[styles.labelBadge, { backgroundColor: colors.primaryStrong }]}>
+            <AppText variant="small" color={colors.onPrimary} weight="700">
+              {labels[selected!]}
+            </AppText>
+          </View>
+          <AppText variant="small" weight="600" style={styles.flex}>
+            {activeEntry.clue}
+          </AppText>
+        </View>
+      ) : (
+        <AppText variant="small" color={colors.muted} style={styles.instruction}>
+          Toca una celda o una pista para escribir.
+        </AppText>
+      )}
+
+      <TextInput
+        ref={inputRef}
+        value={selected !== null ? entryValue(selected) : ''}
+        editable={selected !== null && !locked}
+        onChangeText={value => (selected !== null ? writeEntry(selected, value) : undefined)}
+        autoCapitalize="characters"
+        autoCorrect={false}
+        selectTextOnFocus
+        accessibilityLabel={activeEntry ? `Respuesta de ${labels[selected!]}: ${activeEntry.clue}` : 'Respuesta del crucigrama'}
+        placeholder={
+          activeEntry
+            ? `${activeEntry.word.length} letras · ${labels[selected!]}`
+            : 'Toca una pista para escribir'
+        }
+        placeholderTextColor={colors.muted}
+        style={[
+          styles.input,
+          {
+            borderColor: selected !== null ? colors.primary : colors.line,
+            backgroundColor: colors.card,
+            color: colors.text,
+            fontFamily: fonts.mono,
+            borderRadius: radius.control,
+            marginTop: spacing.sm,
+          },
+        ]}
+      />
+
+      {activeEntry ? (
+        <View style={styles.clueNav}>
+          <IconButton accessibilityLabel="Pista anterior" onPress={() => selectNeighbor(-1)} disabled={locked}>
+            <AppText style={styles.navGlyph}>‹</AppText>
+          </IconButton>
+          <AppText variant="small" center style={styles.flex}>
+            {`Pista ${selected! + 1} de ${engine.entries.length}`}
+          </AppText>
+          <IconButton accessibilityLabel="Pista siguiente" onPress={() => selectNeighbor(1)} disabled={locked}>
+            <AppText style={styles.navGlyph}>›</AppText>
+          </IconButton>
+        </View>
+      ) : null}
+
+      <SecondaryButton
+        label={zoom ? 'Ajustar tablero' : 'Ampliar tablero'}
+        onPress={() => setZoom(current => !current)}
+        style={{ marginTop: spacing.md }}
+      />
       <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={styles.gridScroll}>
         <View style={styles.grid}>
           {Array.from({ length: engine.rows }).map((_, row) => (
@@ -174,11 +254,17 @@ export function CrosswordExercise({
                       },
                     ]}>
                     {start ? (
-                      <AppText variant="code" color={colors.muted} style={styles.cellLabel}>
+                      <AppText
+                        variant="code"
+                        color={colors.muted}
+                        style={[styles.cellLabel, { fontSize: Math.max(7, cellSize * 0.2), lineHeight: Math.max(8, cellSize * 0.22) }]}>
                         {start.join('/')}
                       </AppText>
                     ) : null}
-                    <AppText variant="small" weight="700" style={{ fontSize: zoom ? 20 : 14 }}>
+                    <AppText
+                      variant="small"
+                      weight="700"
+                      style={{ fontSize: Math.max(14, cellSize * 0.5), lineHeight: cellSize * 0.6 }}>
                       {engine.letters[`${row}-${col}`] ?? ''}
                     </AppText>
                   </Pressable>
@@ -189,52 +275,66 @@ export function CrosswordExercise({
         </View>
       </ScrollView>
 
-      {activeEntry ? (
-        <View
-          style={[
-            styles.activeClue,
-            { backgroundColor: colors.soft, borderRadius: radius.control, marginTop: spacing.md },
-          ]}>
-          <View style={[styles.labelBadge, { backgroundColor: colors.primaryStrong }]}>
-            <AppText variant="small" color={colors.onPrimary} weight="700">
-              {labels[selected!]}
-            </AppText>
-          </View>
-          <AppText variant="small" weight="600" style={styles.flex}>
-            {activeEntry.clue}
-          </AppText>
-        </View>
-      ) : (
-        <AppText variant="small" color={colors.muted} style={{ marginTop: spacing.md }}>
-          Toca una celda o una pista para escribir.
-        </AppText>
-      )}
+      <View style={styles.cluesToggle}>
+        <DisclosureRow
+          label="Todas las pistas"
+          expanded={showAllClues}
+          onPress={() => setShowAllClues(current => !current)}
+          trailing={`${engine.entries.length} pistas`}
+        />
+      </View>
 
-      <TextInput
-        value={selected !== null ? entryValue(selected) : ''}
-        editable={selected !== null && !locked}
-        onChangeText={value => (selected !== null ? writeEntry(selected, value) : undefined)}
-        autoCapitalize="characters"
-        autoCorrect={false}
-        accessibilityLabel={activeEntry ? `Respuesta de ${labels[selected!]}: ${activeEntry.clue}` : 'Respuesta del crucigrama'}
-        placeholder={
-          activeEntry
-            ? `${activeEntry.word.length} letras · ${labels[selected!]}`
-            : 'Toca una pista para escribir'
-        }
-        placeholderTextColor={colors.muted}
-        style={[
-          styles.input,
-          {
-            borderColor: selected !== null ? colors.primary : colors.line,
-            backgroundColor: colors.card,
-            color: colors.text,
-            fontFamily: fonts.mono,
-            borderRadius: radius.control,
-            marginTop: spacing.sm,
-          },
-        ]}
-      />
+      {showAllClues ? (
+        <View style={[styles.entries, { marginTop: spacing.sm }]}>
+          {engine.entries.map((entry, index) => {
+            const activeItem = selected === index;
+            const correct = entryValue(index).toUpperCase() === entry.word.toUpperCase();
+            return (
+              <Pressable
+                key={`${entry.word}-${index}`}
+                accessibilityRole="button"
+                accessibilityLabel={`${labels[index]} ${entry.clue}`}
+                accessibilityState={{ disabled: locked }}
+                disabled={locked}
+                onPress={() => {
+                  engine.selectEntry(index);
+                  inputRef.current?.focus();
+                }}
+                style={[
+                  styles.clueRow,
+                  {
+                    borderColor: activeItem ? colors.primary : colors.line,
+                    backgroundColor: activeItem ? colors.soft : colors.card,
+                    borderRadius: radius.control,
+                  },
+                ]}>
+                <View style={[styles.labelBadge, { backgroundColor: activeItem ? colors.primary : colors.soft }]}>
+                  <AppText
+                    variant="small"
+                    color={activeItem ? colors.onPrimary : colors.muted}
+                    weight="700">
+                    {labels[index]}
+                  </AppText>
+                </View>
+                <View style={styles.flex}>
+                  <AppText variant="small">{entry.clue}</AppText>
+                  <AppText variant="small" color={colors.muted}>
+                    {`${entry.word.length} letras · ${entryValue(index) || '—'}`}
+                  </AppText>
+                </View>
+                {engine.checked ? (
+                  <Icon
+                    name={correct ? 'check' : 'close'}
+                    size={16}
+                    color={correct ? colors.success : colors.danger}
+                    strokeWidth={2.5}
+                  />
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
 
       {example && bank.length > 0 ? (
         <View>
@@ -269,53 +369,6 @@ export function CrosswordExercise({
         </View>
       ) : null}
 
-      <View style={[styles.entries, { marginTop: spacing.md }]}>
-        {engine.entries.map((entry, index) => {
-          const activeItem = selected === index;
-          const correct = entryValue(index).toUpperCase() === entry.word.toUpperCase();
-          return (
-            <Pressable
-              key={`${entry.word}-${index}`}
-              accessibilityRole="button"
-              accessibilityLabel={`${labels[index]} ${entry.clue}`}
-              accessibilityState={{ disabled: locked }}
-              disabled={locked}
-              onPress={() => engine.selectEntry(index)}
-              style={[
-                styles.clueRow,
-                {
-                  borderColor: activeItem ? colors.primary : colors.line,
-                  backgroundColor: activeItem ? colors.soft : colors.card,
-                  borderRadius: radius.control,
-                },
-              ]}>
-              <View style={[styles.labelBadge, { backgroundColor: activeItem ? colors.primary : colors.soft }]}>
-                <AppText
-                  variant="small"
-                  color={activeItem ? colors.onPrimary : colors.muted}
-                  weight="700">
-                  {labels[index]}
-                </AppText>
-              </View>
-              <View style={styles.flex}>
-                <AppText variant="small">{entry.clue}</AppText>
-                <AppText variant="small" color={colors.muted}>
-                  {`${entry.word.length} letras · ${entryValue(index) || '—'}`}
-                </AppText>
-              </View>
-              {engine.checked ? (
-                <Icon
-                  name={correct ? 'check' : 'close'}
-                  size={16}
-                  color={correct ? colors.success : colors.danger}
-                  strokeWidth={2.5}
-                />
-              ) : null}
-            </Pressable>
-          );
-        })}
-      </View>
-
       {hideCheck ? null : (
         <PrimaryButton
           label="Comprobar crucigrama"
@@ -347,16 +400,16 @@ const styles = StyleSheet.create({
   grid: { gap: 2 },
   gridRow: { flexDirection: 'row', gap: 2 },
   cell: {
-    width: CELL,
-    height: CELL,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cellLabel: { position: 'absolute', top: 0, left: 1, fontSize: 6, lineHeight: 7 },
-  blank: { width: CELL, height: CELL },
+  cellLabel: { position: 'absolute', top: 0, left: 1 },
   activeClue: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10 },
-  input: { borderWidth: 2, paddingHorizontal: 12, paddingVertical: 10, letterSpacing: 3, fontWeight: '700' },
+  input: { borderWidth: 2, paddingHorizontal: 12, paddingVertical: 10, letterSpacing: 2, fontWeight: '700' },
+  clueNav: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  navGlyph: { fontSize: 20, lineHeight: 22 },
+  cluesToggle: { marginTop: 12 },
   entries: { gap: 8 },
   clueRow: {
     minHeight: 48,
